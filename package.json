@@ -13,6 +13,7 @@
     "db:seed": "tsx db/seed.ts",
     "db:seed:demo": "tsx db/seed-demo.ts",
     "db:reset": "tsx db/reset.ts",
+    "db:reset-remote": "tsx db/reset-remote.ts",
     "setup": "tsx db/migrate.ts && tsx db/seed.ts"
   },
   "dependencies": {
