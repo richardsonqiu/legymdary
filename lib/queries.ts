@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import {
   bodyStats,
@@ -9,6 +9,7 @@ import {
   type BodyStat,
   type Exercise,
 } from "@/db/schema";
+import { requireUserId } from "@/lib/session";
 import {
   addDaysStr,
   estimate1RM,
@@ -121,13 +122,13 @@ function toDetail(w: RawWorkout): WorkoutDetail {
 }
 
 /* ------------------------------------------------------------------ */
-/* Workouts                                                            */
+/* Workouts (scoped to the signed-in user)                             */
 /* ------------------------------------------------------------------ */
 
-/** The in-progress (unfinished) workout, fully hydrated, or null. */
 export async function getActiveWorkout(): Promise<WorkoutDetail | null> {
+  const userId = await requireUserId();
   const w = await db.query.workouts.findFirst({
-    where: isNull(workouts.finishedAt),
+    where: and(isNull(workouts.finishedAt), eq(workouts.userId, userId)),
     orderBy: desc(workouts.createdAt),
     with: {
       workoutExercises: {
@@ -142,9 +143,10 @@ export async function getActiveWorkout(): Promise<WorkoutDetail | null> {
   return w ? toDetail(w as RawWorkout) : null;
 }
 
-/** All workouts (newest first) with computed totals + per-exercise breakdown. */
 export async function getWorkoutDetails(): Promise<WorkoutDetail[]> {
+  const userId = await requireUserId();
   const ws = await db.query.workouts.findMany({
+    where: eq(workouts.userId, userId),
     orderBy: desc(workouts.date),
     with: {
       workoutExercises: {
@@ -159,38 +161,43 @@ export async function getWorkoutDetails(): Promise<WorkoutDetail[]> {
   return ws.map((w) => toDetail(w as RawWorkout));
 }
 
-/** Most recent finished workout, for the dashboard summary + duplicate. */
 export async function getLastFinishedWorkout(): Promise<WorkoutDetail | null> {
   const ws = await getWorkoutDetails();
   return ws.find((w) => w.finished) ?? null;
 }
 
 /* ------------------------------------------------------------------ */
-/* Exercises                                                           */
+/* Exercises (built-in library + this user's custom ones)              */
 /* ------------------------------------------------------------------ */
 
 export async function getAllExercises(): Promise<Exercise[]> {
-  return db.select().from(exercises).orderBy(asc(exercises.name));
+  const userId = await requireUserId();
+  return db
+    .select()
+    .from(exercises)
+    .where(or(isNull(exercises.userId), eq(exercises.userId, userId)))
+    .orderBy(asc(exercises.name));
 }
 
-/** Exercises that have at least one logged set (for the progress selector). */
 export async function getExercisesWithHistory(): Promise<
   { id: number; name: string }[]
 > {
-  const rows = await db
+  const userId = await requireUserId();
+  return db
     .selectDistinct({ id: exercises.id, name: exercises.name })
     .from(exercises)
     .innerJoin(workoutExercises, eq(workoutExercises.exerciseId, exercises.id))
-    .innerJoin(sets, eq(sets.workoutExerciseId, workoutExercises.id))
+    .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
+    .where(eq(workouts.userId, userId))
     .orderBy(asc(exercises.name));
-  return rows;
 }
 
 /* ------------------------------------------------------------------ */
-/* Personal records (estimated 1RM)                                    */
+/* Personal records                                                    */
 /* ------------------------------------------------------------------ */
 
 export async function getAllPRs(): Promise<PRRow[]> {
+  const userId = await requireUserId();
   const rows = await db
     .select({
       exerciseId: exercises.id,
@@ -205,21 +212,18 @@ export async function getAllPRs(): Promise<PRRow[]> {
     .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
     .innerJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
     .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .where(eq(sets.isWarmup, false));
+    .where(and(eq(sets.isWarmup, false), eq(workouts.userId, userId)));
 
   const best = new Map<number, PRRow>();
   for (const r of rows) {
     const e1rm = estimate1RM(r.weight, r.reps);
     if (e1rm <= 0) continue;
     const cur = best.get(r.exerciseId);
-    if (!cur || e1rm > cur.e1rm) {
-      best.set(r.exerciseId, { ...r, e1rm });
-    }
+    if (!cur || e1rm > cur.e1rm) best.set(r.exerciseId, { ...r, e1rm });
   }
   return [...best.values()].sort((a, b) => b.e1rm - a.e1rm);
 }
 
-/** PRs whose record-setting lift happened in the current week (Mon–Sun). */
 export async function getPRsThisWeek(): Promise<PRRow[]> {
   const prs = await getAllPRs();
   const weekStart = startOfWeekStr();
@@ -237,40 +241,11 @@ export type ProgressPoint = {
   bestE1rm: number;
 };
 
-export async function getExerciseProgress(
-  exerciseId: number,
-): Promise<ProgressPoint[]> {
-  const rows = await db
-    .select({
-      date: workouts.date,
-      reps: sets.reps,
-      weight: sets.weight,
-    })
-    .from(sets)
-    .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
-    .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .where(
-      and(eq(workoutExercises.exerciseId, exerciseId), eq(sets.isWarmup, false)),
-    );
-
-  const byDate = new Map<string, ProgressPoint>();
-  for (const r of rows) {
-    const e =
-      byDate.get(r.date) ??
-      ({ date: r.date, topWeight: 0, volume: 0, bestE1rm: 0 } as ProgressPoint);
-    e.topWeight = Math.max(e.topWeight, r.weight);
-    e.volume += r.weight * r.reps;
-    e.bestE1rm = Math.max(e.bestE1rm, estimate1RM(r.weight, r.reps));
-    byDate.set(r.date, e);
-  }
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
-}
-
-/** Progress points for every exercise that has history, in a single query. */
 export async function getAllExerciseProgress(): Promise<{
   exercises: { id: number; name: string }[];
   byExercise: Record<number, ProgressPoint[]>;
 }> {
+  const userId = await requireUserId();
   const rows = await db
     .select({
       exerciseId: exercises.id,
@@ -283,7 +258,7 @@ export async function getAllExerciseProgress(): Promise<{
     .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
     .innerJoin(exercises, eq(workoutExercises.exerciseId, exercises.id))
     .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .where(eq(sets.isWarmup, false));
+    .where(and(eq(sets.isWarmup, false), eq(workouts.userId, userId)));
 
   const names = new Map<number, string>();
   const tmp = new Map<number, Map<string, ProgressPoint>>();
@@ -316,16 +291,16 @@ export async function getAllExerciseProgress(): Promise<{
   return { exercises: exList, byExercise };
 }
 
-/** Total working sets per week for the last `weeks` weeks (zero-filled). */
 export async function getWeeklyVolume(
   weeks = 12,
 ): Promise<{ week: string; sets: number }[]> {
+  const userId = await requireUserId();
   const rows = await db
     .select({ date: workouts.date })
     .from(sets)
     .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
     .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .where(eq(sets.isWarmup, false));
+    .where(and(eq(sets.isWarmup, false), eq(workouts.userId, userId)));
 
   const byWeek = new Map<string, number>();
   for (const r of rows) {
@@ -347,13 +322,20 @@ export async function getWeeklyVolume(
 /* ------------------------------------------------------------------ */
 
 export async function getBodyStats(): Promise<BodyStat[]> {
-  return db.select().from(bodyStats).orderBy(asc(bodyStats.date));
+  const userId = await requireUserId();
+  return db
+    .select()
+    .from(bodyStats)
+    .where(eq(bodyStats.userId, userId))
+    .orderBy(asc(bodyStats.date));
 }
 
 export async function getLatestBodyStat(): Promise<BodyStat | null> {
+  const userId = await requireUserId();
   const rows = await db
     .select()
     .from(bodyStats)
+    .where(eq(bodyStats.userId, userId))
     .orderBy(desc(bodyStats.date))
     .limit(1);
   return rows[0] ?? null;

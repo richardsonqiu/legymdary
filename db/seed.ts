@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { isNull } from "drizzle-orm";
 import { db } from "./index";
 import { exercises, type NewExercise } from "./schema";
 
@@ -78,15 +79,26 @@ const library: Omit<NewExercise, "isCustom">[] = [
 ];
 
 async function main() {
-  console.log(`Seeding ${library.length} exercises...`);
+  console.log(`Seeding the built-in exercise library...`);
 
-  await db
-    .insert(exercises)
-    .values(library.map((e) => ({ ...e, isCustom: false })))
-    .onConflictDoNothing();
+  // Built-in exercises have a null userId. Insert only the ones missing so the
+  // seed stays idempotent (re-runnable).
+  const existing = await db
+    .select({ name: exercises.name })
+    .from(exercises)
+    .where(isNull(exercises.userId));
+  const have = new Set(existing.map((e) => e.name));
+  const toInsert = library.filter((e) => !have.has(e.name));
 
-  const all = await db.select().from(exercises);
-  console.log(`Done. Exercise library now has ${all.length} exercises.`);
+  if (toInsert.length) {
+    await db
+      .insert(exercises)
+      .values(toInsert.map((e) => ({ ...e, isCustom: false })));
+  }
+
+  console.log(
+    `Done. Added ${toInsert.length} new exercise(s); library is ${have.size + toInsert.length} strong.`,
+  );
   process.exit(0);
 }
 

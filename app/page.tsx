@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountMenu } from "@/components/AccountMenu";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
   DumbbellIcon,
@@ -14,6 +15,7 @@ import {
   getPRsThisWeek,
   getWorkoutDetails,
 } from "@/lib/queries";
+import { getSessionUser } from "@/lib/session";
 import {
   calcStreaks,
   formatMedium,
@@ -33,11 +35,13 @@ function greeting() {
 }
 
 export default async function DashboardPage() {
-  const [details, latestStat, prsThisWeek] = await Promise.all([
+  const [details, latestStat, prsThisWeek, user] = await Promise.all([
     getWorkoutDetails(),
     getLatestBodyStat(),
     getPRsThisWeek(),
+    getSessionUser(),
   ]);
+  const firstName = user?.name?.split(" ")[0] ?? null;
 
   const workoutDays = details
     .filter((w) => w.exercises.some((e) => e.sets.length > 0))
@@ -48,14 +52,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-500">
-          LeGYMdary
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          {greeting()}
-        </h1>
-        <p className="text-sm text-zinc-400">{formatPretty(todayStr())}</p>
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-500">
+            LeGYMdary
+          </p>
+          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight">
+            {greeting()}
+            {firstName ? `, ${firstName}` : ""}
+          </h1>
+          <p className="text-sm text-zinc-400">{formatPretty(todayStr())}</p>
+        </div>
+        <AccountMenu name={user?.name} email={user?.email} />
       </header>
 
       {/* Streak + primary action */}

@@ -16,12 +16,14 @@
     "setup": "tsx db/migrate.ts && tsx db/seed.ts"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.2",
     "@libsql/client": "^0.17.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.9",
+    "next-auth": "^5.0.0-beta.31",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1"

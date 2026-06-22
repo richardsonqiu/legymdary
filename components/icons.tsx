@@ -142,3 +142,22 @@ export const ArrowLeftIcon = (p: IconProps) => (
     <path d="M19 12H5M11 6l-6 6 6 6" />
   </Base>
 );
+
+export const LogoutIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M15 12H4M11 8l-4 4 4 4M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" />
+  </Base>
+);
+
+export const GoogleIcon = (p: IconProps) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={20}
+    height={20}
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <path d="M12.24 10.4v3.32h4.6c-.2 1.18-1.45 3.46-4.6 3.46a5.06 5.06 0 0 1 0-10.12c1.6 0 2.67.68 3.28 1.27l2.24-2.16C16.46 4.66 14.6 3.9 12.24 3.9a8.1 8.1 0 1 0 0 16.2c4.68 0 7.78-3.29 7.78-7.92 0-.53-.06-.94-.13-1.35l-7.65-.03z" />
+  </svg>
+);

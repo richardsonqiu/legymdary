@@ -1,11 +1,14 @@
 # LeGYMdary — the Legendary Gym Diary
 
-A mobile-first, full-stack gym & fitness tracker. Log workouts, auto-detect
-personal records, track body stats, and watch your progress over time — all in a
-clean, monochrome interface designed for use on your phone at the gym.
+A mobile-first, full-stack gym & fitness tracker. Sign in with Google, log
+workouts, auto-detect personal records, track body stats, and watch your
+progress over time — all in a clean, monochrome interface designed for use on
+your phone at the gym. Every account gets its own private diary.
 
 ## Features
 
+- **Google sign-in, multi-user** — each account has its own private workouts,
+  stats and PRs.
 - **Workout logger** — start a session, search & add exercises, log sets
   (reps, weight in kg, notes, warmup flag), duplicate your last workout, finish.
 - **Exercise library** — 50+ exercises pre-loaded and tagged by muscle group &
@@ -16,20 +19,20 @@ clean, monochrome interface designed for use on your phone at the gym.
   `weight × (1 + reps / 30)`, with a live PR badge while logging.
 - **Progress charts** — per-exercise weight/volume/1RM over 30 / 90 days / all
   time, body-stat line charts with a range selector, and weekly volume.
-- **History calendar** — monthly view with workout days highlighted, tap a day
-  for its session, plus current & longest streak counters.
+- **History calendar + consistency heatmap** — a month view with workout days
+  highlighted, a GitHub-style year heatmap, and current & longest streaks.
 - **Dashboard** — today's date, current streak, last workout, latest body stats,
   and PRs hit this week.
-- **Optional password gate** — protect your data behind a single password.
 
 ## Tech stack
 
 - [Next.js 16](https://nextjs.org) (App Router) + React 19 + TypeScript
+- [Auth.js v5](https://authjs.dev) (NextAuth) with the Google provider
 - [Tailwind CSS v4](https://tailwindcss.com) — dark monochrome theme
 - [Drizzle ORM](https://orm.drizzle.team) on [libSQL](https://github.com/tursodatabase/libsql)
   — a local SQLite file in dev, [Turso](https://turso.tech) in production
 - [Recharts](https://recharts.org) for charts
-- Server Actions for all mutations
+- Server Actions for all mutations (every read & write is scoped to the user)
 
 ## Getting started (local)
 
@@ -37,38 +40,57 @@ clean, monochrome interface designed for use on your phone at the gym.
 # 1. Install dependencies
 npm install
 
-# 2. Create your env file (defaults to a local SQLite file)
+# 2. Create your env file
 cp .env.example .env
 
-# 3. Create the database schema and seed the exercise library
+# 3. Set an auth secret (writes AUTH_SECRET into .env)
+npx auth secret
+
+# 4. Create the database schema and seed the exercise library
 npm run setup        # = db:migrate + db:seed
 
-# 4. Run it
+# 5. Run it
 npm run dev          # http://localhost:3000
 ```
 
-Optional: `npm run db:seed:demo` loads ~8 weeks of sample workouts and body
-stats so you can explore the charts, calendar and PRs. **It replaces existing
-workouts + body stats** (the exercise library is kept). When you're ready to log
-for real, `npm run db:reset` clears everything except the library.
+You can sign in two ways locally:
 
-## Deploy for free (Vercel + Turso)
+- **Google** — set `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` (see deploy steps),
+  adding `http://localhost:3000/api/auth/callback/google` as a redirect URI.
+- **Dev email login** — available automatically in development (no Google
+  needed). Enter any email to create/sign in to a test account. Disabled in
+  production.
 
-Both tiers used here are free.
+Optional: after signing in once, `npm run db:seed:demo` fills *your* account
+with ~8 weeks of sample workouts and body stats. `npm run db:reset` clears all
+logged data (keeps the exercise library).
 
-1. **Create a Turso database** at <https://turso.tech> and grab its database URL
-   (`libsql://…`) and an auth token (Turso CLI: `turso db tokens create <db>`).
-2. **Push to GitHub** and import the repo into [Vercel](https://vercel.com).
-3. In Vercel → Project → **Settings → Environment Variables**, add:
-   - `DATABASE_URL` = your `libsql://…` URL
-   - `DATABASE_AUTH_TOKEN` = your Turso token
-   - `APP_PASSWORD` = a password (recommended, protects your health data)
-4. **Deploy.** The `vercel-build` script runs the migrations and seeds the
-   exercise library against Turso automatically, then builds the app.
+## Deploy for free (Vercel + Turso + Google OAuth)
 
-> The same migrations run in dev and prod (one libSQL driver), so what you test
-> locally is what ships. To migrate/seed Turso from your machine instead, put
-> the Turso credentials in `.env` and run `npm run setup`.
+1. **Turso database (free):** create one at <https://turso.tech>; grab its
+   `libsql://…` URL and an auth token.
+2. **Google OAuth:** in the [Google Cloud Console](https://console.cloud.google.com)
+   → APIs & Services → Credentials → **Create OAuth client ID** →
+   **Web application**. Add the authorized redirect URI
+   `https://<your-vercel-domain>/api/auth/callback/google`. Copy the client ID
+   and secret.
+3. **Deploy:** push to GitHub and import the repo into
+   [Vercel](https://vercel.com). Add these **Environment Variables**:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DATABASE_URL` | your Turso `libsql://…` URL |
+   | `DATABASE_AUTH_TOKEN` | your Turso token |
+   | `AUTH_SECRET` | output of `npx auth secret` |
+   | `AUTH_GOOGLE_ID` | Google OAuth client ID |
+   | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
+
+   Deploy. The `vercel-build` script runs the migrations and seeds the exercise
+   library into Turso automatically.
+
+> Tip: you won't know the Vercel domain until the first deploy. Deploy once,
+> then add `https://<that-domain>/api/auth/callback/google` to the Google OAuth
+> client's redirect URIs (and to "Authorized JavaScript origins").
 
 ## Scripts
 
@@ -79,7 +101,7 @@ Both tiers used here are free.
 | `npm run db:generate`  | Generate SQL migrations from the Drizzle schema     |
 | `npm run db:migrate`   | Apply migrations to `DATABASE_URL`                  |
 | `npm run db:seed`      | Seed the exercise library (idempotent)              |
-| `npm run db:seed:demo` | Load sample data (replaces workouts + body stats)   |
+| `npm run db:seed:demo` | Fill the signed-in account with sample data         |
 | `npm run db:reset`     | Clear all workouts + body stats (keeps the library) |
 | `npm run setup`        | `db:migrate` + `db:seed`                            |
 
@@ -89,16 +111,21 @@ Both tiers used here are free.
 | ---------------------- | -------- | ------------------------------------------------------ |
 | `DATABASE_URL`         | yes      | `file:./local.db` locally, or a Turso `libsql://…` URL |
 | `DATABASE_AUTH_TOKEN`  | prod     | Turso auth token (leave blank for a local file)        |
-| `APP_PASSWORD`         | no       | Enables the login gate when set; blank = open access   |
+| `AUTH_SECRET`          | yes      | Auth.js signing secret (`npx auth secret`)             |
+| `AUTH_GOOGLE_ID`       | prod     | Google OAuth client ID                                 |
+| `AUTH_GOOGLE_SECRET`   | prod     | Google OAuth client secret                             |
 
 ## Project structure
 
 ```
 app/            Routes: dashboard, log, history, stats, prs, exercises, login
-components/     UI, bottom nav, charts, and the workout logger
+                + api/auth (Auth.js)
+auth.ts         Auth.js instance (Drizzle adapter, Google + dev provider)
+auth.config.ts  Edge-safe auth config (used by the proxy gate)
+proxy.ts        Route gate — redirects signed-out users to /login
+components/     UI, bottom nav, charts, the workout logger, account menu
 db/             Drizzle schema, client, migrations + seed scripts
-lib/            Queries (reads), actions (mutations), domain utils, auth
-middleware.ts   Optional password gate
+lib/            Queries (reads), actions (mutations), session helper, utils
 ```
 
 ## Notes

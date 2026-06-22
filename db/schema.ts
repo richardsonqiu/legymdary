@@ -2,15 +2,71 @@ import { relations } from "drizzle-orm";
 import {
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import type { AdapterAccountType } from "next-auth/adapters";
+
+/* ------------------------------------------------------------------ */
+/* Auth.js tables (users, OAuth accounts, sessions)                    */
+/* ------------------------------------------------------------------ */
+
+export const users = sqliteTable("user", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name"),
+  email: text("email").notNull(),
+  emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
+  image: text("image"),
+});
+
+export const accounts = sqliteTable(
+  "account",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").$type<AdapterAccountType>().notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => [
+    primaryKey({ columns: [account.provider, account.providerAccountId] }),
+  ],
+);
+
+export const sessions = sqliteTable("session", {
+  sessionToken: text("sessionToken").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const verificationTokens = sqliteTable(
+  "verificationToken",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+  },
+  (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })],
+);
 
 /**
- * Exercise library. Pre-seeded with common movements and extendable with
- * user-created custom exercises.
+ * Exercise library. Rows with a null userId are the shared built-in library;
+ * a non-null userId marks a user's own custom exercise.
  */
 export const exercises = sqliteTable(
   "exercises",
@@ -20,11 +76,12 @@ export const exercises = sqliteTable(
     muscleGroup: text("muscle_group").notNull(),
     equipment: text("equipment").notNull(),
     isCustom: integer("is_custom", { mode: "boolean" }).notNull().default(false),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [uniqueIndex("exercises_name_unique").on(t.name)],
+  (t) => [index("exercises_user_idx").on(t.userId)],
 );
 
 /**
@@ -35,6 +92,9 @@ export const workouts = sqliteTable(
   "workouts",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     date: text("date").notNull(),
     notes: text("notes"),
@@ -43,7 +103,7 @@ export const workouts = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [index("workouts_date_idx").on(t.date)],
+  (t) => [index("workouts_user_date_idx").on(t.userId, t.date)],
 );
 
 /** An exercise placed inside a workout session, with ordering. */
@@ -84,6 +144,9 @@ export const bodyStats = sqliteTable(
   "body_stats",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     date: text("date").notNull(),
     weight: real("weight"),
     waist: real("waist"),
@@ -92,7 +155,7 @@ export const bodyStats = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
   },
-  (t) => [uniqueIndex("body_stats_date_unique").on(t.date)],
+  (t) => [uniqueIndex("body_stats_user_date_unique").on(t.userId, t.date)],
 );
 
 export const workoutsRelations = relations(workouts, ({ many }) => ({
@@ -125,6 +188,7 @@ export const exercisesRelations = relations(exercises, ({ many }) => ({
   workoutExercises: many(workoutExercises),
 }));
 
+export type User = typeof users.$inferSelect;
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;
 export type Workout = typeof workouts.$inferSelect;
