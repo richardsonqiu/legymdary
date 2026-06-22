@@ -48,7 +48,7 @@ export function AccountMenu({
           </div>
           <div className="my-1 h-px bg-zinc-800" />
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ callbackUrl: "/" })}
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
           >
             <LogoutIcon className="h-4 w-4" /> Sign out

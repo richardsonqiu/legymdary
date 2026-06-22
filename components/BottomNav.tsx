@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/", label: "Dashboard", Icon: HomeIcon },
+  { href: "/dashboard", label: "Dashboard", Icon: HomeIcon },
   { href: "/log", label: "Log", Icon: DumbbellIcon },
   { href: "/history", label: "History", Icon: CalendarIcon },
   { href: "/stats", label: "Stats", Icon: BarsIcon },
@@ -22,14 +22,12 @@ const items = [
 export function BottomNav() {
   const pathname = usePathname();
 
-  if (pathname === "/login") return null;
-
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800/80 bg-zinc-950/85 backdrop-blur-lg">
       <div className="pb-safe mx-auto flex max-w-2xl items-stretch">
         {items.map(({ href, label, Icon }) => {
           const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+            pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={href}

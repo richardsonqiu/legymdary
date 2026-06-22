@@ -147,7 +147,7 @@ export function WorkoutEditor({
   function finish() {
     start(async () => {
       await finishWorkout(workout.id);
-      router.push("/");
+      router.push("/dashboard");
     });
   }
   function discard() {

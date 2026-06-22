@@ -33,7 +33,7 @@ export function LoginForm({
           <Button
             size="lg"
             className="w-full"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           >
             <GoogleIcon className="h-5 w-5" />
             Continue with Google
@@ -71,7 +71,7 @@ export function LoginForm({
               size="lg"
               className="w-full"
               disabled={!email.includes("@")}
-              onClick={() => signIn("dev", { email, callbackUrl: "/" })}
+              onClick={() => signIn("dev", { email, callbackUrl: "/dashboard" })}
             >
               Dev sign in
             </Button>

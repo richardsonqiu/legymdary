@@ -14,12 +14,14 @@ export default {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const onLogin = nextUrl.pathname === "/login";
-      if (onLogin) {
-        if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
+      const p = nextUrl.pathname;
+      const isPublic = p === "/" || p === "/login";
+      if (isLoggedIn) {
+        // Signed-in users shouldn't sit on the landing or login screens.
+        if (isPublic) return Response.redirect(new URL("/dashboard", nextUrl));
         return true;
       }
-      return isLoggedIn;
+      return isPublic;
     },
   },
 } satisfies NextAuthConfig;
