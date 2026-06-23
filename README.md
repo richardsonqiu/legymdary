@@ -53,13 +53,12 @@ npm run setup        # = db:migrate + db:seed
 npm run dev          # http://localhost:3000
 ```
 
-You can sign in two ways locally:
+You can sign in two ways:
 
+- **Email & password** — create an account with just an email and password.
+  Works everywhere, no Google setup required.
 - **Google** — set `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` (see deploy steps),
   adding `http://localhost:3000/api/auth/callback/google` as a redirect URI.
-- **Dev email login** — available automatically in development (no Google
-  needed). Enter any email to create/sign in to a test account. Disabled in
-  production.
 
 Optional: after signing in once, `npm run db:seed:demo` fills *your* account
 with ~8 weeks of sample workouts and body stats. `npm run db:reset` clears all

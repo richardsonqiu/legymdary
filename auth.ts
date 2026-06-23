@@ -5,40 +5,35 @@ import Credentials from "next-auth/providers/credentials";
 import authConfig from "./auth.config";
 import { db } from "./db";
 import { accounts, sessions, users, verificationTokens } from "./db/schema";
+import { verifyPassword } from "./lib/password";
 
-/**
- * Local-only email login (no Google credentials needed) so the multi-user flow
- * can be tested in development. Never registered in production.
- */
-const devProviders =
-  process.env.NODE_ENV !== "production"
-    ? [
-        Credentials({
-          id: "dev",
-          name: "Dev email login",
-          credentials: { email: { label: "Email", type: "email" } },
-          async authorize(creds) {
-            const email = String(creds?.email ?? "")
-              .trim()
-              .toLowerCase();
-            if (!email.includes("@")) return null;
+/** Email + password sign-in. Sign-up is handled by the signUp server action. */
+const passwordProvider = Credentials({
+  id: "password",
+  name: "Email & password",
+  credentials: {
+    email: { label: "Email", type: "email" },
+    password: { label: "Password", type: "password" },
+  },
+  async authorize(creds) {
+    const email = String(creds?.email ?? "")
+      .trim()
+      .toLowerCase();
+    const password = String(creds?.password ?? "");
+    if (!email || !password) return null;
 
-            const found = await db
-              .select()
-              .from(users)
-              .where(eq(users.email, email))
-              .limit(1);
-            if (found[0]) {
-              return { id: found[0].id, email, name: found[0].name ?? email };
-            }
-            const id = crypto.randomUUID();
-            const name = email.split("@")[0];
-            await db.insert(users).values({ id, email, name });
-            return { id, email, name };
-          },
-        }),
-      ]
-    : [];
+    const rows = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    const u = rows[0];
+    if (!u?.passwordHash) return null; // no account, or a Google-only account
+    if (!(await verifyPassword(password, u.passwordHash))) return null;
+
+    return { id: u.id, email: u.email, name: u.name ?? email };
+  },
+});
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -49,7 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verificationTokensTable: verificationTokens,
   }),
   session: { strategy: "jwt" },
-  providers: [...authConfig.providers, ...devProviders],
+  providers: [...authConfig.providers, passwordProvider],
   callbacks: {
     ...authConfig.callbacks,
     jwt({ token, user }) {

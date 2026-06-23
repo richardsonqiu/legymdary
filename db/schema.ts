@@ -22,6 +22,8 @@ export const users = sqliteTable("user", {
   email: text("email").notNull(),
   emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
   image: text("image"),
+  // Set only for email/password accounts; null for OAuth (e.g. Google) users.
+  passwordHash: text("password_hash"),
 });
 
 export const accounts = sqliteTable(
