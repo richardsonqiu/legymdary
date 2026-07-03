@@ -1,4 +1,14 @@
-import { and, asc, desc, eq, isNull, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+} from "drizzle-orm";
 import { db } from "@/db";
 import {
   bodyStats,
@@ -161,9 +171,120 @@ export async function getWorkoutDetails(): Promise<WorkoutDetail[]> {
   return ws.map((w) => toDetail(w as RawWorkout));
 }
 
+/** Distinct calendar days on which the user logged at least one working set. */
+export async function getWorkoutDates(): Promise<string[]> {
+  const userId = await requireUserId();
+  const rows = await db
+    .selectDistinct({ date: workouts.date })
+    .from(workouts)
+    .innerJoin(workoutExercises, eq(workoutExercises.workoutId, workouts.id))
+    .innerJoin(sets, eq(sets.workoutExerciseId, workoutExercises.id))
+    .where(and(eq(workouts.userId, userId), eq(sets.isWarmup, false)));
+  return rows.map((r) => r.date);
+}
+
+/** Most recent finished workout, fetched directly (not the whole history). */
 export async function getLastFinishedWorkout(): Promise<WorkoutDetail | null> {
-  const ws = await getWorkoutDetails();
-  return ws.find((w) => w.finished) ?? null;
+  const userId = await requireUserId();
+  const w = await db.query.workouts.findFirst({
+    where: and(
+      eq(workouts.userId, userId),
+      isNotNull(workouts.finishedAt),
+    ),
+    orderBy: [desc(workouts.date), desc(workouts.id)],
+    with: {
+      workoutExercises: {
+        orderBy: (f, ops) => ops.asc(f.position),
+        with: {
+          exercise: true,
+          sets: { orderBy: (f, ops) => ops.asc(f.position) },
+        },
+      },
+    },
+  });
+  return w ? toDetail(w as RawWorkout) : null;
+}
+
+export type LastPerf = {
+  date: string;
+  sets: { weight: number; reps: number }[];
+};
+
+/**
+ * For each of the given exercises, the working sets from the user's most recent
+ * *other* workout that contained it — the "last time" reference while logging.
+ */
+export async function getLastPerformances(
+  currentWorkoutId: number,
+  exerciseIds: number[],
+): Promise<Record<number, LastPerf>> {
+  const userId = await requireUserId();
+  if (exerciseIds.length === 0) return {};
+
+  const rows = await db
+    .select({
+      exerciseId: workoutExercises.exerciseId,
+      workoutId: workouts.id,
+      date: workouts.date,
+      reps: sets.reps,
+      weight: sets.weight,
+      position: sets.position,
+    })
+    .from(sets)
+    .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
+    .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
+    .where(
+      and(
+        eq(workouts.userId, userId),
+        eq(sets.isWarmup, false),
+        ne(workouts.id, currentWorkoutId),
+        inArray(workoutExercises.exerciseId, exerciseIds),
+      ),
+    );
+
+  type Wk = {
+    date: string;
+    sets: { weight: number; reps: number; position: number }[];
+  };
+  const perEx = new Map<number, Map<number, Wk>>();
+  for (const r of rows) {
+    let byWorkout = perEx.get(r.exerciseId);
+    if (!byWorkout) {
+      byWorkout = new Map();
+      perEx.set(r.exerciseId, byWorkout);
+    }
+    let wk = byWorkout.get(r.workoutId);
+    if (!wk) {
+      wk = { date: r.date, sets: [] };
+      byWorkout.set(r.workoutId, wk);
+    }
+    wk.sets.push({ weight: r.weight, reps: r.reps, position: r.position });
+  }
+
+  const out: Record<number, LastPerf> = {};
+  for (const [exId, byWorkout] of perEx) {
+    let bestId = -1;
+    let best: Wk | null = null;
+    for (const [wid, wk] of byWorkout) {
+      if (
+        !best ||
+        wk.date > best.date ||
+        (wk.date === best.date && wid > bestId)
+      ) {
+        best = wk;
+        bestId = wid;
+      }
+    }
+    if (best) {
+      out[exId] = {
+        date: best.date,
+        sets: best.sets
+          .sort((a, b) => a.position - b.position)
+          .map((s) => ({ weight: s.weight, reps: s.reps })),
+      };
+    }
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ */

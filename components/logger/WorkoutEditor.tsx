@@ -16,17 +16,23 @@ import {
   removeWorkoutExercise,
   updateWorkout,
 } from "@/lib/actions";
-import type { WorkoutDetail, WorkoutExerciseDetail } from "@/lib/queries";
-import { cn, estimate1RM, kg } from "@/lib/utils";
+import type {
+  LastPerf,
+  WorkoutDetail,
+  WorkoutExerciseDetail,
+} from "@/lib/queries";
+import { cn, estimate1RM, formatShort, kg } from "@/lib/utils";
 
 type Input = { weight: string; reps: string; warmup: boolean };
 
 export function WorkoutEditor({
   workout,
   exercises,
+  lastByExercise,
 }: {
   workout: WorkoutDetail;
   exercises: Exercise[];
+  lastByExercise: Record<number, LastPerf>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -45,10 +51,16 @@ export function WorkoutEditor({
   }, [toast]);
 
   function exDefault(ex: WorkoutExerciseDetail): Input {
+    // Prefill from this session's last set, else from last time's top set.
     const last = ex.sets[ex.sets.length - 1];
+    if (last) {
+      return { weight: String(last.weight), reps: String(last.reps), warmup: false };
+    }
+    const prev = lastByExercise[ex.exerciseId]?.sets;
+    const prevLast = prev?.[prev.length - 1];
     return {
-      weight: last ? String(last.weight) : "",
-      reps: last ? String(last.reps) : "",
+      weight: prevLast ? String(prevLast.weight) : "",
+      reps: prevLast ? String(prevLast.reps) : "",
       warmup: false,
     };
   }
@@ -96,7 +108,8 @@ export function WorkoutEditor({
     router.refresh();
     return {};
   }
-  function removeExercise(id: number) {
+  function removeExercise(id: number, hasSets: boolean) {
+    if (hasSets && !confirm("Remove this exercise and its logged sets?")) return;
     start(async () => {
       await removeWorkoutExercise(id);
       router.refresh();
@@ -238,13 +251,28 @@ export function WorkoutEditor({
                     </div>
                   </div>
                   <button
-                    onClick={() => removeExercise(ex.workoutExerciseId)}
+                    onClick={() =>
+                      removeExercise(ex.workoutExerciseId, ex.sets.length > 0)
+                    }
                     aria-label="Remove exercise"
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
                   >
                     <XIcon className="h-4 w-4" />
                   </button>
                 </div>
+
+                {lastByExercise[ex.exerciseId] && (
+                  <div className="text-xs text-zinc-500">
+                    <span className="text-zinc-600">
+                      Last · {formatShort(lastByExercise[ex.exerciseId].date)}:
+                    </span>{" "}
+                    <span className="tabular-nums">
+                      {lastByExercise[ex.exerciseId].sets
+                        .map((s) => `${kg(s.weight)}×${s.reps}`)
+                        .join(", ")}
+                    </span>
+                  </div>
+                )}
 
                 {ex.sets.length > 0 && (
                   <ul className="space-y-1.5">

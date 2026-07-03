@@ -1,19 +1,34 @@
 import { StartWorkout } from "@/components/logger/StartWorkout";
 import { WorkoutEditor } from "@/components/logger/WorkoutEditor";
-import { getActiveWorkout, getAllExercises, getWorkoutDetails } from "@/lib/queries";
+import {
+  getActiveWorkout,
+  getAllExercises,
+  getLastPerformances,
+  getWorkoutDates,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function LogPage() {
-  const [active, exercises, details] = await Promise.all([
-    getActiveWorkout(),
-    getAllExercises(),
-    getWorkoutDetails(),
-  ]);
+  const active = await getActiveWorkout();
 
   if (active) {
-    return <WorkoutEditor workout={active} exercises={exercises} />;
+    const [exercises, lastByExercise] = await Promise.all([
+      getAllExercises(),
+      getLastPerformances(
+        active.id,
+        active.exercises.map((e) => e.exerciseId),
+      ),
+    ]);
+    return (
+      <WorkoutEditor
+        workout={active}
+        exercises={exercises}
+        lastByExercise={lastByExercise}
+      />
+    );
   }
 
-  return <StartWorkout canDuplicate={details.length > 0} />;
+  const dates = await getWorkoutDates();
+  return <StartWorkout canDuplicate={dates.length > 0} />;
 }

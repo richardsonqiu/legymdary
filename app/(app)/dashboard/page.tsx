@@ -1,107 +1,53 @@
 import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
+import { DashboardHeading } from "@/components/DashboardHeading";
+import { StreakCard } from "@/components/StreakCard";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
   DumbbellIcon,
-  FlameIcon,
   RulerIcon,
   ScaleIcon,
   SparkIcon,
   TrophyIcon,
 } from "@/components/icons";
-import { buttonClass, Card, EmptyState, SectionTitle } from "@/components/ui";
+import { Card, EmptyState, SectionTitle } from "@/components/ui";
 import {
+  getActiveWorkout,
+  getLastFinishedWorkout,
   getLatestBodyStat,
   getPRsThisWeek,
-  getWorkoutDetails,
+  getWorkoutDates,
 } from "@/lib/queries";
 import { getSessionUser } from "@/lib/session";
-import {
-  calcStreaks,
-  formatMedium,
-  formatPretty,
-  formatShort,
-  kg,
-  todayStr,
-} from "@/lib/utils";
+import { formatMedium, formatShort, kg } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-}
-
 export default async function DashboardPage() {
-  const [details, latestStat, prsThisWeek, user] = await Promise.all([
-    getWorkoutDetails(),
-    getLatestBodyStat(),
-    getPRsThisWeek(),
-    getSessionUser(),
-  ]);
+  const [workoutDates, active, lastFinished, latestStat, prsThisWeek, user] =
+    await Promise.all([
+      getWorkoutDates(),
+      getActiveWorkout(),
+      getLastFinishedWorkout(),
+      getLatestBodyStat(),
+      getPRsThisWeek(),
+      getSessionUser(),
+    ]);
   const firstName = user?.name?.split(" ")[0] ?? null;
-
-  const workoutDays = details
-    .filter((w) => w.exercises.some((e) => e.sets.length > 0))
-    .map((w) => w.date);
-  const { current, longest } = calcStreaks(workoutDays);
-  const active = details.find((w) => !w.finished) ?? null;
-  const lastFinished = details.find((w) => w.finished) ?? null;
 
   return (
     <div className="space-y-6">
       <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-500">
-            LeGYMdary
-          </p>
-          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight">
-            {greeting()}
-            {firstName ? `, ${firstName}` : ""}
-          </h1>
-          <p className="text-sm text-zinc-400">{formatPretty(todayStr())}</p>
-        </div>
+        <DashboardHeading firstName={firstName} />
         <AccountMenu name={user?.name} email={user?.email} />
       </header>
 
-      {/* Streak + primary action */}
-      <Card className="space-y-4 border-zinc-700/70 bg-gradient-to-b from-zinc-900 to-zinc-900/40">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 text-sm text-zinc-400">
-              <FlameIcon className="h-4 w-4" />
-              Current streak
-            </div>
-            <div className="mt-1 text-5xl font-bold leading-none tabular-nums">
-              {current}
-              <span className="ml-1.5 text-xl font-medium text-zinc-500">
-                {current === 1 ? "day" : "days"}
-              </span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-[11px] uppercase tracking-wide text-zinc-500">
-              Longest
-            </div>
-            <div className="text-lg font-semibold tabular-nums text-zinc-300">
-              {longest}
-            </div>
-          </div>
-        </div>
-
-        <Link href="/log" className={buttonClass("primary", "lg", "w-full")}>
-          <DumbbellIcon className="h-5 w-5" />
-          {active ? "Continue workout" : "Start workout"}
-        </Link>
-        {active && (
-          <p className="-mt-1 text-center text-xs text-zinc-500">
-            {active.name} · {active.exerciseCount} exercise
-            {active.exerciseCount === 1 ? "" : "s"} in progress
-          </p>
-        )}
-      </Card>
+      <StreakCard
+        workoutDates={workoutDates}
+        active={
+          active ? { name: active.name, count: active.exerciseCount } : null
+        }
+      />
 
       {/* Last workout */}
       <section>

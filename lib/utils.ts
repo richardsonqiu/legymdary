@@ -40,6 +40,7 @@ export const EQUIPMENT = [
 /** Estimated one-rep max via the Epley formula: weight × (1 + reps / 30). */
 export function estimate1RM(weight: number, reps: number): number {
   if (!weight || reps <= 0) return 0;
+  if (reps === 1) return weight; // a single-rep set already is the 1RM
   return weight * (1 + reps / 30);
 }
 
@@ -99,7 +100,10 @@ export function formatShort(s: string): string {
 /* Streaks — consecutive calendar days with at least one workout       */
 /* ------------------------------------------------------------------ */
 
-export function calcStreaks(dateStrings: string[]): {
+export function calcStreaks(
+  dateStrings: string[],
+  today: string = todayStr(),
+): {
   current: number;
   longest: number;
 } {
@@ -118,7 +122,6 @@ export function calcStreaks(dateStrings: string[]): {
   }
 
   const present = new Set(days);
-  const today = todayStr();
   // A workout today, or yesterday (grace so today's rest day doesn't reset it).
   let cursor = today;
   if (!present.has(cursor)) {
