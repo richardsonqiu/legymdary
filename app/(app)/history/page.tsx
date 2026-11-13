@@ -2,12 +2,19 @@ import { ConsistencyHeatmap } from "@/components/ConsistencyHeatmap";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
 import { CalendarIcon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, SectionTitle } from "@/components/ui";
-import { getWorkoutDetails } from "@/lib/queries";
+import { GarminActivityList } from "@/components/garmin/GarminActivityList";
+import { getGarminActivities, getGarminStatus, getWorkoutDetails } from "@/lib/queries";
+import { addDaysStr, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function HistoryPage() {
-  const workouts = await getWorkoutDetails();
+  const today = todayStr();
+  const [workouts, garmin, activities] = await Promise.all([
+    getWorkoutDetails(),
+    getGarminStatus(),
+    getGarminActivities(addDaysStr(today, -30), addDaysStr(today, 1)),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -28,6 +35,12 @@ export default async function HistoryPage() {
           </section>
           <HistoryCalendar workouts={workouts} />
         </>
+      )}
+      {garmin && (
+        <section>
+          <SectionTitle>Garmin activities · last 30 days</SectionTitle>
+          <GarminActivityList activities={activities} />
+        </section>
       )}
     </div>
   );

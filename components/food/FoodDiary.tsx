@@ -24,6 +24,7 @@ import {
   mealTypeForHour,
   sumMacros,
   type DailyTargets,
+  withBonus,
   type MealItem,
   type MealType,
 } from "@/lib/nutrition";
@@ -51,6 +52,7 @@ export function FoodDiary({
   requestedDate,
   targets,
   planMissing,
+  garminByDate,
 }: {
   meals: Meal[];
   /** Distinct recent meals for one-tap "eat again" (no AI call). */
@@ -61,6 +63,8 @@ export function FoodDiary({
   requestedDate: string | null;
   targets: DailyTargets;
   planMissing: boolean;
+  /** Garmin burn + activity bonus per date (null when Garmin isn't connected). */
+  garminByDate?: Record<string, { burned: number | null; bonus: number }> | null;
 }) {
   const router = useRouter();
   const mounted = useMounted();
@@ -203,7 +207,30 @@ export function FoodDiary({
       </div>
 
       <Card>
-        <MacroSummary totals={totals} targets={targets} />
+        <MacroSummary totals={totals} targets={withBonus(targets, garminByDate?.[date]?.bonus)} />
+        {garminByDate && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
+            <span>
+              Garmin burn{isToday ? " so far" : ""}:{" "}
+              <b className="tabular-nums text-zinc-200">
+                {garminByDate[date]?.burned != null
+                  ? `${Math.round(garminByDate[date]!.burned!).toLocaleString("en-US")} kcal`
+                  : "—"}
+              </b>
+              {garminByDate[date]?.burned != null && (
+                <span className="text-zinc-500">
+                  {" "}· net {totals.calories - garminByDate[date]!.burned! > 0 ? "+" : ""}
+                  {Math.round(totals.calories - garminByDate[date]!.burned!).toLocaleString("en-US")}
+                </span>
+              )}
+            </span>
+            {!!garminByDate[date]?.bonus && (
+              <span className="text-emerald-300/80">
+                +{garminByDate[date]!.bonus} kcal activity bonus
+              </span>
+            )}
+          </div>
+        )}
         {planMissing && (
           <Link
             href="/plan"

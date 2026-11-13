@@ -16,6 +16,9 @@ import {
   aiUsage,
   bodyStats,
   exercises,
+  garminActivities,
+  garminConnections,
+  garminDaily,
   goals,
   meals,
   templateExercises,
@@ -25,6 +28,8 @@ import {
   workouts,
   type BodyStat,
   type Exercise,
+  type GarminActivity,
+  type GarminDaily,
   type Goals,
   type Meal,
 } from "@/db/schema";
@@ -742,4 +747,53 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
     weightNow: latest?.weight ?? null,
     weightWeekAgo: weekAgo?.weight ?? null,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Garmin                                                              */
+/* ------------------------------------------------------------------ */
+
+export type GarminStatus = {
+  status: string;
+  lastError: string | null;
+  lastSyncAt: Date | null;
+  keyHint: string;
+  adjustForActivity: boolean;
+  connectedAt: Date;
+};
+
+/** Connection status without any secrets. */
+export async function getGarminStatus(): Promise<GarminStatus | null> {
+  const userId = await requireUserId();
+  const [row] = await db
+    .select({
+      status: garminConnections.status,
+      lastError: garminConnections.lastError,
+      lastSyncAt: garminConnections.lastSyncAt,
+      keyHint: garminConnections.keyHint,
+      adjustForActivity: garminConnections.adjustForActivity,
+      connectedAt: garminConnections.connectedAt,
+    })
+    .from(garminConnections)
+    .where(eq(garminConnections.userId, userId))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getGarminDaily(from: string, to: string): Promise<GarminDaily[]> {
+  const userId = await requireUserId();
+  return db
+    .select()
+    .from(garminDaily)
+    .where(and(eq(garminDaily.userId, userId), between(garminDaily.date, from, to)))
+    .orderBy(asc(garminDaily.date));
+}
+
+export async function getGarminActivities(from: string, to: string): Promise<GarminActivity[]> {
+  const userId = await requireUserId();
+  return db
+    .select()
+    .from(garminActivities)
+    .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, from, to)))
+    .orderBy(desc(garminActivities.date), desc(garminActivities.startTimeLocal));
 }
