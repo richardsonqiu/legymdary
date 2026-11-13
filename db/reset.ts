@@ -1,6 +1,15 @@
 import "dotenv/config";
 import { db } from "./index";
-import { bodyStats, meals, sets, workoutExercises, workouts } from "./schema";
+import {
+  aiUsage,
+  bodyStats,
+  meals,
+  sets,
+  templateExercises,
+  templates,
+  workoutExercises,
+  workouts,
+} from "./schema";
 
 /**
  * Clears all logged data (workouts, sets, meals, body stats) but keeps the exercise
@@ -12,6 +21,9 @@ async function main() {
   await db.delete(workouts);
   await db.delete(bodyStats);
   await db.delete(meals);
+  await db.delete(templateExercises);
+  await db.delete(templates);
+  await db.delete(aiUsage);
   console.log("Cleared all workouts, meals and body stats. Exercise library kept.");
   process.exit(0);
 }

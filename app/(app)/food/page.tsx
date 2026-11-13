@@ -3,7 +3,13 @@ import { FoodDiary } from "@/components/food/FoodDiary";
 import { TargetIcon } from "@/components/icons";
 import { PageHeader, buttonClass } from "@/components/ui";
 import { computePlan, planInputFrom, targetsFromPlan } from "@/lib/nutrition";
-import { getGoals, getLatestBodyValues, getMeals } from "@/lib/queries";
+import {
+  getAiUsageSince,
+  getGoals,
+  getLatestBodyValues,
+  getMeals,
+  getRecentMeals,
+} from "@/lib/queries";
 import { addDaysStr, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +27,14 @@ export default async function FoodPage({
   // Without ?date= the client picks "today" in its own timezone, which is at
   // most a day away from the server's — so load a 3-day window around it.
   const center = requested ?? todayStr();
-  const [meals, goals, body] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const [meals, goals, body, recentMeals, aiSpend] = await Promise.all([
     getMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getGoals(),
     getLatestBodyValues(),
+    getRecentMeals(8),
+    getAiUsageSince(monthStart),
   ]);
   const plan = computePlan(planInputFrom(goals, body));
 
@@ -41,6 +51,8 @@ export default async function FoodPage({
       />
       <FoodDiary
         meals={meals}
+        recentMeals={recentMeals}
+        aiSpend={{ calls: aiSpend.calls, costUsd: aiSpend.costUsd }}
         requestedDate={requested}
         targets={targetsFromPlan(plan)}
         planMissing={plan.calorieTarget == null}

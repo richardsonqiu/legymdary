@@ -17,7 +17,7 @@ import {
 } from "@/components/icons";
 import { Button, Card, EmptyState, SectionTitle } from "@/components/ui";
 import type { Meal } from "@/db/schema";
-import { deleteMeal } from "@/lib/actions";
+import { deleteMeal, relogMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
 import {
   MEAL_TYPES,
@@ -46,11 +46,17 @@ function parseItems(json: string | null): MealItem[] {
 
 export function FoodDiary({
   meals,
+  recentMeals,
+  aiSpend,
   requestedDate,
   targets,
   planMissing,
 }: {
   meals: Meal[];
+  /** Distinct recent meals for one-tap "eat again" (no AI call). */
+  recentMeals: Meal[];
+  /** AI photo analyses this month and their estimated cost. */
+  aiSpend: { calls: number; costUsd: number };
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
   targets: DailyTargets;
@@ -67,6 +73,8 @@ export function FoodDiary({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [deleting, startDelete] = useTransition();
+  const [relogging, startRelog] = useTransition();
+  const [relogId, setRelogId] = useState<number | null>(null);
 
   if (!date) {
     return <div className="h-64 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/50" />;
@@ -146,6 +154,15 @@ export function FoodDiary({
     if (!confirm(`Delete “${m.name}”?`)) return;
     startDelete(async () => {
       await deleteMeal(m.id);
+      router.refresh();
+    });
+  }
+
+  function eatAgain(m: Meal) {
+    if (!date) return;
+    setRelogId(m.id);
+    startRelog(async () => {
+      await relogMeal({ mealId: m.id, date, mealType: defaultMealType() });
       router.refresh();
     });
   }
@@ -235,6 +252,38 @@ export function FoodDiary({
         {photoError && <p className="text-center text-sm text-amber-300">{photoError}</p>}
       </section>
 
+      {/* Eat again — instant re-log, no AI cost */}
+      {recentMeals.length > 0 && (
+        <section>
+          <SectionTitle>Eat again</SectionTitle>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+            {recentMeals.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => eatAgain(m)}
+                disabled={relogging}
+                className="flex w-36 shrink-0 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-2 text-left transition-colors hover:bg-zinc-800/60 disabled:opacity-60"
+              >
+                {m.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.photo} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-800/70 text-zinc-500">
+                    <ForkIcon className="h-4 w-4" />
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-medium">{m.name}</span>
+                  <span className="block text-[11px] tabular-nums text-zinc-500">
+                    {relogging && relogId === m.id ? "Adding…" : `+ ${Math.round(m.calories)} kcal`}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Meals */}
       <section>
         <SectionTitle>Meals</SectionTitle>
@@ -273,6 +322,14 @@ export function FoodDiary({
           </div>
         )}
       </section>
+
+      {aiSpend.calls > 0 && (
+        <p className="text-center text-[11px] text-zinc-600">
+          AI this month: {aiSpend.calls} photo{" "}
+          {aiSpend.calls === 1 ? "analysis" : "analyses"} · ≈ $
+          {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
+        </p>
+      )}
 
       {composer && (
         <MealComposer

@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ExercisePicker } from "@/components/logger/ExercisePicker";
+import { RestTimer, type RestTimerHandle } from "@/components/logger/RestTimer";
 import { PlusIcon, TrashIcon, TrophyIcon, XIcon } from "@/components/icons";
 import { Button, Card, EmptyState, Tag } from "@/components/ui";
 import type { Exercise } from "@/db/schema";
@@ -14,6 +15,7 @@ import {
   finishWorkout,
   logSet,
   removeWorkoutExercise,
+  saveWorkoutAsTemplate,
   updateWorkout,
 } from "@/lib/actions";
 import type {
@@ -43,6 +45,7 @@ export function WorkoutEditor({
   );
   const [name, setName] = useState(workout.name);
   const [date, setDate] = useState(workout.date);
+  const timer = useRef<RestTimerHandle>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -143,6 +146,7 @@ export function WorkoutEditor({
           });
         }
         updateInput(ex, { warmup: false });
+        timer.current?.start();
         router.refresh();
       } catch (e) {
         setToast({ text: (e as Error).message });
@@ -163,6 +167,15 @@ export function WorkoutEditor({
       router.push("/dashboard");
     });
   }
+  function saveTemplate() {
+    const tplName = prompt("Save as template — name:", workout.name);
+    if (!tplName?.trim()) return;
+    start(async () => {
+      const res = await saveWorkoutAsTemplate(workout.id, tplName);
+      setToast({ text: "error" in res ? res.error : `Saved template “${tplName.trim()}”` });
+    });
+  }
+
   function discard() {
     if (!confirm("Discard this workout and all its sets?")) return;
     start(async () => {
@@ -172,7 +185,7 @@ export function WorkoutEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-16">
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4">
           <div
@@ -385,16 +398,22 @@ export function WorkoutEditor({
         >
           Finish workout
         </Button>
-        <Button
-          variant="danger"
-          size="md"
-          className="w-full"
-          onClick={discard}
-          disabled={pending}
-        >
-          Discard workout
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={saveTemplate}
+            disabled={pending || workout.exercises.length === 0}
+          >
+            Save as template
+          </Button>
+          <Button variant="danger" size="md" onClick={discard} disabled={pending}>
+            Discard workout
+          </Button>
+        </div>
       </div>
+
+      <RestTimer ref={timer} />
 
       {pickerOpen && (
         <ExercisePicker

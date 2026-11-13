@@ -4,10 +4,13 @@ import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
+  aiUsage,
   bodyStats,
   exercises,
   goals,
   meals,
+  templateExercises,
+  templates,
   sets,
   workoutExercises,
   workouts,
@@ -384,15 +387,32 @@ export async function analyzeMeal(input: {
   image: string;
   hint?: string | null;
 }): Promise<MealAnalysis | { error: string }> {
-  await requireUserId();
+  const userId = await requireUserId();
   const m = IMAGE_DATA_URL_RE.exec(input.image ?? "");
   if (!m) return { error: "Unsupported image. Please use a JPEG or PNG photo." };
   if (m[2].length > 5_000_000) return { error: "That photo is too large." };
-  return analyzeMealImage({
+  const res = await analyzeMealImage({
     base64: m[2],
     mediaType: m[1] as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
     hint: input.hint?.slice(0, 500),
   });
+  if (res.usage.length) {
+    try {
+      await db.insert(aiUsage).values(
+        res.usage.map((u) => ({
+          userId,
+          feature: "meal_photo",
+          model: u.model,
+          inputTokens: u.inputTokens,
+          outputTokens: u.outputTokens,
+          costUsd: u.costUsd,
+        })),
+      );
+    } catch (err) {
+      console.error("Failed to record AI usage:", err); // never block the user
+    }
+  }
+  return res.ok ? res.analysis : { error: res.error };
 }
 
 function cleanItems(items: unknown): MealItem[] {
@@ -484,6 +504,40 @@ export async function updateMeal(id: number, input: MealInput): Promise<void> {
   revalidateAll();
 }
 
+/** "Eat again": copies an earlier meal (incl. photo) onto another day — no AI call. */
+export async function relogMeal(input: {
+  mealId: number;
+  date: string;
+  mealType?: string;
+}): Promise<void> {
+  const userId = await requireUserId();
+  if (!DATE_RE.test(input.date ?? "")) throw new Error("Invalid date.");
+  const [src] = await db
+    .select()
+    .from(meals)
+    .where(and(eq(meals.id, input.mealId), eq(meals.userId, userId)))
+    .limit(1);
+  if (!src) throw new Error("Meal not found.");
+  const mealType = (MEAL_TYPES as readonly string[]).includes(input.mealType ?? "")
+    ? input.mealType!
+    : src.mealType;
+  await db.insert(meals).values({
+    userId,
+    date: input.date,
+    mealType,
+    name: src.name,
+    calories: src.calories,
+    protein: src.protein,
+    carbs: src.carbs,
+    fat: src.fat,
+    items: src.items,
+    notes: src.notes,
+    photo: src.photo,
+    aiEstimated: src.aiEstimated,
+  });
+  revalidateAll();
+}
+
 export async function deleteMeal(id: number): Promise<void> {
   const userId = await requireUserId();
   await db.delete(meals).where(and(eq(meals.id, id), eq(meals.userId, userId)));
@@ -547,4 +601,91 @@ export async function saveGoals(input: {
     .onConflictDoUpdate({ target: goals.userId, set: vals });
   revalidateAll();
   return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* Workout templates (routines)                                        */
+/* ------------------------------------------------------------------ */
+
+/** Saves a workout's exercise list (and working-set counts) as a template. */
+export async function saveWorkoutAsTemplate(
+  workoutId: number,
+  name: string,
+): Promise<{ id: number } | { error: string }> {
+  const userId = await requireUserId();
+  await assertOwnsWorkout(userId, workoutId);
+  const clean = name?.trim().slice(0, 80);
+  if (!clean) return { error: "Give the template a name." };
+
+  const wes = await db.query.workoutExercises.findMany({
+    where: eq(workoutExercises.workoutId, workoutId),
+    orderBy: (f, ops) => ops.asc(f.position),
+    with: { sets: true },
+  });
+  if (!wes.length) return { error: "Add at least one exercise first." };
+
+  const [row] = await db
+    .insert(templates)
+    .values({ userId, name: clean })
+    .returning({ id: templates.id });
+  await db.insert(templateExercises).values(
+    wes.map((we, i) => {
+      const working = we.sets.filter((s) => !s.isWarmup).length;
+      return {
+        templateId: row.id,
+        exerciseId: we.exerciseId,
+        position: i,
+        targetSets: working || null,
+      };
+    }),
+  );
+  revalidateAll();
+  return { id: row.id };
+}
+
+export async function startWorkoutFromTemplate(
+  templateId: number,
+  date: string,
+): Promise<number> {
+  const userId = await requireUserId();
+  const [tpl] = await db
+    .select()
+    .from(templates)
+    .where(and(eq(templates.id, templateId), eq(templates.userId, userId)))
+    .limit(1);
+  if (!tpl) throw new Error("Template not found.");
+  const items = await db
+    .select()
+    .from(templateExercises)
+    .where(eq(templateExercises.templateId, templateId))
+    .orderBy(templateExercises.position);
+
+  const [row] = await db
+    .insert(workouts)
+    .values({ userId, name: tpl.name, date: DATE_RE.test(date) ? date : todayStr() })
+    .returning({ id: workouts.id });
+  if (items.length) {
+    await db.insert(workoutExercises).values(
+      items.map((it, i) => ({ workoutId: row.id, exerciseId: it.exerciseId, position: i })),
+    );
+  }
+  await db
+    .update(templates)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(templates.id, templateId));
+  revalidateAll();
+  return row.id;
+}
+
+export async function deleteTemplate(id: number): Promise<void> {
+  const userId = await requireUserId();
+  const [tpl] = await db
+    .select({ id: templates.id })
+    .from(templates)
+    .where(and(eq(templates.id, id), eq(templates.userId, userId)))
+    .limit(1);
+  if (!tpl) return;
+  await db.delete(templateExercises).where(eq(templateExercises.templateId, id));
+  await db.delete(templates).where(eq(templates.id, id));
+  revalidateAll();
 }

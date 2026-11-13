@@ -115,12 +115,15 @@ logged data (keeps the exercise library).
 | `AUTH_GOOGLE_ID`       | prod     | Google OAuth client ID                                 |
 | `AUTH_GOOGLE_SECRET`   | prod     | Google OAuth client secret                             |
 | `ANTHROPIC_API_KEY`    | optional | Enables AI calorie estimates from meal photos          |
+| `MEAL_AI_MODEL`        | optional | Primary photo model (default `claude-haiku-5-5`)       |
+| `MEAL_AI_BACKUP_MODEL` | optional | Retry model (default `claude-sonnet-5-5`; `""` = off)  |
+| `MEAL_AI_EFFORT`       | optional | `low` (default), `medium` or `high`                    |
 
 ## Project structure
 
 ```
-app/            Routes: dashboard, log, history, stats, prs, exercises, login
-                + api/auth (Auth.js)
+app/            Routes: dashboard, log, food, plan, history, stats, prs,
+                exercises, login + api/auth (Auth.js), api/export (CSV)
 auth.ts         Auth.js instance (Drizzle adapter, Google + dev provider)
 auth.config.ts  Edge-safe auth config (used by the proxy gate)
 proxy.ts        Route gate — redirects signed-out users to /login
@@ -132,9 +135,16 @@ lib/            Queries (reads), actions (mutations), session helper, utils
 ## Food log & goal plan
 
 - **Food tab** — tap *Snap a meal* to take a photo (or pick one / enter it
-  manually). The photo is downscaled in the browser and sent to Claude, which
-  returns the items it sees with estimated portions, calories and macros. You
-  can edit every item before saving. A small thumbnail is stored with the meal.
+  manually). The photo is downscaled in the browser (≤1024px) and sent to
+  Claude Haiku 5.5, which returns the items it sees with estimated portions,
+  calories and macros. If Haiku refuses or fails, the request is retried once
+  on Claude Sonnet 5.5. You can edit every item before saving. A small
+  thumbnail is stored with the meal. **Eat again** re-logs a recent meal in
+  one tap with no AI call.
+- **AI cost** — every call's tokens and estimated cost are stored (`ai_usage`)
+  and logged as `[meal-ai] model=… in=… out=… cost=$…`; the Food tab shows
+  this month's total. Rough cost: ~$0.0005 per photo on Haiku 5.5, ~$0.01 on
+  Sonnet 5.5.
 - **Plan** — enter sex, birth year, height, activity level and a target weight
   and/or target body-fat %. Current weight and body fat come from your latest
   Stats entries. The plan computes BMR (Katch-McArdle when body fat is known,
@@ -143,6 +153,16 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   capped, with a safe calorie floor), macro targets and an ETA. A body-fat goal
   is turned into a target weight assuming you keep your lean mass. It also
   compares your average intake and 4-week weight trend against the plan.
+
+## Training extras
+
+- **Rest timer** — starts automatically when you log a set; pick 1:00–3:00,
+  ±15s, vibrates and beeps when done, survives a page refresh.
+- **Templates** — "Save as template" during a workout stores its exercises and
+  working-set counts; start a new session from a template on the Log tab.
+- **Weekly check-in** (dashboard) — workouts, sets and volume vs last week,
+  average calories/protein and days on target, and 7-day weight change.
+- **CSV export** — account menu → export workouts, food log or body stats.
 
 ## Notes
 

@@ -1,6 +1,6 @@
 /**
  * Client-side image helpers: phone photos are several MB, so we downscale
- * before uploading. The AI gets a ~1280px JPEG; the DB keeps a small thumbnail.
+ * before uploading. The AI gets a ≤1024px JPEG (~1,000 image tokens); the DB keeps a small thumbnail.
  */
 
 async function decode(file: Blob): Promise<ImageBitmap | HTMLImageElement> {
@@ -47,7 +47,7 @@ export async function prepareMealPhoto(
   const img = await decode(file);
   try {
     return {
-      analysis: draw(img, 1280, 0.82),
+      analysis: draw(img, 1024, 0.8),
       thumb: draw(img, 360, 0.7),
     };
   } finally {

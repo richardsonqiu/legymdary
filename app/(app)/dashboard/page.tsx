@@ -3,6 +3,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreakCard } from "@/components/StreakCard";
 import { TodayFoodCard } from "@/components/food/TodayFoodCard";
+import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
   DumbbellIcon,
@@ -21,6 +22,7 @@ import {
   getLatestBodyStat,
   getLatestBodyValues,
   getPRsThisWeek,
+  getWeeklyCheckin,
   getWorkoutDates,
 } from "@/lib/queries";
 import { getSessionUser } from "@/lib/session";
@@ -40,6 +42,7 @@ export default async function DashboardPage() {
     foodTotals,
     goals,
     bodyValues,
+    weekly,
   ] = await Promise.all([
     getWorkoutDates(),
     getActiveWorkout(),
@@ -50,6 +53,7 @@ export default async function DashboardPage() {
     getDailyTotals(addDaysStr(serverToday, -1), addDaysStr(serverToday, 1)),
     getGoals(),
     getLatestBodyValues(),
+    getWeeklyCheckin(),
   ]);
   const foodTargets = targetsFromPlan(computePlan(planInputFrom(goals, bodyValues)));
   const firstName = user?.name?.split(" ")[0] ?? null;
@@ -80,6 +84,12 @@ export default async function DashboardPage() {
           Today&apos;s food
         </SectionTitle>
         <TodayFoodCard totals={foodTotals} targets={foodTargets} />
+      </section>
+
+      {/* Weekly check-in */}
+      <section>
+        <SectionTitle>This week</SectionTitle>
+        <WeeklyCheckin data={weekly} targets={foodTargets} />
       </section>
 
       {/* Last workout */}
