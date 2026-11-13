@@ -15,6 +15,20 @@
       "when": 1782175045855,
       "tag": "0001_heavy_master_mold",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794569954561,
+      "tag": "0002_blue_prism",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794570615330,
+      "tag": "0003_food_ai_usage_templates",
+      "breakpoints": true
     }
   ]
 }

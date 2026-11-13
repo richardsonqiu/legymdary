@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreakCard } from "@/components/StreakCard";
+import { TodayFoodCard } from "@/components/food/TodayFoodCard";
+import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
   DumbbellIcon,
@@ -11,28 +13,49 @@ import {
   TrophyIcon,
 } from "@/components/icons";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
+import { computePlan, planInputFrom, targetsFromPlan } from "@/lib/nutrition";
 import {
   getActiveWorkout,
+  getDailyTotals,
+  getGoals,
   getLastFinishedWorkout,
   getLatestBodyStat,
+  getLatestBodyValues,
   getPRsThisWeek,
+  getWeeklyCheckin,
   getWorkoutDates,
 } from "@/lib/queries";
 import { getSessionUser } from "@/lib/session";
-import { formatMedium, formatShort, kg } from "@/lib/utils";
+import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [workoutDates, active, lastFinished, latestStat, prsThisWeek, user] =
-    await Promise.all([
-      getWorkoutDates(),
-      getActiveWorkout(),
-      getLastFinishedWorkout(),
-      getLatestBodyStat(),
-      getPRsThisWeek(),
-      getSessionUser(),
-    ]);
+  const serverToday = todayStr();
+  const [
+    workoutDates,
+    active,
+    lastFinished,
+    latestStat,
+    prsThisWeek,
+    user,
+    foodTotals,
+    goals,
+    bodyValues,
+    weekly,
+  ] = await Promise.all([
+    getWorkoutDates(),
+    getActiveWorkout(),
+    getLastFinishedWorkout(),
+    getLatestBodyStat(),
+    getPRsThisWeek(),
+    getSessionUser(),
+    getDailyTotals(addDaysStr(serverToday, -1), addDaysStr(serverToday, 1)),
+    getGoals(),
+    getLatestBodyValues(),
+    getWeeklyCheckin(),
+  ]);
+  const foodTargets = targetsFromPlan(computePlan(planInputFrom(goals, bodyValues)));
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
@@ -48,6 +71,26 @@ export default async function DashboardPage() {
           active ? { name: active.name, count: active.exerciseCount } : null
         }
       />
+
+      {/* Today's food */}
+      <section>
+        <SectionTitle
+          action={
+            <Link href="/plan" className="text-xs text-zinc-400">
+              Plan →
+            </Link>
+          }
+        >
+          Today&apos;s food
+        </SectionTitle>
+        <TodayFoodCard totals={foodTotals} targets={foodTargets} />
+      </section>
+
+      {/* Weekly check-in */}
+      <section>
+        <SectionTitle>This week</SectionTitle>
+        <WeeklyCheckin data={weekly} targets={foodTargets} />
+      </section>
 
       {/* Last workout */}
       <section>

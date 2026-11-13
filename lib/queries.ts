@@ -1,7 +1,9 @@
 import {
   and,
   asc,
+  between,
   desc,
+  gte,
   eq,
   inArray,
   isNotNull,
@@ -11,13 +13,20 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  aiUsage,
   bodyStats,
   exercises,
+  goals,
+  meals,
+  templateExercises,
+  templates,
   sets,
   workoutExercises,
   workouts,
   type BodyStat,
   type Exercise,
+  type Goals,
+  type Meal,
 } from "@/db/schema";
 import { requireUserId } from "@/lib/session";
 import {
@@ -460,4 +469,277 @@ export async function getLatestBodyStat(): Promise<BodyStat | null> {
     .orderBy(desc(bodyStats.date))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Food log + goals                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Meals (with thumbnails) for an inclusive range of calendar days. */
+export async function getMeals(from: string, to: string): Promise<Meal[]> {
+  const userId = await requireUserId();
+  return db
+    .select()
+    .from(meals)
+    .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
+    .orderBy(asc(meals.date), asc(meals.createdAt));
+}
+
+export type DayTotals = {
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  count: number;
+};
+
+/** Per-day calorie/macro totals (no photos) — light enough for dashboards. */
+export async function getDailyTotals(
+  from: string,
+  to: string,
+): Promise<DayTotals[]> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({
+      date: meals.date,
+      calories: meals.calories,
+      protein: meals.protein,
+      carbs: meals.carbs,
+      fat: meals.fat,
+    })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), between(meals.date, from, to)));
+  const byDate = new Map<string, DayTotals>();
+  for (const r of rows) {
+    const d =
+      byDate.get(r.date) ??
+      { date: r.date, calories: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
+    d.calories += r.calories;
+    d.protein += r.protein;
+    d.carbs += r.carbs;
+    d.fat += r.fat;
+    d.count += 1;
+    byDate.set(r.date, d);
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function getGoals(): Promise<Goals | null> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(eq(goals.userId, userId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Latest known weight and body fat, each from its most recent entry. */
+export async function getLatestBodyValues(): Promise<{
+  weight: number | null;
+  weightDate: string | null;
+  bodyFat: number | null;
+  bodyFatDate: string | null;
+}> {
+  const userId = await requireUserId();
+  const [w] = await db
+    .select({ v: bodyStats.weight, date: bodyStats.date })
+    .from(bodyStats)
+    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight)))
+    .orderBy(desc(bodyStats.date))
+    .limit(1);
+  const [bf] = await db
+    .select({ v: bodyStats.bodyFat, date: bodyStats.date })
+    .from(bodyStats)
+    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.bodyFat)))
+    .orderBy(desc(bodyStats.date))
+    .limit(1);
+  return {
+    weight: w?.v ?? null,
+    weightDate: w?.date ?? null,
+    bodyFat: bf?.v ?? null,
+    bodyFatDate: bf?.date ?? null,
+  };
+}
+
+/** Most recent distinct meals (by name) for one-tap "eat again". */
+export async function getRecentMeals(limit = 6): Promise<Meal[]> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select()
+    .from(meals)
+    .where(eq(meals.userId, userId))
+    .orderBy(desc(meals.createdAt))
+    .limit(60);
+  const seen = new Set<string>();
+  const out: Meal[] = [];
+  for (const r of rows) {
+    const key = r.name.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export type AiUsageSummary = {
+  calls: number;
+  costUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+  byModel: { model: string; calls: number; costUsd: number }[];
+};
+
+/** AI calls + estimated spend since a given instant. */
+export async function getAiUsageSince(since: Date): Promise<AiUsageSummary> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select()
+    .from(aiUsage)
+    .where(and(eq(aiUsage.userId, userId), gte(aiUsage.createdAt, since)));
+  const byModel = new Map<string, { model: string; calls: number; costUsd: number }>();
+  let costUsd = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (const r of rows) {
+    costUsd += r.costUsd;
+    inputTokens += r.inputTokens;
+    outputTokens += r.outputTokens;
+    const m = byModel.get(r.model) ?? { model: r.model, calls: 0, costUsd: 0 };
+    m.calls += 1;
+    m.costUsd += r.costUsd;
+    byModel.set(r.model, m);
+  }
+  return {
+    calls: rows.length,
+    costUsd,
+    inputTokens,
+    outputTokens,
+    byModel: [...byModel.values()].sort((a, b) => b.calls - a.calls),
+  };
+}
+
+export type TemplateSummary = {
+  id: number;
+  name: string;
+  lastUsedAt: Date | null;
+  exercises: { name: string; targetSets: number | null }[];
+};
+
+export async function getTemplates(): Promise<TemplateSummary[]> {
+  const userId = await requireUserId();
+  const tpls = await db
+    .select()
+    .from(templates)
+    .where(eq(templates.userId, userId))
+    .orderBy(desc(templates.lastUsedAt), desc(templates.createdAt));
+  if (!tpls.length) return [];
+  const items = await db
+    .select({
+      templateId: templateExercises.templateId,
+      position: templateExercises.position,
+      targetSets: templateExercises.targetSets,
+      name: exercises.name,
+    })
+    .from(templateExercises)
+    .innerJoin(exercises, eq(templateExercises.exerciseId, exercises.id))
+    .where(inArray(templateExercises.templateId, tpls.map((t) => t.id)))
+    .orderBy(asc(templateExercises.position));
+  return tpls.map((t) => ({
+    id: t.id,
+    name: t.name,
+    lastUsedAt: t.lastUsedAt,
+    exercises: items
+      .filter((i) => i.templateId === t.id)
+      .map((i) => ({ name: i.name, targetSets: i.targetSets })),
+  }));
+}
+
+export type WeekStats = {
+  workouts: number;
+  sets: number;
+  volume: number;
+  daysLogged: number;
+  avgCalories: number | null;
+  avgProtein: number | null;
+};
+
+export type WeeklyCheckin = {
+  weekStart: string;
+  thisWeek: WeekStats;
+  lastWeek: WeekStats;
+  /** Daily totals for this week, to count target hits against the plan. */
+  days: DayTotals[];
+  weightNow: number | null;
+  weightWeekAgo: number | null;
+};
+
+/** This week (Mon→today) vs the full previous week. */
+export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
+  const userId = await requireUserId();
+  const weekStart = startOfWeekStr(todayStr());
+  const lastStart = addDaysStr(weekStart, -7);
+  const end = addDaysStr(weekStart, 6);
+
+  const [setRows, totals, weights] = await Promise.all([
+    db
+      .select({
+        date: workouts.date,
+        workoutId: workouts.id,
+        reps: sets.reps,
+        weight: sets.weight,
+        isWarmup: sets.isWarmup,
+      })
+      .from(sets)
+      .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
+      .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
+      .where(and(eq(workouts.userId, userId), between(workouts.date, lastStart, end))),
+    getDailyTotals(lastStart, end),
+    db
+      .select({ date: bodyStats.date, weight: bodyStats.weight })
+      .from(bodyStats)
+      .where(
+        and(
+          eq(bodyStats.userId, userId),
+          isNotNull(bodyStats.weight),
+          gte(bodyStats.date, addDaysStr(todayStr(), -21)),
+        ),
+      )
+      .orderBy(asc(bodyStats.date)),
+  ]);
+
+  function stats(from: string, to: string): WeekStats {
+    const rows = setRows.filter((r) => r.date >= from && r.date <= to && !r.isWarmup);
+    const days = totals.filter((t) => t.date >= from && t.date <= to);
+    return {
+      workouts: new Set(rows.map((r) => r.workoutId)).size,
+      sets: rows.length,
+      volume: rows.reduce((a, r) => a + r.weight * r.reps, 0),
+      daysLogged: days.length,
+      avgCalories: days.length
+        ? days.reduce((a, d) => a + d.calories, 0) / days.length
+        : null,
+      avgProtein: days.length
+        ? days.reduce((a, d) => a + d.protein, 0) / days.length
+        : null,
+    };
+  }
+
+  const latest = weights[weights.length - 1];
+  const weekAgoTarget = latest ? addDaysStr(latest.date, -7) : null;
+  // Closest weigh-in at or before 7 days earlier (within the 3-week window).
+  const weekAgo = weekAgoTarget
+    ? [...weights].reverse().find((w) => w.date <= weekAgoTarget)
+    : undefined;
+
+  return {
+    weekStart,
+    thisWeek: stats(weekStart, end),
+    lastWeek: stats(lastStart, addDaysStr(weekStart, -1)),
+    days: totals.filter((t) => t.date >= weekStart),
+    weightNow: latest?.weight ?? null,
+    weightWeekAgo: weekAgo?.weight ?? null,
+  };
 }

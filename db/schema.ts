@@ -160,6 +160,114 @@ export const bodyStats = sqliteTable(
   (t) => [uniqueIndex("body_stats_user_date_unique").on(t.userId, t.date)],
 );
 
+/**
+ * A logged meal. `date` is the user's local calendar day (YYYY-MM-DD).
+ * Calories/macros are usually AI estimates from a photo, editable by the user.
+ * `items` is a JSON array of { name, portion, calories, protein, carbs, fat }.
+ * `photo` is a small JPEG thumbnail stored as a data URL (a few dozen KB).
+ */
+export const meals = sqliteTable(
+  "meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    mealType: text("meal_type").notNull().default("snack"),
+    name: text("name").notNull(),
+    calories: real("calories").notNull().default(0),
+    protein: real("protein").notNull().default(0),
+    carbs: real("carbs").notNull().default(0),
+    fat: real("fat").notNull().default(0),
+    items: text("items"),
+    notes: text("notes"),
+    photo: text("photo"),
+    aiEstimated: integer("ai_estimated", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("meals_user_date_idx").on(t.userId, t.date)],
+);
+
+/**
+ * One row per user: the profile needed for energy math plus weight / body-fat
+ * goals. Everything is optional so the plan can be filled in gradually.
+ */
+export const goals = sqliteTable("goals", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  sex: text("sex"), // "male" | "female"
+  birthYear: integer("birth_year"),
+  heightCm: real("height_cm"),
+  activityLevel: text("activity_level"), // key of ACTIVITY_LEVELS
+  targetWeight: real("target_weight"),
+  targetBodyFat: real("target_body_fat"),
+  weeklyRate: real("weekly_rate"), // kg per week, absolute pace
+  calorieOverride: real("calorie_override"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+/** One row per AI call (meal photo analysis) — powers the in-app spend view. */
+export const aiUsage = sqliteTable(
+  "ai_usage",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    feature: text("feature").notNull().default("meal_photo"),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsd: real("cost_usd").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("ai_usage_user_created_idx").on(t.userId, t.createdAt)],
+);
+
+/** A saved routine (e.g. "Push Day") to start workouts from. */
+export const templates = sqliteTable(
+  "templates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("templates_user_idx").on(t.userId)],
+);
+
+/** Ordered exercises in a template, with an optional target set count. */
+export const templateExercises = sqliteTable(
+  "template_exercises",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    templateId: integer("template_id")
+      .notNull()
+      .references(() => templates.id, { onDelete: "cascade" }),
+    exerciseId: integer("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    targetSets: integer("target_sets"),
+  },
+  (t) => [index("template_exercises_template_idx").on(t.templateId)],
+);
+
 export const workoutsRelations = relations(workouts, ({ many }) => ({
   workoutExercises: many(workoutExercises),
 }));
@@ -197,3 +305,6 @@ export type Workout = typeof workouts.$inferSelect;
 export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type SetRow = typeof sets.$inferSelect;
 export type BodyStat = typeof bodyStats.$inferSelect;
+export type Meal = typeof meals.$inferSelect;
+export type Goals = typeof goals.$inferSelect;
+export type Template = typeof templates.$inferSelect;

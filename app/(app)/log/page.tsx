@@ -4,6 +4,7 @@ import {
   getActiveWorkout,
   getAllExercises,
   getLastPerformances,
+  getTemplates,
   getWorkoutDates,
 } from "@/lib/queries";
 
@@ -29,6 +30,6 @@ export default async function LogPage() {
     );
   }
 
-  const dates = await getWorkoutDates();
-  return <StartWorkout canDuplicate={dates.length > 0} />;
+  const [dates, templates] = await Promise.all([getWorkoutDates(), getTemplates()]);
+  return <StartWorkout canDuplicate={dates.length > 0} templates={templates} />;
 }

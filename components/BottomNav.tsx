@@ -6,6 +6,7 @@ import {
   BarsIcon,
   CalendarIcon,
   DumbbellIcon,
+  ForkIcon,
   HomeIcon,
   TrophyIcon,
 } from "@/components/icons";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/dashboard", label: "Dashboard", Icon: HomeIcon },
   { href: "/log", label: "Log", Icon: DumbbellIcon },
+  { href: "/food", label: "Food", Icon: ForkIcon },
   { href: "/history", label: "History", Icon: CalendarIcon },
   { href: "/stats", label: "Stats", Icon: BarsIcon },
   { href: "/prs", label: "PRs", Icon: TrophyIcon },
@@ -40,7 +42,7 @@ export function BottomNav() {
             >
               <span
                 className={cn(
-                  "flex h-9 w-12 items-center justify-center rounded-full transition-colors",
+                  "flex h-9 w-11 items-center justify-center rounded-full transition-colors",
                   active && "bg-zinc-100/10",
                 )}
               >

@@ -161,3 +161,32 @@ export const GoogleIcon = (p: IconProps) => (
     <path d="M12.24 10.4v3.32h4.6c-.2 1.18-1.45 3.46-4.6 3.46a5.06 5.06 0 0 1 0-10.12c1.6 0 2.67.68 3.28 1.27l2.24-2.16C16.46 4.66 14.6 3.9 12.24 3.9a8.1 8.1 0 1 0 0 16.2c4.68 0 7.78-3.29 7.78-7.92 0-.53-.06-.94-.13-1.35l-7.65-.03z" />
   </svg>
 );
+
+export const CameraIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2.5h6L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9Z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </Base>
+);
+
+export const ImageIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+    <circle cx="9" cy="10" r="1.5" />
+    <path d="m20.5 16-4.5-4.5L6 19.5" />
+  </Base>
+);
+
+export const ForkIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M7 3v7a2 2 0 0 0 2 2v9M11 3v7a2 2 0 0 1-2 2M9 3v6M17 21V3c-2 1.5-3 4-3 7v3h3" />
+  </Base>
+);
+
+export const TargetIcon = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1.5" />
+  </Base>
+);
