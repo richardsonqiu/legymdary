@@ -13,10 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LeGYMdary — the Legendary Gym Diary",
+  title: {
+    default: "LeGYMdary — the Legendary Gym Diary",
+    template: "%s · LeGYMdary",
+  },
   description:
     "Log workouts, track personal records, body stats and progress over time.",
   applicationName: "LeGYMdary",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  formatDetection: { telephone: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

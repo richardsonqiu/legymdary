@@ -355,6 +355,16 @@ export const garminActivities = sqliteTable(
   ],
 );
 
+/**
+ * Fixed-window rate-limit counters (login, sign-up, AI and Garmin calls).
+ * Kept in the database so limits hold across serverless instances.
+ */
+export const rateLimits = sqliteTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: integer("window_start").notNull(),
+  count: integer("count").notNull().default(0),
+});
+
 export const workoutsRelations = relations(workouts, ({ many }) => ({
   workoutExercises: many(workoutExercises),
 }));

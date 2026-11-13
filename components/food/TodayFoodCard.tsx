@@ -40,7 +40,7 @@ export function TodayFoodCard({
           +{bonusByDate[today]} kcal added for today&apos;s extra activity (Garmin)
         </p>
       )}
-      <Link href="/food" className={buttonClass("secondary", "md", "w-full")}>
+      <Link href="/food" transitionTypes={["nav-forward"]} className={buttonClass("secondary", "md", "w-full")}>
         <CameraIcon className="h-4 w-4" />
         {t ? `${t.count} meal${t.count > 1 ? "s" : ""} logged · add another` : "Log your first meal today"}
       </Link>

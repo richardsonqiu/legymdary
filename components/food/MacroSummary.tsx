@@ -1,3 +1,4 @@
+import { CountUp } from "@/components/CountUp";
 import type { DailyTargets, Macros } from "@/lib/nutrition";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +45,8 @@ export function MacroSummary({
               strokeLinecap="round"
               strokeDasharray={c}
               strokeDashoffset={c * (1 - pct)}
-              className={cn(
-                "transition-[stroke-dashoffset] duration-500",
-                over ? "stroke-amber-400" : "stroke-emerald-400",
-              )}
+              style={{ ["--ring-c" as string]: c }}
+              className={cn("ring-progress", over ? "stroke-amber-400" : "stroke-emerald-400")}
             />
           )}
         </svg>
@@ -58,7 +57,7 @@ export function MacroSummary({
               compact ? "text-lg" : "text-2xl",
             )}
           >
-            {remaining != null ? Math.abs(remaining).toLocaleString("en-US") : eaten.toLocaleString("en-US")}
+            <CountUp value={remaining != null ? Math.abs(remaining) : eaten} />
           </span>
           <span className="text-[10px] uppercase tracking-wide text-zinc-500">
             {remaining == null ? "kcal eaten" : over ? "kcal over" : "kcal left"}
@@ -70,7 +69,9 @@ export function MacroSummary({
         <div className="flex items-baseline justify-between text-sm">
           <span className="text-zinc-400">Eaten</span>
           <span className="tabular-nums">
-            <span className="font-semibold">{eaten.toLocaleString("en-US")}</span>
+            <span className="font-semibold">
+              <CountUp value={eaten} />
+            </span>
             {target != null && (
               <span className="text-zinc-500"> / {target.toLocaleString("en-US")} kcal</span>
             )}
@@ -107,7 +108,7 @@ function MacroBar({
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
         {target ? (
-          <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
+          <div className={cn("bar-fill h-full rounded-full", color)} style={{ width: `${pct}%` }} />
         ) : null}
       </div>
     </div>

@@ -1,15 +1,17 @@
 import { TrophyIcon } from "@/components/icons";
+import { PageTransition } from "@/components/PageTransition";
 import { EmptyState, PageHeader, Tag } from "@/components/ui";
 import { getAllPRs } from "@/lib/queries";
 import { formatMedium, kg } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Personal records" };
 
 export default async function PRsPage() {
   const prs = await getAllPRs();
 
   return (
-    <div className="space-y-5">
+    <PageTransition className="space-y-5">
       <PageHeader
         title="Personal records"
         subtitle={
@@ -71,6 +73,6 @@ export default async function PRsPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageTransition>
   );
 }
