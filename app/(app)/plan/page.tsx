@@ -3,26 +3,21 @@ import { GoalsForm } from "@/components/plan/GoalsForm";
 import { ProjectionChart } from "@/components/plan/ProjectionChart";
 import { ArrowLeftIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
-import { computePlan, planInputFrom, weightTrendPerWeek } from "@/lib/nutrition";
-import {
-  getBodyStats,
-  getDailyTotals,
-  getGoals,
-  getLatestBodyValues,
-} from "@/lib/queries";
+import { getEnergyContext } from "@/lib/energy-data";
+import { weightTrendPerWeek, type Plan } from "@/lib/nutrition";
+import { getBodyStats, getDailyTotals } from "@/lib/queries";
 import { addDaysStr, daysBetween, formatMedium, kg, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlanPage() {
   const today = todayStr();
-  const [goals, body, stats, totals] = await Promise.all([
-    getGoals(),
-    getLatestBodyValues(),
+  const [energy, stats, totals] = await Promise.all([
+    getEnergyContext(),
     getBodyStats(),
     getDailyTotals(addDaysStr(today, -14), today),
   ]);
-  const plan = computePlan(planInputFrom(goals, body));
+  const { goals, body, plan, measured, garminMaint } = energy;
 
   const weights = stats
     .filter((s) => s.weight != null && s.date >= addDaysStr(today, -90))
@@ -98,8 +93,20 @@ export default async function PlanPage() {
             <Card className="space-y-1.5 text-sm">
               {plan.tdee != null && (
                 <Row
-                  label="Maintenance (TDEE)"
+                  label={
+                    plan.maintenanceSource === "measured"
+                      ? "Maintenance · measured"
+                      : plan.maintenanceSource === "garmin"
+                        ? "Maintenance · Garmin avg"
+                        : "Maintenance · formula"
+                  }
                   value={`${plan.tdee.toLocaleString("en-US")} kcal`}
+                />
+              )}
+              {plan.maintenanceSource !== "formula" && plan.formulaTdee != null && (
+                <Row
+                  label="Formula estimate (for reference)"
+                  value={`${plan.formulaTdee.toLocaleString("en-US")} kcal`}
                 />
               )}
               {plan.bmr != null && (
@@ -131,6 +138,12 @@ export default async function PlanPage() {
               )}
             </Card>
             <Notes plan={plan} goals={goals} />
+            <MaintenanceNote
+              source={plan.maintenanceSource}
+              measured={measured}
+              garminDays={garminMaint?.days ?? null}
+              garminConnected={!!energy.garmin}
+            />
           </div>
         ) : (
           <Card className="text-sm text-zinc-400">
@@ -213,7 +226,7 @@ function Notes({
   plan,
   goals,
 }: {
-  plan: ReturnType<typeof computePlan>;
+  plan: Plan;
   goals: { targetWeight: number | null; targetBodyFat: number | null } | null;
 }) {
   const notes: string[] = [];
@@ -276,5 +289,57 @@ function MacroTile({
         <span className="ml-0.5 text-xs font-normal text-zinc-500">g</span>
       </div>
     </div>
+  );
+}
+
+function MaintenanceNote({
+  source,
+  measured,
+  garminDays,
+  garminConnected,
+}: {
+  source: Plan["maintenanceSource"];
+  measured: Awaited<ReturnType<typeof getEnergyContext>>["measured"];
+  garminDays: number | null;
+  garminConnected: boolean;
+}) {
+  let text: React.ReactNode;
+  if (source === "measured" && measured) {
+    text = (
+      <>
+        <b className="text-zinc-200">Measured from your data:</b> you averaged{" "}
+        {Math.round(measured.avgIntake).toLocaleString("en-US")} kcal over {measured.loggedDays}{" "}
+        fully-logged days while your weight moved {measured.trendKgPerWeek >= 0 ? "+" : ""}
+        {kg(measured.trendKgPerWeek)} kg/week ({measured.weighIns} weigh-ins). The target
+        self-corrects as you keep logging.
+      </>
+    );
+  } else if (source === "garmin") {
+    text = (
+      <>
+        <b className="text-zinc-200">From Garmin:</b> your average daily burn over the last{" "}
+        {garminDays} days. Log meals fully for 10+ days with regular weigh-ins and this switches to
+        a value measured from your actual intake and weight trend.
+      </>
+    );
+  } else {
+    text = (
+      <>
+        <b className="text-zinc-200">Formula estimate.</b>{" "}
+        {garminConnected
+          ? "Once Garmin has 5+ days of data, your real burn replaces it."
+          : (
+            <>
+              <Link href="/garmin" className="underline">Connect Garmin</Link> or log meals fully
+              for 10+ days with regular weigh-ins to replace it with your real number.
+            </>
+          )}
+      </>
+    );
+  }
+  return (
+    <p className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-3 py-2.5 text-xs text-zinc-400">
+      {text}
+    </p>
   );
 }

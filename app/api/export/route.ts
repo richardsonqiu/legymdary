@@ -3,6 +3,7 @@ import { db } from "@/db";
 import {
   bodyStats,
   exercises,
+  garminDaily,
   meals,
   sets,
   workoutExercises,
@@ -10,7 +11,7 @@ import {
 } from "@/db/schema";
 import { getSessionUser } from "@/lib/session";
 
-/** CSV download of the signed-in user's data: ?type=workouts|meals|body */
+/** CSV download of the signed-in user's data: ?type=workouts|meals|body|garmin */
 
 type Cell = string | number | boolean | null | undefined;
 
@@ -84,6 +85,16 @@ export async function GET(request: Request) {
     body = csv(
       ["date", "weight_kg", "waist_cm", "body_fat_pct"],
       rows.map((r) => [r.date, r.weight, r.waist, r.bodyFat]),
+    );
+  } else if (type === "garmin") {
+    const rows = await db
+      .select()
+      .from(garminDaily)
+      .where(eq(garminDaily.userId, userId))
+      .orderBy(asc(garminDaily.date));
+    body = csv(
+      ["date", "total_kcal", "active_kcal", "bmr_kcal", "steps", "resting_hr", "sleep_hours", "sleep_score", "hrv_last_night", "hrv_status", "body_battery_high", "body_battery_low", "stress_avg"],
+      rows.map((r) => [r.date, r.totalKcal, r.activeKcal, r.bmrKcal, r.steps, r.restingHr, r.sleepSeconds != null ? Math.round(r.sleepSeconds / 360) / 10 : null, r.sleepScore, r.hrvLastNight, r.hrvStatus, r.bodyBatteryHigh, r.bodyBatteryLow, r.stressAvg]),
     );
   } else {
     return new Response("Unknown export type", { status: 400 });

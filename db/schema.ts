@@ -153,6 +153,8 @@ export const bodyStats = sqliteTable(
     weight: real("weight"),
     waist: real("waist"),
     bodyFat: real("body_fat"),
+    // "manual" (typed in the app) or "garmin" (imported from a Garmin scale).
+    source: text("source").notNull().default("manual"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -268,6 +270,91 @@ export const templateExercises = sqliteTable(
   (t) => [index("template_exercises_template_idx").on(t.templateId)],
 );
 
+/**
+ * A user's Garmin Connect Personal API link. The API key is stored encrypted
+ * (AES-256-GCM); the short-lived bearer token is cached encrypted too.
+ */
+export const garminConnections = sqliteTable("garmin_connections", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  apiKeyEnc: text("api_key_enc").notNull(),
+  keyHint: text("key_hint").notNull(),
+  tokenEnc: text("token_enc"),
+  tokenExpiresAt: integer("token_expires_at", { mode: "timestamp_ms" }),
+  status: text("status").notNull().default("ok"), // "ok" | "error"
+  lastError: text("last_error"),
+  lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
+  /** Add part of the day's extra activity burn to the calorie target. */
+  adjustForActivity: integer("adjust_for_activity", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  connectedAt: integer("connected_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+/** One row per user per local calendar day, merged from several Garmin feeds. */
+export const garminDaily = sqliteTable(
+  "garmin_daily",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    totalKcal: real("total_kcal"),
+    activeKcal: real("active_kcal"),
+    bmrKcal: real("bmr_kcal"),
+    consumedKcal: real("consumed_kcal"),
+    steps: integer("steps"),
+    intensityMinutes: integer("intensity_minutes"),
+    restingHr: integer("resting_hr"),
+    stressAvg: integer("stress_avg"),
+    bodyBatteryHigh: integer("body_battery_high"),
+    bodyBatteryLow: integer("body_battery_low"),
+    bodyBatteryCharged: integer("body_battery_charged"),
+    bodyBatteryDrained: integer("body_battery_drained"),
+    sleepSeconds: integer("sleep_seconds"),
+    sleepScore: integer("sleep_score"),
+    hrvLastNight: integer("hrv_last_night"),
+    hrvWeeklyAvg: integer("hrv_weekly_avg"),
+    hrvStatus: text("hrv_status"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("garmin_daily_user_date_unique").on(t.userId, t.date)],
+);
+
+/** Garmin activities (runs, rides, strength…) as summaries. */
+export const garminActivities = sqliteTable(
+  "garmin_activities",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    activityId: text("activity_id").notNull(),
+    date: text("date").notNull(),
+    startTimeLocal: text("start_time_local"),
+    name: text("name").notNull(),
+    type: text("type"),
+    durationSec: real("duration_sec"),
+    calories: real("calories"),
+    avgHr: real("avg_hr"),
+    distanceM: real("distance_m"),
+    trainingLoad: real("training_load"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("garmin_activities_user_activity_unique").on(t.userId, t.activityId),
+    index("garmin_activities_user_date_idx").on(t.userId, t.date),
+  ],
+);
+
 export const workoutsRelations = relations(workouts, ({ many }) => ({
   workoutExercises: many(workoutExercises),
 }));
@@ -308,3 +395,6 @@ export type BodyStat = typeof bodyStats.$inferSelect;
 export type Meal = typeof meals.$inferSelect;
 export type Goals = typeof goals.$inferSelect;
 export type Template = typeof templates.$inferSelect;
+export type GarminDaily = typeof garminDaily.$inferSelect;
+export type GarminActivity = typeof garminActivities.$inferSelect;
+export type GarminConnection = typeof garminConnections.$inferSelect;

@@ -6,6 +6,9 @@ import { db } from "@/db";
 import {
   aiUsage,
   bodyStats,
+  garminActivities,
+  garminConnections,
+  garminDaily,
   exercises,
   goals,
   meals,
@@ -16,6 +19,9 @@ import {
   workouts,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
+import { exchangeKey, GarminError } from "@/lib/garmin/client";
+import { encryptSecret } from "@/lib/garmin/crypto";
+import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import {
   ACTIVITY_LEVELS,
   MEAL_TYPES,
@@ -35,6 +41,7 @@ function revalidateAll() {
     "/exercises",
     "/food",
     "/plan",
+    "/garmin",
   ]) {
     revalidatePath(p);
   }
@@ -361,6 +368,7 @@ export async function logBodyStat(input: {
         weight: vals.weight,
         waist: vals.waist,
         bodyFat: vals.bodyFat,
+        source: "manual", // a manual edit takes ownership from a Garmin import
       },
     });
   revalidateAll();
@@ -687,5 +695,77 @@ export async function deleteTemplate(id: number): Promise<void> {
   if (!tpl) return;
   await db.delete(templateExercises).where(eq(templateExercises.templateId, id));
   await db.delete(templates).where(eq(templates.id, id));
+  revalidateAll();
+}
+
+/* ------------------------------------------------------------------ */
+/* Garmin Connect (Personal API)                                       */
+/* ------------------------------------------------------------------ */
+
+/** Validates a personal API key with Garmin, stores it encrypted, then backfills 30 days. */
+export async function connectGarmin(
+  apiKey: string,
+): Promise<{ ok: true; sync: SyncResult } | { error: string }> {
+  const userId = await requireUserId();
+  const key = apiKey?.trim();
+  if (!key || key.length < 16 || key.length > 4096 || /\s/.test(key)) {
+    return { error: "That doesn't look like a Garmin API key. Copy it exactly as shown." };
+  }
+  let token: { token: string; expiresAt: Date };
+  try {
+    token = await exchangeKey(key);
+  } catch (err) {
+    return {
+      error:
+        err instanceof GarminError
+          ? err.message
+          : "Couldn't reach Garmin right now. Please try again.",
+    };
+  }
+  const vals = {
+    apiKeyEnc: encryptSecret(key),
+    keyHint: key.slice(-4),
+    tokenEnc: encryptSecret(token.token),
+    tokenExpiresAt: token.expiresAt,
+    status: "ok",
+    lastError: null,
+    connectedAt: new Date(),
+  };
+  await db
+    .insert(garminConnections)
+    .values({ userId, ...vals })
+    .onConflictDoUpdate({ target: garminConnections.userId, set: vals });
+  const sync = await syncGarminForUser(userId, { days: 30 });
+  revalidateAll();
+  return { ok: true, sync };
+}
+
+export async function syncGarminNow(): Promise<SyncResult> {
+  const userId = await requireUserId();
+  const res = await syncGarminForUser(userId, { days: 7 });
+  revalidateAll();
+  return res;
+}
+
+export async function setGarminActivityAdjust(on: boolean): Promise<void> {
+  const userId = await requireUserId();
+  await db
+    .update(garminConnections)
+    .set({ adjustForActivity: !!on })
+    .where(eq(garminConnections.userId, userId));
+  revalidateAll();
+}
+
+/** Removes the stored key and, optionally, all imported Garmin data. */
+export async function disconnectGarmin(deleteData: boolean): Promise<void> {
+  const userId = await requireUserId();
+  await db.delete(garminConnections).where(eq(garminConnections.userId, userId));
+  if (deleteData) {
+    await db.delete(garminDaily).where(eq(garminDaily.userId, userId));
+    await db.delete(garminActivities).where(eq(garminActivities.userId, userId));
+    await db
+      .delete(bodyStats)
+      .where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, "garmin")));
+  }
   revalidateAll();
 }

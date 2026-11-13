@@ -3,6 +3,8 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreakCard } from "@/components/StreakCard";
 import { TodayFoodCard } from "@/components/food/TodayFoodCard";
+import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
+import { ReadinessCard } from "@/components/garmin/ReadinessCard";
 import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
@@ -11,20 +13,20 @@ import {
   ScaleIcon,
   SparkIcon,
   TrophyIcon,
+  WatchIcon,
 } from "@/components/icons";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
-import { computePlan, planInputFrom, targetsFromPlan } from "@/lib/nutrition";
 import {
   getActiveWorkout,
   getDailyTotals,
-  getGoals,
   getLastFinishedWorkout,
   getLatestBodyStat,
-  getLatestBodyValues,
   getPRsThisWeek,
   getWeeklyCheckin,
   getWorkoutDates,
 } from "@/lib/queries";
+import { getEnergyContext } from "@/lib/energy-data";
+import { syncGarminInBackgroundIfStale } from "@/lib/garmin/background";
 import { getSessionUser } from "@/lib/session";
 import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
 
@@ -40,8 +42,7 @@ export default async function DashboardPage() {
     prsThisWeek,
     user,
     foodTotals,
-    goals,
-    bodyValues,
+    energy,
     weekly,
   ] = await Promise.all([
     getWorkoutDates(),
@@ -51,11 +52,23 @@ export default async function DashboardPage() {
     getPRsThisWeek(),
     getSessionUser(),
     getDailyTotals(addDaysStr(serverToday, -1), addDaysStr(serverToday, 1)),
-    getGoals(),
-    getLatestBodyValues(),
+    getEnergyContext(),
     getWeeklyCheckin(),
   ]);
-  const foodTargets = targetsFromPlan(computePlan(planInputFrom(goals, bodyValues)));
+  const foodTargets = energy.targets;
+  if (user?.id && energy.garmin) await syncGarminInBackgroundIfStale(user.id);
+  const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
+  const energyRows = energy.intake.map((d) => ({
+    date: d.date,
+    eaten: d.calories,
+    meals: d.count,
+    burned: garminByDate.get(d.date)?.totalKcal ?? null,
+  }));
+  for (const g of energy.garminDays) {
+    if (!energy.intake.some((d) => d.date === g.date)) {
+      energyRows.push({ date: g.date, eaten: 0, meals: 0, burned: g.totalKcal });
+    }
+  }
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
@@ -83,8 +96,47 @@ export default async function DashboardPage() {
         >
           Today&apos;s food
         </SectionTitle>
-        <TodayFoodCard totals={foodTotals} targets={foodTargets} />
+        <TodayFoodCard
+          totals={foodTotals}
+          targets={foodTargets}
+          bonusByDate={energy.bonusByDate}
+        />
       </section>
+
+      {/* Garmin */}
+      {energy.garmin ? (
+        <>
+          <section>
+            <SectionTitle
+              action={
+                <Link href="/garmin" className="text-xs text-zinc-400">
+                  Garmin →
+                </Link>
+              }
+            >
+              Readiness
+            </SectionTitle>
+            <ReadinessCard byDate={energy.readinessByDate} />
+          </section>
+          <section>
+            <SectionTitle>Energy balance</SectionTitle>
+            <EnergyBalanceCard rows={energyRows} />
+          </section>
+        </>
+      ) : (
+        <Link
+          href="/garmin"
+          className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900/50"
+        >
+          <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
+          <span>
+            <b>Connect Garmin</b>
+            <span className="block text-xs text-zinc-500">
+              See calories in vs out, recovery and your real maintenance calories.
+            </span>
+          </span>
+        </Link>
+      )}
 
       {/* Weekly check-in */}
       <section>

@@ -190,3 +190,22 @@ export const TargetIcon = (p: IconProps) => (
     <circle cx="12" cy="12" r="1.5" />
   </Base>
 );
+
+export const WatchIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="6.5" y="6.5" width="11" height="11" rx="3" />
+    <path d="M9 6.5 9.5 3h5l.5 3.5M9 17.5l.5 3.5h5l.5-3.5M12 10v2.2l1.4 1" />
+  </Base>
+);
+
+export const BoltIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
+  </Base>
+);
+
+export const RefreshIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4" />
+  </Base>
+);
