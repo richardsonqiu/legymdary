@@ -12,6 +12,8 @@ import { createClient } from "@libsql/client";
  */
 const TABLES = [
   "body_stats",
+  "meals",
+  "goals",
   "sets",
   "workout_exercises",
   "workouts",

@@ -1,9 +1,9 @@
 import "dotenv/config";
 import { db } from "./index";
-import { bodyStats, sets, workoutExercises, workouts } from "./schema";
+import { bodyStats, meals, sets, workoutExercises, workouts } from "./schema";
 
 /**
- * Clears all logged data (workouts, sets, body stats) but keeps the exercise
+ * Clears all logged data (workouts, sets, meals, body stats) but keeps the exercise
  * library. Handy for wiping demo data before you start logging for real.
  */
 async function main() {
@@ -11,7 +11,8 @@ async function main() {
   await db.delete(workoutExercises);
   await db.delete(workouts);
   await db.delete(bodyStats);
-  console.log("Cleared all workouts and body stats. Exercise library kept.");
+  await db.delete(meals);
+  console.log("Cleared all workouts, meals and body stats. Exercise library kept.");
   process.exit(0);
 }
 

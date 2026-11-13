@@ -160,6 +160,60 @@ export const bodyStats = sqliteTable(
   (t) => [uniqueIndex("body_stats_user_date_unique").on(t.userId, t.date)],
 );
 
+/**
+ * A logged meal. `date` is the user's local calendar day (YYYY-MM-DD).
+ * Calories/macros are usually AI estimates from a photo, editable by the user.
+ * `items` is a JSON array of { name, portion, calories, protein, carbs, fat }.
+ * `photo` is a small JPEG thumbnail stored as a data URL (a few dozen KB).
+ */
+export const meals = sqliteTable(
+  "meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    mealType: text("meal_type").notNull().default("snack"),
+    name: text("name").notNull(),
+    calories: real("calories").notNull().default(0),
+    protein: real("protein").notNull().default(0),
+    carbs: real("carbs").notNull().default(0),
+    fat: real("fat").notNull().default(0),
+    items: text("items"),
+    notes: text("notes"),
+    photo: text("photo"),
+    aiEstimated: integer("ai_estimated", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("meals_user_date_idx").on(t.userId, t.date)],
+);
+
+/**
+ * One row per user: the profile needed for energy math plus weight / body-fat
+ * goals. Everything is optional so the plan can be filled in gradually.
+ */
+export const goals = sqliteTable("goals", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  sex: text("sex"), // "male" | "female"
+  birthYear: integer("birth_year"),
+  heightCm: real("height_cm"),
+  activityLevel: text("activity_level"), // key of ACTIVITY_LEVELS
+  targetWeight: real("target_weight"),
+  targetBodyFat: real("target_body_fat"),
+  weeklyRate: real("weekly_rate"), // kg per week, absolute pace
+  calorieOverride: real("calorie_override"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const workoutsRelations = relations(workouts, ({ many }) => ({
   workoutExercises: many(workoutExercises),
 }));
@@ -197,3 +251,5 @@ export type Workout = typeof workouts.$inferSelect;
 export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type SetRow = typeof sets.$inferSelect;
 export type BodyStat = typeof bodyStats.$inferSelect;
+export type Meal = typeof meals.$inferSelect;
+export type Goals = typeof goals.$inferSelect;

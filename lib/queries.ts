@@ -1,6 +1,7 @@
 import {
   and,
   asc,
+  between,
   desc,
   eq,
   inArray,
@@ -13,11 +14,15 @@ import { db } from "@/db";
 import {
   bodyStats,
   exercises,
+  goals,
+  meals,
   sets,
   workoutExercises,
   workouts,
   type BodyStat,
   type Exercise,
+  type Goals,
+  type Meal,
 } from "@/db/schema";
 import { requireUserId } from "@/lib/session";
 import {
@@ -460,4 +465,96 @@ export async function getLatestBodyStat(): Promise<BodyStat | null> {
     .orderBy(desc(bodyStats.date))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Food log + goals                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Meals (with thumbnails) for an inclusive range of calendar days. */
+export async function getMeals(from: string, to: string): Promise<Meal[]> {
+  const userId = await requireUserId();
+  return db
+    .select()
+    .from(meals)
+    .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
+    .orderBy(asc(meals.date), asc(meals.createdAt));
+}
+
+export type DayTotals = {
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  count: number;
+};
+
+/** Per-day calorie/macro totals (no photos) — light enough for dashboards. */
+export async function getDailyTotals(
+  from: string,
+  to: string,
+): Promise<DayTotals[]> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({
+      date: meals.date,
+      calories: meals.calories,
+      protein: meals.protein,
+      carbs: meals.carbs,
+      fat: meals.fat,
+    })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), between(meals.date, from, to)));
+  const byDate = new Map<string, DayTotals>();
+  for (const r of rows) {
+    const d =
+      byDate.get(r.date) ??
+      { date: r.date, calories: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
+    d.calories += r.calories;
+    d.protein += r.protein;
+    d.carbs += r.carbs;
+    d.fat += r.fat;
+    d.count += 1;
+    byDate.set(r.date, d);
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function getGoals(): Promise<Goals | null> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(eq(goals.userId, userId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Latest known weight and body fat, each from its most recent entry. */
+export async function getLatestBodyValues(): Promise<{
+  weight: number | null;
+  weightDate: string | null;
+  bodyFat: number | null;
+  bodyFatDate: string | null;
+}> {
+  const userId = await requireUserId();
+  const [w] = await db
+    .select({ v: bodyStats.weight, date: bodyStats.date })
+    .from(bodyStats)
+    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight)))
+    .orderBy(desc(bodyStats.date))
+    .limit(1);
+  const [bf] = await db
+    .select({ v: bodyStats.bodyFat, date: bodyStats.date })
+    .from(bodyStats)
+    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.bodyFat)))
+    .orderBy(desc(bodyStats.date))
+    .limit(1);
+  return {
+    weight: w?.v ?? null,
+    weightDate: w?.date ?? null,
+    bodyFat: bf?.v ?? null,
+    bodyFatDate: bf?.date ?? null,
+  };
 }

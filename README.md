@@ -83,6 +83,7 @@ logged data (keeps the exercise library).
    | `AUTH_SECRET` | output of `npx auth secret` |
    | `AUTH_GOOGLE_ID` | Google OAuth client ID |
    | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
+   | `ANTHROPIC_API_KEY` | Anthropic API key (for meal-photo analysis) |
 
    Deploy. The `vercel-build` script runs the migrations and seeds the exercise
    library into Turso automatically.
@@ -113,6 +114,7 @@ logged data (keeps the exercise library).
 | `AUTH_SECRET`          | yes      | Auth.js signing secret (`npx auth secret`)             |
 | `AUTH_GOOGLE_ID`       | prod     | Google OAuth client ID                                 |
 | `AUTH_GOOGLE_SECRET`   | prod     | Google OAuth client secret                             |
+| `ANTHROPIC_API_KEY`    | optional | Enables AI calorie estimates from meal photos          |
 
 ## Project structure
 
@@ -126,6 +128,21 @@ components/     UI, bottom nav, charts, the workout logger, account menu
 db/             Drizzle schema, client, migrations + seed scripts
 lib/            Queries (reads), actions (mutations), session helper, utils
 ```
+
+## Food log & goal plan
+
+- **Food tab** — tap *Snap a meal* to take a photo (or pick one / enter it
+  manually). The photo is downscaled in the browser and sent to Claude, which
+  returns the items it sees with estimated portions, calories and macros. You
+  can edit every item before saving. A small thumbnail is stored with the meal.
+- **Plan** — enter sex, birth year, height, activity level and a target weight
+  and/or target body-fat %. Current weight and body fat come from your latest
+  Stats entries. The plan computes BMR (Katch-McArdle when body fat is known,
+  otherwise Mifflin-St Jeor), maintenance calories, a daily calorie target at a
+  sustainable pace (default 0.5% of body weight/week to lose, 0.25% to gain;
+  capped, with a safe calorie floor), macro targets and an ETA. A body-fat goal
+  is turned into a target weight assuming you keep your lean mass. It also
+  compares your average intake and 4-week weight trend against the plan.
 
 ## Notes
 
