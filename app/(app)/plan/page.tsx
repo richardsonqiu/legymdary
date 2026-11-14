@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTransition } from "@/components/PageTransition";
 import { GoalsForm } from "@/components/plan/GoalsForm";
 import { ProjectionChart } from "@/components/plan/ProjectionChart";
 import { ArrowLeftIcon } from "@/components/icons";
@@ -9,6 +10,7 @@ import { getBodyStats, getDailyTotals } from "@/lib/queries";
 import { addDaysStr, daysBetween, formatMedium, kg, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Plan" };
 
 export default async function PlanPage() {
   const today = todayStr();
@@ -42,13 +44,13 @@ export default async function PlanPage() {
     plan.direction === "lose" ? "Fat loss" : plan.direction === "gain" ? "Lean gain" : "Maintain";
 
   return (
-    <div className="space-y-7">
+    <PageTransition className="space-y-7">
       <PageHeader
         title="Plan"
         subtitle="Weight & body-fat goal → daily targets"
         action={
           <Link
-            href="/food"
+            href="/food" transitionTypes={["nav-back"]}
             className="flex h-9 items-center gap-1 rounded-lg px-2 text-sm text-zinc-400 hover:bg-zinc-800"
           >
             <ArrowLeftIcon className="h-4 w-4" /> Food
@@ -203,7 +205,7 @@ export default async function PlanPage() {
           Estimates only — not medical advice.
         </p>
       </section>
-    </div>
+    </PageTransition>
   );
 }
 
@@ -330,7 +332,7 @@ function MaintenanceNote({
           ? "Once Garmin has 5+ days of data, your real burn replaces it."
           : (
             <>
-              <Link href="/garmin" className="underline">Connect Garmin</Link> or log meals fully
+              <Link href="/garmin" transitionTypes={["nav-forward"]} className="underline">Connect Garmin</Link> or log meals fully
               for 10+ days with regular weigh-ins to replace it with your real number.
             </>
           )}

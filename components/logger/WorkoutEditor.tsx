@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ExercisePicker } from "@/components/logger/ExercisePicker";
 import { RestTimer, type RestTimerHandle } from "@/components/logger/RestTimer";
+import { Portal } from "@/components/Portal";
 import { PlusIcon, TrashIcon, TrophyIcon, XIcon } from "@/components/icons";
 import { Button, Card, EmptyState, Tag } from "@/components/ui";
 import type { Exercise } from "@/db/schema";
@@ -57,7 +58,11 @@ export function WorkoutEditor({
     // Prefill from this session's last set, else from last time's top set.
     const last = ex.sets[ex.sets.length - 1];
     if (last) {
-      return { weight: String(last.weight), reps: String(last.reps), warmup: false };
+      return {
+        weight: String(last.weight),
+        reps: String(last.reps),
+        warmup: false,
+      };
     }
     const prev = lastByExercise[ex.exerciseId]?.sets;
     const prevLast = prev?.[prev.length - 1];
@@ -112,7 +117,8 @@ export function WorkoutEditor({
     return {};
   }
   function removeExercise(id: number, hasSets: boolean) {
-    if (hasSets && !confirm("Remove this exercise and its logged sets?")) return;
+    if (hasSets && !confirm("Remove this exercise and its logged sets?"))
+      return;
     start(async () => {
       await removeWorkoutExercise(id);
       router.refresh();
@@ -146,6 +152,7 @@ export function WorkoutEditor({
           });
         }
         updateInput(ex, { warmup: false });
+        navigator.vibrate?.(res.isPR ? [20, 40, 60] : 12);
         timer.current?.start();
         router.refresh();
       } catch (e) {
@@ -172,7 +179,9 @@ export function WorkoutEditor({
     if (!tplName?.trim()) return;
     start(async () => {
       const res = await saveWorkoutAsTemplate(workout.id, tplName);
-      setToast({ text: "error" in res ? res.error : `Saved template “${tplName.trim()}”` });
+      setToast({
+        text: "error" in res ? res.error : `Saved template “${tplName.trim()}”`,
+      });
     });
   }
 
@@ -187,19 +196,21 @@ export function WorkoutEditor({
   return (
     <div className="space-y-4 pb-16">
       {toast && (
-        <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4">
-          <div
-            className={cn(
-              "animate-pr-pop flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-lg",
-              toast.pr
-                ? "bg-zinc-50 text-zinc-950"
-                : "border border-zinc-700 bg-zinc-900 text-zinc-100",
-            )}
-          >
-            {toast.pr && <TrophyIcon className="h-4 w-4" />}
-            {toast.text}
+        <Portal>
+          <div className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex justify-center px-4">
+            <div
+              className={cn(
+                "animate-pr-pop flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-lg",
+                toast.pr
+                  ? "bg-zinc-50 text-zinc-950"
+                  : "border border-zinc-700 bg-zinc-900 text-zinc-100",
+              )}
+            >
+              {toast.pr && <TrophyIcon className="h-4 w-4" />}
+              {toast.text}
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Session header */}
@@ -295,7 +306,7 @@ export function WorkoutEditor({
                       return (
                         <li
                           key={s.id}
-                          className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2"
+                          className="animate-item-in flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2"
                         >
                           <span
                             className={cn(
@@ -308,7 +319,9 @@ export function WorkoutEditor({
                             {label}
                           </span>
                           <span className="flex-1 tabular-nums">
-                            <span className="font-semibold">{kg(s.weight)}</span>
+                            <span className="font-semibold">
+                              {kg(s.weight)}
+                            </span>
                             <span className="text-zinc-500"> kg × </span>
                             <span className="font-semibold">{s.reps}</span>
                           </span>
@@ -407,7 +420,12 @@ export function WorkoutEditor({
           >
             Save as template
           </Button>
-          <Button variant="danger" size="md" onClick={discard} disabled={pending}>
+          <Button
+            variant="danger"
+            size="md"
+            onClick={discard}
+            disabled={pending}
+          >
             Discard workout
           </Button>
         </div>

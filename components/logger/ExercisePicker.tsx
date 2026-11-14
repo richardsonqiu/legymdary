@@ -1,5 +1,6 @@
 "use client";
 
+import { Portal } from "@/components/Portal";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { CheckIcon, PlusIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Button, Field, inputClass, Tag } from "@/components/ui";
@@ -48,123 +49,128 @@ export function ExercisePicker({
   }, [exercises, query, muscle]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
-      <div className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-3xl border-t border-zinc-800 bg-zinc-900 animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2 border-b border-zinc-800 px-4 py-3">
-          <h2 className="text-base font-semibold">
-            {creating ? "New exercise" : "Add exercise"}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-800"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-        </div>
+    <Portal>
+      <div className="animate-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm">
+        <div className="flex max-h-[88vh] w-full max-w-2xl flex-col animate-sheet rounded-t-3xl border-t border-zinc-800 bg-zinc-900">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2 border-b border-zinc-800 px-4 py-3">
+            <h2 className="text-base font-semibold">
+              {creating ? "New exercise" : "Add exercise"}
+            </h2>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-800"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
+          </div>
 
-        {creating ? (
-          <CreateExerciseForm
-            onCancel={() => setCreating(false)}
-            onCreateExercise={onCreateExercise}
-          />
-        ) : (
-          <>
-            {/* Search + filters */}
-            <div className="space-y-3 border-b border-zinc-800 px-4 py-3">
-              <div className="relative">
-                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search exercises…"
-                  className={cn(inputClass, "pl-10")}
-                  autoFocus
-                />
-              </div>
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1">
-                <Chip active={muscle === null} onClick={() => setMuscle(null)}>
-                  All
-                </Chip>
-                {MUSCLE_GROUPS.map((m) => (
+          {creating ? (
+            <CreateExerciseForm
+              onCancel={() => setCreating(false)}
+              onCreateExercise={onCreateExercise}
+            />
+          ) : (
+            <>
+              {/* Search + filters */}
+              <div className="space-y-3 border-b border-zinc-800 px-4 py-3">
+                <div className="relative">
+                  <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search exercises…"
+                    className={cn(inputClass, "pl-10")}
+                    autoFocus
+                  />
+                </div>
+                <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1">
                   <Chip
-                    key={m}
-                    active={muscle === m}
-                    onClick={() => setMuscle(muscle === m ? null : m)}
+                    active={muscle === null}
+                    onClick={() => setMuscle(null)}
                   >
-                    {m}
+                    All
                   </Chip>
-                ))}
+                  {MUSCLE_GROUPS.map((m) => (
+                    <Chip
+                      key={m}
+                      active={muscle === m}
+                      onClick={() => setMuscle(muscle === m ? null : m)}
+                    >
+                      {m}
+                    </Chip>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* List */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-              {filtered.length === 0 ? (
-                <p className="px-2 py-8 text-center text-sm text-zinc-500">
-                  No exercises match.
-                </p>
-              ) : (
-                <ul>
-                  {filtered.map((e) => {
-                    const isAdded = added.has(e.id);
-                    return (
-                      <li key={e.id}>
-                        <button
-                          onClick={() => onAdd(e.id)}
-                          className="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2.5 text-left hover:bg-zinc-800/60 active:bg-zinc-800"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">
-                              {e.name}
-                            </div>
-                            <div className="mt-1 flex gap-1.5">
-                              <Tag>{e.muscleGroup}</Tag>
-                              <Tag>{e.equipment}</Tag>
-                              {e.isCustom && <Tag>custom</Tag>}
-                            </div>
-                          </div>
-                          <span
-                            className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                              isAdded
-                                ? "bg-zinc-100 text-zinc-950"
-                                : "border border-zinc-700 text-zinc-300",
-                            )}
+              {/* List */}
+              <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+                {filtered.length === 0 ? (
+                  <p className="px-2 py-8 text-center text-sm text-zinc-500">
+                    No exercises match.
+                  </p>
+                ) : (
+                  <ul>
+                    {filtered.map((e) => {
+                      const isAdded = added.has(e.id);
+                      return (
+                        <li key={e.id}>
+                          <button
+                            onClick={() => onAdd(e.id)}
+                            className="flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2.5 text-left hover:bg-zinc-800/60 active:bg-zinc-800"
                           >
-                            {isAdded ? (
-                              <CheckIcon className="h-4 w-4" />
-                            ) : (
-                              <PlusIcon className="h-4 w-4" />
-                            )}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium">
+                                {e.name}
+                              </div>
+                              <div className="mt-1 flex gap-1.5">
+                                <Tag>{e.muscleGroup}</Tag>
+                                <Tag>{e.equipment}</Tag>
+                                {e.isCustom && <Tag>custom</Tag>}
+                              </div>
+                            </div>
+                            <span
+                              className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                                isAdded
+                                  ? "bg-zinc-100 text-zinc-950"
+                                  : "border border-zinc-700 text-zinc-300",
+                              )}
+                            >
+                              {isAdded ? (
+                                <CheckIcon className="h-4 w-4" />
+                              ) : (
+                                <PlusIcon className="h-4 w-4" />
+                              )}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
 
-            {/* Footer */}
-            <div className="flex gap-2 border-t border-zinc-800 px-4 py-3 pb-safe">
-              <Button
-                variant="secondary"
-                size="lg"
-                className="flex-1"
-                onClick={() => setCreating(true)}
-              >
-                <PlusIcon className="h-5 w-5" /> New exercise
-              </Button>
-              <Button size="lg" className="flex-1" onClick={onClose}>
-                Done
-              </Button>
-            </div>
-          </>
-        )}
+              {/* Footer */}
+              <div className="flex gap-2 border-t border-zinc-800 px-4 py-3 pb-safe">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setCreating(true)}
+                >
+                  <PlusIcon className="h-5 w-5" /> New exercise
+                </Button>
+                <Button size="lg" className="flex-1" onClick={onClose}>
+                  Done
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 

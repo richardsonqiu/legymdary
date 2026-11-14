@@ -1,4 +1,5 @@
 import { BodyStatForm } from "@/components/charts/BodyStatForm";
+import { PageTransition } from "@/components/PageTransition";
 import { BodyStatsChart } from "@/components/charts/BodyStatsChart";
 import { ExerciseProgressChart } from "@/components/charts/ExerciseProgressChart";
 import { WeeklyVolumeChart } from "@/components/charts/WeeklyVolumeChart";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Stats" };
 
 export default async function StatsPage() {
   const [bodyStats, latest, weekly, progress] = await Promise.all([
@@ -21,7 +23,7 @@ export default async function StatsPage() {
   ]);
 
   return (
-    <div className="space-y-7">
+    <PageTransition className="space-y-7">
       <PageHeader title="Stats" subtitle="Body, volume & progress" />
 
       <section>
@@ -55,6 +57,6 @@ export default async function StatsPage() {
           />
         </Card>
       </section>
-    </div>
+    </PageTransition>
   );
 }

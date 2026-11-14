@@ -1,3 +1,4 @@
+import { PageTransition } from "@/components/PageTransition";
 import { StartWorkout } from "@/components/logger/StartWorkout";
 import { WorkoutEditor } from "@/components/logger/WorkoutEditor";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Log workout" };
 
 export default async function LogPage() {
   const active = await getActiveWorkout();
@@ -22,14 +24,20 @@ export default async function LogPage() {
       ),
     ]);
     return (
-      <WorkoutEditor
-        workout={active}
-        exercises={exercises}
-        lastByExercise={lastByExercise}
-      />
+      <PageTransition className="">
+        <WorkoutEditor
+          workout={active}
+          exercises={exercises}
+          lastByExercise={lastByExercise}
+        />
+      </PageTransition>
     );
   }
 
   const [dates, templates] = await Promise.all([getWorkoutDates(), getTemplates()]);
-  return <StartWorkout canDuplicate={dates.length > 0} templates={templates} />;
+  return (
+    <PageTransition className="">
+      <StartWorkout canDuplicate={dates.length > 0} templates={templates} />
+    </PageTransition>
+  );
 }

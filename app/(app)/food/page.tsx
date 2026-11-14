@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTransition } from "@/components/PageTransition";
 import { FoodDiary } from "@/components/food/FoodDiary";
 import { TargetIcon } from "@/components/icons";
 import { PageHeader, buttonClass } from "@/components/ui";
@@ -15,6 +16,7 @@ import {
 import { addDaysStr, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Food" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -51,12 +53,12 @@ export default async function FoodPage({
   }
 
   return (
-    <div>
+    <PageTransition className="space-y-0">
       <PageHeader
         title="Food"
         subtitle="Snap what you eat — AI estimates the calories"
         action={
-          <Link href="/plan" className={buttonClass("secondary", "sm")}>
+          <Link href="/plan" transitionTypes={["nav-forward"]} className={buttonClass("secondary", "sm")}>
             <TargetIcon className="h-4 w-4" /> Plan
           </Link>
         }
@@ -70,6 +72,6 @@ export default async function FoodPage({
         garminByDate={energy.garmin ? garminByDate : null}
         planMissing={plan.calorieTarget == null}
       />
-    </div>
+    </PageTransition>
   );
 }

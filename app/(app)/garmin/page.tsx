@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTransition } from "@/components/PageTransition";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { GarminConnect } from "@/components/garmin/GarminConnect";
 import { ArrowLeftIcon } from "@/components/icons";
@@ -7,6 +8,7 @@ import { getGarminActivities, getGarminStatus } from "@/lib/queries";
 import { addDaysStr, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Garmin" };
 
 export default async function GarminPage() {
   const today = todayStr();
@@ -15,13 +17,13 @@ export default async function GarminPage() {
     getGarminActivities(addDaysStr(today, -30), addDaysStr(today, 1)),
   ]);
   return (
-    <div className="space-y-7">
+    <PageTransition className="space-y-7">
       <PageHeader
         title="Garmin"
         subtitle="Calories burned, recovery and activities"
         action={
           <Link
-            href="/dashboard"
+            href="/dashboard" transitionTypes={["nav-back"]}
             className="flex h-9 items-center gap-1 rounded-lg px-2 text-sm text-zinc-400 hover:bg-zinc-800"
           >
             <ArrowLeftIcon className="h-4 w-4" /> Home
@@ -35,6 +37,6 @@ export default async function GarminPage() {
           <GarminActivityList activities={activities.slice(0, 15)} />
         </section>
       )}
-    </div>
+    </PageTransition>
   );
 }
