@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArcGauge, RangeBar, toneFor, toneWord } from "@/components/score/Score";
+import { sceneFor, sceneStyle } from "@/lib/scenes";
 import { Explain } from "@/components/Explain";
 import { Card } from "@/components/ui";
 import type { DayCard } from "@/lib/analysis/service";
-import { cn } from "@/lib/utils";
+import { cn, todayStr } from "@/lib/utils";
 
 /** Server-safe presentational cards for the Insights page. */
 
@@ -32,7 +33,7 @@ export function ReadinessHero({ r }: { r: DayCard["readiness"] }) {
     <div className="space-y-3">
       <div
         className="hero-photo relative overflow-hidden rounded-[28px] border border-white/10 px-5 pb-5 pt-5"
-        style={{ ["--sky-a" as string]: a, ["--sky-b" as string]: b }}
+        style={{ ["--sky-a" as string]: a, ["--sky-b" as string]: b, ...sceneStyle(sceneFor(todayStr())) }}
       >
         <div className="relative mx-auto flex w-[220px] justify-center">
           <ArcGauge value={r.score} />
