@@ -6,7 +6,7 @@ import { ArrowLeftIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { weightTrendPerWeek, type Plan } from "@/lib/nutrition";
-import { getBodyStats, getDailyTotals } from "@/lib/queries";
+import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
 import { addDaysStr, daysBetween, formatMedium, kg, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -14,11 +14,13 @@ export const metadata = { title: "Plan" };
 
 export default async function PlanPage() {
   const today = todayStr();
-  const [energy, stats, totals] = await Promise.all([
+  const [energy, stats, totals, scans] = await Promise.all([
     getEnergyContext(),
     getBodyStats(),
     getDailyTotals(addDaysStr(today, -14), today),
+    getBodyScans(),
   ]);
+  const latestScan = scans[scans.length - 1] ?? null;
   const { goals, body, plan, measured, garminMaint } = energy;
 
   const weights = stats
@@ -116,6 +118,9 @@ export default async function PlanPage() {
                   label={`BMR · ${plan.bmrMethod === "katch-mcardle" ? "lean-mass formula" : "Mifflin-St Jeor"}`}
                   value={`${plan.bmr.toLocaleString("en-US")} kcal`}
                 />
+              )}
+              {latestScan?.bmr != null && (
+                <Row label={`BMR · measured (InBody ${latestScan.date})`} value={`${Math.round(latestScan.bmr).toLocaleString("en-US")} kcal`} />
               )}
               {plan.leanMass != null && <Row label="Lean mass" value={`${kg(plan.leanMass)} kg`} />}
               {body.weight != null && (

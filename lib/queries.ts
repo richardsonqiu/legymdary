@@ -16,6 +16,7 @@ import {
 import { db } from "@/db";
 import {
   aiUsage,
+  bodyScans,
   bodyStats,
   exercises,
   garminActivities,
@@ -28,6 +29,7 @@ import {
   sets,
   workoutExercises,
   workouts,
+  type BodyScan,
   type BodyStat,
   type Exercise,
   type GarminActivity,
@@ -35,6 +37,7 @@ import {
   type Goals,
   type Meal,
 } from "@/db/schema";
+import { latestBodyValues } from "@/lib/body-values";
 import { requireUserId } from "@/lib/session";
 import {
   addDaysStr,
@@ -579,29 +582,11 @@ export const getLatestBodyValues = cache(async function getLatestBodyValues(): P
   weightDate: string | null;
   bodyFat: number | null;
   bodyFatDate: string | null;
+  bodyFatSource: string | null;
 }> {
   const userId = await requireUserId();
-  // Both lookups in one round trip.
-  const [[w], [bf]] = await Promise.all([
-    db
-      .select({ v: bodyStats.weight, date: bodyStats.date })
-      .from(bodyStats)
-      .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight)))
-      .orderBy(desc(bodyStats.date))
-      .limit(1),
-    db
-      .select({ v: bodyStats.bodyFat, date: bodyStats.date })
-      .from(bodyStats)
-      .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.bodyFat)))
-      .orderBy(desc(bodyStats.date))
-      .limit(1),
-  ]);
-  return {
-    weight: w?.v ?? null,
-    weightDate: w?.date ?? null,
-    bodyFat: bf?.v ?? null,
-    bodyFatDate: bf?.date ?? null,
-  };
+  // Pad a day so users ahead of the server's timezone still get "today".
+  return latestBodyValues(userId, addDaysStr(todayStr(), 1));
 });
 
 /** Most recent distinct meals (by name) for one-tap "eat again". */
@@ -836,3 +821,9 @@ export async function getGarminActivities(from: string, to: string): Promise<Gar
     .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, from, to)))
     .orderBy(desc(garminActivities.date), desc(garminActivities.startTimeLocal));
 }
+
+/** All body-composition scans, oldest first. */
+export const getBodyScans = cache(async function getBodyScans(): Promise<BodyScan[]> {
+  const userId = await requireUserId();
+  return db.select().from(bodyScans).where(eq(bodyScans.userId, userId)).orderBy(asc(bodyScans.date));
+});

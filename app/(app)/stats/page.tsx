@@ -1,3 +1,4 @@
+import { BodyScans } from "@/components/body/BodyScans";
 import { BodyStatForm } from "@/components/charts/BodyStatForm";
 import { PageTransition } from "@/components/PageTransition";
 import { BodyStatsChart } from "@/components/charts/BodyStatsChart";
@@ -6,7 +7,9 @@ import { WeeklyVolumeChart } from "@/components/charts/WeeklyVolumeChart";
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
 import {
   getAllExerciseProgress,
+  getBodyScans,
   getBodyStats,
+  getGoals,
   getLatestBodyStat,
   getWeeklyVolume,
 } from "@/lib/queries";
@@ -15,11 +18,13 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Stats" };
 
 export default async function StatsPage() {
-  const [bodyStats, latest, weekly, progress] = await Promise.all([
+  const [bodyStats, latest, weekly, progress, scans, goals] = await Promise.all([
     getBodyStats(),
     getLatestBodyStat(),
     getWeeklyVolume(12),
     getAllExerciseProgress(),
+    getBodyScans(),
+    getGoals(),
   ]);
 
   return (
@@ -29,6 +34,11 @@ export default async function StatsPage() {
       <section>
         <SectionTitle>Log body stats</SectionTitle>
         <BodyStatForm latest={latest} />
+      </section>
+
+      <section>
+        <SectionTitle>Body composition (InBody)</SectionTitle>
+        <BodyScans scans={scans} targetBodyFat={goals?.targetBodyFat ?? null} />
       </section>
 
       <section>
