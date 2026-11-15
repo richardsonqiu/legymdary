@@ -1,4 +1,5 @@
 import { BottomNav } from "@/components/BottomNav";
+import { SubTabs } from "@/components/SubTabs";
 
 export default function AppLayout({
   children,
@@ -7,7 +8,10 @@ export default function AppLayout({
 }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col">
-      <main className="flex-1 px-4 pb-28 pt-[max(1.5rem,env(safe-area-inset-top))]">{children}</main>
+      <main className="flex-1 px-4 pb-28 pt-[max(1.5rem,env(safe-area-inset-top))]">
+        <SubTabs />
+        {children}
+      </main>
       <BottomNav />
     </div>
   );

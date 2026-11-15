@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
 import { CountUp } from "@/components/CountUp";
 import { Celebration } from "@/components/consistency/Celebration";
+import { DayCell, DayLegend } from "@/components/consistency/DayCell";
 import { DumbbellIcon } from "@/components/icons";
 import { buttonClass, Card } from "@/components/ui";
 import type { ConsistencyDay } from "@/lib/queries";
@@ -90,7 +91,7 @@ export function StreaksCard({
             </div>
           </div>
           <div>
-            <div className="text-xs text-zinc-400">🍽️ Logging streak</div>
+            <div className="text-xs text-zinc-400">🥗 Logging streak</div>
             <div className="mt-1 text-4xl font-bold leading-none tabular-nums">
               <CountUp value={fs.current} duration={500} />
               <span className="ml-1 text-base font-medium text-zinc-500">{fs.current === 1 ? "day" : "days"}</span>
@@ -113,20 +114,19 @@ export function StreaksCard({
           <div className="grid grid-cols-7 gap-1.5">
             {week.map((d) => (
               <div key={d.date} className="space-y-1 text-center">
-                <div
-                  className={cn(
-                    "flex aspect-square items-center justify-center rounded-lg text-sm",
-                    d.future ? "bg-zinc-900/40" : d.active ? "bg-emerald-500/80" : "bg-zinc-800/70",
-                    d.date === today && "ring-2 ring-zinc-200/70",
-                  )}
-                >
-                  {d.logged && !d.future ? <span className="text-[11px]">🍽️</span> : null}
-                </div>
+                <DayCell
+                  d={byDate.get(d.date)}
+                  future={d.future}
+                  className={cn("aspect-square rounded-lg", d.date === today && "ring-2 ring-zinc-100/80")}
+                />
                 <div className="text-[10px] text-zinc-500">{format(parseISO(d.date), "EEEEE")}</div>
               </div>
             ))}
           </div>
-          <p className="mt-1.5 text-[10px] text-zinc-600">Green = trained (logged sets or 15+ min Garmin activity) · 🍽️ = food logged</p>
+          <div className="mt-2">
+            <DayLegend />
+          </div>
+          <p className="mt-1 text-[10px] text-zinc-600">Trained = logged sets or 15+ min Garmin activity.</p>
         </div>
 
         <Link href="/log" transitionTypes={["nav-forward"]} className={buttonClass("primary", "lg", "w-full")}>

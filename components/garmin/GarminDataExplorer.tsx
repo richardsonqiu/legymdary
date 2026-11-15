@@ -125,7 +125,9 @@ export function GarminDataExplorer({
               ? "Refresh all data"
               : status.pausedUntil
                 ? "Paused — resumes automatically"
-                : "Import everything"}
+                : overall > 0
+                  ? "Continue import now"
+                  : "Import everything"}
           </Button>
           {running && (
             <Button variant="secondary" className="col-span-2" onClick={() => (stop.current = true)}>
@@ -142,10 +144,18 @@ export function GarminDataExplorer({
             already imported; older history fills in over time.
           </p>
         )}
-        <p className="text-xs text-zinc-600">
-          Runs in ~40-second steps and resumes where it left off. A daily background job keeps it up
-          to date afterwards.
-        </p>
+        {!status.done && (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
+            <div className="mb-1 font-medium text-zinc-200">How the import keeps going — you don&apos;t need to do anything</div>
+            <ul className="list-disc space-y-0.5 pl-4">
+              <li>Whenever you open the app, it imports ~20 seconds more in the background (at most every 30 min).</li>
+              <li>A daily background job also continues it, even if you don&apos;t open the app.</li>
+              <li>If Garmin rate-limits us, it waits and picks up exactly where it stopped.</li>
+              <li>Your newest data always comes first; older history fills in over time.</li>
+            </ul>
+            <div className="mt-1.5">Want it faster? Tap <b className="text-zinc-200">Continue import now</b> and keep this page open.</div>
+          </div>
+        )}
       </Card>
 
       <section className="space-y-3">
