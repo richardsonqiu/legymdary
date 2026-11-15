@@ -79,7 +79,7 @@ export async function generateDailyReport(
   return { ok: true, report: res.data, model: res.model };
 }
 
-const AnswerSchema = z.object({
+export const AnswerSchema = z.object({
   answer: z.string().describe("A direct, concise answer (under ~150 words) grounded in the card."),
 });
 

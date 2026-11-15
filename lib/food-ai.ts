@@ -54,7 +54,7 @@ export function estimateCostUsd(
   return (inputTokens * i + outputTokens * o) / 1_000_000;
 }
 
-const MealEstimate = z.object({
+export const MealEstimate = z.object({
   is_food: z.boolean().describe("false if the photo does not show food or drink"),
   meal_name: z
     .string()
