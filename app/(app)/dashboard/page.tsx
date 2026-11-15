@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { PageTransition } from "@/components/PageTransition";
 import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreakCard } from "@/components/StreakCard";
 import { TodayFoodCard } from "@/components/food/TodayFoodCard";
+import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
+import { ReadinessCard } from "@/components/garmin/ReadinessCard";
 import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
@@ -11,24 +14,25 @@ import {
   ScaleIcon,
   SparkIcon,
   TrophyIcon,
+  WatchIcon,
 } from "@/components/icons";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
-import { computePlan, planInputFrom, targetsFromPlan } from "@/lib/nutrition";
 import {
   getActiveWorkout,
   getDailyTotals,
-  getGoals,
   getLastFinishedWorkout,
   getLatestBodyStat,
-  getLatestBodyValues,
   getPRsThisWeek,
   getWeeklyCheckin,
   getWorkoutDates,
 } from "@/lib/queries";
+import { getEnergyContext } from "@/lib/energy-data";
+import { syncGarminInBackgroundIfStale } from "@/lib/garmin/background";
 import { getSessionUser } from "@/lib/session";
 import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const serverToday = todayStr();
@@ -40,8 +44,7 @@ export default async function DashboardPage() {
     prsThisWeek,
     user,
     foodTotals,
-    goals,
-    bodyValues,
+    energy,
     weekly,
   ] = await Promise.all([
     getWorkoutDates(),
@@ -51,15 +54,27 @@ export default async function DashboardPage() {
     getPRsThisWeek(),
     getSessionUser(),
     getDailyTotals(addDaysStr(serverToday, -1), addDaysStr(serverToday, 1)),
-    getGoals(),
-    getLatestBodyValues(),
+    getEnergyContext(),
     getWeeklyCheckin(),
   ]);
-  const foodTargets = targetsFromPlan(computePlan(planInputFrom(goals, bodyValues)));
+  const foodTargets = energy.targets;
+  if (user?.id && energy.garmin) await syncGarminInBackgroundIfStale(user.id);
+  const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
+  const energyRows = energy.intake.map((d) => ({
+    date: d.date,
+    eaten: d.calories,
+    meals: d.count,
+    burned: garminByDate.get(d.date)?.totalKcal ?? null,
+  }));
+  for (const g of energy.garminDays) {
+    if (!energy.intake.some((d) => d.date === g.date)) {
+      energyRows.push({ date: g.date, eaten: 0, meals: 0, burned: g.totalKcal });
+    }
+  }
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
-    <div className="space-y-6">
+    <PageTransition className="space-y-6">
       <header className="flex items-start justify-between gap-3">
         <DashboardHeading firstName={firstName} />
         <AccountMenu name={user?.name} email={user?.email} />
@@ -76,15 +91,54 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/plan" className="text-xs text-zinc-400">
+            <Link href="/plan" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               Plan →
             </Link>
           }
         >
           Today&apos;s food
         </SectionTitle>
-        <TodayFoodCard totals={foodTotals} targets={foodTargets} />
+        <TodayFoodCard
+          totals={foodTotals}
+          targets={foodTargets}
+          bonusByDate={energy.bonusByDate}
+        />
       </section>
+
+      {/* Garmin */}
+      {energy.garmin ? (
+        <>
+          <section>
+            <SectionTitle
+              action={
+                <Link href="/garmin" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
+                  Garmin →
+                </Link>
+              }
+            >
+              Readiness
+            </SectionTitle>
+            <ReadinessCard byDate={energy.readinessByDate} />
+          </section>
+          <section>
+            <SectionTitle>Energy balance</SectionTitle>
+            <EnergyBalanceCard rows={energyRows} />
+          </section>
+        </>
+      ) : (
+        <Link
+          href="/garmin" transitionTypes={["nav-forward"]}
+          className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900/50"
+        >
+          <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
+          <span>
+            <b>Connect Garmin</b>
+            <span className="block text-xs text-zinc-500">
+              See calories in vs out, recovery and your real maintenance calories.
+            </span>
+          </span>
+        </Link>
+      )}
 
       {/* Weekly check-in */}
       <section>
@@ -96,7 +150,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/history" className="text-xs text-zinc-400">
+            <Link href="/history" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               History →
             </Link>
           }
@@ -120,7 +174,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/stats" className="text-xs text-zinc-400">
+            <Link href="/stats" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               Update →
             </Link>
           }
@@ -172,7 +226,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/prs" className="text-xs text-zinc-400">
+            <Link href="/prs" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               All PRs →
             </Link>
           }
@@ -216,7 +270,7 @@ export default async function DashboardPage() {
           </p>
         )}
       </section>
-    </div>
+    </PageTransition>
   );
 }
 

@@ -24,6 +24,7 @@ import {
   mealTypeForHour,
   sumMacros,
   type DailyTargets,
+  withBonus,
   type MealItem,
   type MealType,
 } from "@/lib/nutrition";
@@ -51,6 +52,7 @@ export function FoodDiary({
   requestedDate,
   targets,
   planMissing,
+  garminByDate,
 }: {
   meals: Meal[];
   /** Distinct recent meals for one-tap "eat again" (no AI call). */
@@ -61,6 +63,8 @@ export function FoodDiary({
   requestedDate: string | null;
   targets: DailyTargets;
   planMissing: boolean;
+  /** Garmin burn + activity bonus per date (null when Garmin isn't connected). */
+  garminByDate?: Record<string, { burned: number | null; bonus: number }> | null;
 }) {
   const router = useRouter();
   const mounted = useMounted();
@@ -163,6 +167,7 @@ export function FoodDiary({
     setRelogId(m.id);
     startRelog(async () => {
       await relogMeal({ mealId: m.id, date, mealType: defaultMealType() });
+      navigator.vibrate?.(12);
       router.refresh();
     });
   }
@@ -203,10 +208,33 @@ export function FoodDiary({
       </div>
 
       <Card>
-        <MacroSummary totals={totals} targets={targets} />
+        <MacroSummary totals={totals} targets={withBonus(targets, garminByDate?.[date]?.bonus)} />
+        {garminByDate && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
+            <span>
+              Garmin burn{isToday ? " so far" : ""}:{" "}
+              <b className="tabular-nums text-zinc-200">
+                {garminByDate[date]?.burned != null
+                  ? `${Math.round(garminByDate[date]!.burned!).toLocaleString("en-US")} kcal`
+                  : "—"}
+              </b>
+              {garminByDate[date]?.burned != null && (
+                <span className="text-zinc-500">
+                  {" "}· net {totals.calories - garminByDate[date]!.burned! > 0 ? "+" : ""}
+                  {Math.round(totals.calories - garminByDate[date]!.burned!).toLocaleString("en-US")}
+                </span>
+              )}
+            </span>
+            {!!garminByDate[date]?.bonus && (
+              <span className="text-emerald-300/80">
+                +{garminByDate[date]!.bonus} kcal activity bonus
+              </span>
+            )}
+          </div>
+        )}
         {planMissing && (
           <Link
-            href="/plan"
+            href="/plan" transitionTypes={["nav-forward"]}
             className="mt-4 flex items-center gap-2 rounded-xl border border-dashed border-zinc-700 px-3 py-2.5 text-sm text-zinc-300"
           >
             <TargetIcon className="h-4 w-4 shrink-0 text-zinc-500" />
@@ -262,7 +290,7 @@ export function FoodDiary({
                 key={m.id}
                 onClick={() => eatAgain(m)}
                 disabled={relogging}
-                className="flex w-36 shrink-0 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-2 text-left transition-colors hover:bg-zinc-800/60 disabled:opacity-60"
+                className="press flex w-36 shrink-0 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-2 text-left hover:bg-zinc-800/60 disabled:opacity-60"
               >
                 {m.photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -360,7 +388,7 @@ function MealRow({
   const [open, setOpen] = useState(false);
   const items = parseItems(meal.items);
   return (
-    <li className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
+    <li className="animate-item-in overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
       <button
         className="flex w-full items-center gap-3 p-2.5 text-left"
         onClick={() => setOpen((o) => !o)}

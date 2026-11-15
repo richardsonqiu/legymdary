@@ -63,9 +63,19 @@ export type PlanInput = {
   targetBodyFat: number | null;
   weeklyRate: number | null; // kg / week (absolute)
   calorieOverride: number | null;
+  /**
+   * Maintenance calories measured from real data (food log + weight trend, or
+   * Garmin burn). When set, it replaces the formula estimate.
+   */
+  maintenance?: { kcal: number; source: MaintenanceSource } | null;
 };
 
+export type MaintenanceSource = "measured" | "garmin" | "formula";
+
 export type Plan = {
+  maintenanceSource: MaintenanceSource | null;
+  /** Formula-based TDEE, kept for comparison when a measured value is used. */
+  formulaTdee: number | null;
   /** Missing inputs that block a calorie target. Empty when the plan is complete. */
   missing: string[];
   bmr: number | null;
@@ -113,9 +123,23 @@ export function computePlan(i: PlanInput): Plan {
     if (!i.age) missing.push("birth year");
     if (!i.heightCm) missing.push("height");
   }
-  if (!i.activityLevel) missing.push("activity level");
-  const tdee =
+  const formulaTdee =
     bmr != null && i.activityLevel ? bmr * ACTIVITY_LEVELS[i.activityLevel].factor : null;
+  const measured = i.maintenance && i.maintenance.kcal > 0 ? i.maintenance : null;
+  const tdee = measured ? measured.kcal : formulaTdee;
+  const maintenanceSource: MaintenanceSource | null = measured
+    ? measured.source
+    : formulaTdee != null
+      ? "formula"
+      : null;
+  if (measured) {
+    // Real data replaces the formula, so only weight is still required.
+    for (let k = missing.length - 1; k >= 0; k--) {
+      if (!missing[k].startsWith("current weight")) missing.splice(k, 1);
+    }
+  } else if (!i.activityLevel) {
+    missing.push("activity level");
+  }
 
   // --- Goal weight ---
   const impliedWeightForBodyFat =
@@ -187,6 +211,8 @@ export function computePlan(i: PlanInput): Plan {
       : null;
 
   return {
+    maintenanceSource,
+    formulaTdee: formulaTdee != null ? round(formulaTdee, 10) : null,
     missing,
     bmr: bmr != null ? round(bmr) : null,
     bmrMethod,
@@ -241,8 +267,10 @@ export function planInputFrom(
   } | null,
   body: { weight: number | null; bodyFat: number | null },
   year: number = new Date().getFullYear(),
+  maintenance: PlanInput["maintenance"] = null,
 ): PlanInput {
   return {
+    maintenance,
     sex: g?.sex === "male" || g?.sex === "female" ? g.sex : null,
     age: g?.birthYear ? year - g.birthYear : null,
     heightCm: g?.heightCm ?? null,
@@ -269,4 +297,14 @@ export type DailyTargets = {
 export function targetsFromPlan(p: Plan): DailyTargets {
   if (p.calorieTarget == null) return null;
   return { calories: p.calorieTarget, protein: p.protein, carbs: p.carbs, fat: p.fat };
+}
+
+/** Adds an activity bonus to a day's targets (extra energy goes to carbs). */
+export function withBonus(t: DailyTargets, bonus: number | undefined): DailyTargets {
+  if (!t || !bonus) return t;
+  return {
+    ...t,
+    calories: t.calories + bonus,
+    carbs: t.carbs != null ? t.carbs + Math.round(bonus / 4 / 5) * 5 : null,
+  };
 }

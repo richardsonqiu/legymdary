@@ -118,6 +118,9 @@ logged data (keeps the exercise library).
 | `MEAL_AI_MODEL`        | optional | Primary photo model (default `claude-haiku-5-5`)       |
 | `MEAL_AI_BACKUP_MODEL` | optional | Retry model (default `claude-sonnet-5-5`; `""` = off)  |
 | `MEAL_AI_EFFORT`       | optional | `low` (default), `medium` or `high`                    |
+| `MEAL_AI_DAILY_LIMIT`  | optional | AI photo analyses per user per day (default 60)        |
+| `CRON_SECRET`          | for Garmin | Auth for the daily Garmin sync cron                  |
+| `GARMIN_ENCRYPTION_KEY`| optional | Encrypts stored Garmin keys (default: `AUTH_SECRET`)   |
 
 ## Project structure
 
@@ -154,6 +157,36 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   is turned into a target weight assuming you keep your lean mass. It also
   compares your average intake and 4-week weight trend against the plan.
 
+## Garmin integration
+
+Uses Garmin's free **Connect Personal API** (read-only). Each user creates a
+key at Garmin Connect → Settings → Personal API Key and pastes it on the
+**Garmin** page (account menu or dashboard). The key is verified, stored
+encrypted (AES-256-GCM), exchanged for a 24-hour bearer token as needed, and
+never written back to Garmin.
+
+- **Sync** — 30 days on connect; afterwards a background sync after page loads
+  (at most every 3h), a daily Vercel Cron (`/api/cron/garmin`, needs
+  `CRON_SECRET`), and a "Sync now" button. Pulls daily summaries (calories
+  burned, steps, resting HR, stress, Body Battery), sleep, HRV, activities and
+  scale weigh-ins.
+- **Energy balance** — calories eaten vs Garmin's burn, today and last 7 days.
+- **Measured maintenance** — once you have ≥10 fully-logged days and ≥4
+  weigh-ins over ≥14 days, maintenance = avg intake − weight trend × 7,700
+  kcal/kg; otherwise Garmin's average daily burn (≥5 days); otherwise the
+  formula. The Plan's calorie target uses the best available.
+- **Eat back extra activity** (opt-in) — adds half of the day's above-average
+  active burn to that day's target (max +600).
+- **Readiness** — sleep score, HRV status, Body Battery and resting HR vs
+  your 7-day baseline → "Ready to push / Train as planned / Take it easy".
+- **Weigh-ins** from a Garmin scale fill Stats (source `garmin`); anything you
+  type yourself is never overwritten.
+- Garmin activities show on History and the Garmin page; CSV export includes
+  Garmin daily data. Disconnecting can also delete all imported data.
+
+The Personal API is intended for personal use, not commercial apps serving
+many users — see Garmin's FAQ before opening this app to the public.
+
 ## Training extras
 
 - **Rest timer** — starts automatically when you log a set; pick 1:00–3:00,
@@ -163,6 +196,35 @@ lib/            Queries (reads), actions (mutations), session helper, utils
 - **Weekly check-in** (dashboard) — workouts, sets and volume vs last week,
   average calories/protein and days on target, and 7-day weight change.
 - **CSV export** — account menu → export workouts, food log or body stats.
+
+## Security
+
+- **Dependencies** — Next.js 16.4.6, next-auth 5.0.0-beta.32 and
+  @auth/drizzle-adapter 1.11.3 patch the critical/high advisories (proxy
+  bypass, Server Actions DoS, Auth.js fail-open). `npm audit --omit=dev` is
+  clean; remaining moderate findings are in dev-only tooling (ESLint,
+  drizzle-kit).
+- **Auth** — every server action and query re-checks the session (the proxy is
+  only a first gate); all data is scoped to the signed-in user. Passwords use
+  scrypt with constant-time comparison; email/password length is capped.
+- **Rate limits** (database-backed, so they hold on serverless) — sign-in: 10
+  per account and 30 per IP per 15 min; sign-up: 5 per IP per hour; AI photo
+  analysis: 8/min and `MEAL_AI_DAILY_LIMIT` (default 60)/day per user; Garmin
+  connect 10/hour, sync 20/hour.
+- **Headers** — CSP (no third-party scripts, no framing, no plugins),
+  `X-Frame-Options: DENY`, `nosniff`, strict referrer policy, restrictive
+  Permissions-Policy, COOP, and HSTS on Vercel. `X-Powered-By` removed.
+- **Secrets** — Garmin keys/tokens AES-256-GCM encrypted at rest; the cron
+  endpoint compares `CRON_SECRET` in constant time; API responses are
+  `no-store`; CSV exports are guarded against formula injection.
+- **Input validation** — dates, numeric ranges, text lengths and image data
+  URLs are validated server-side on every write.
+
+## Install as an app
+
+Open the site on your phone → Share → **Add to Home Screen** (iOS) or the
+install prompt (Android). It launches full-screen with shortcuts for "Snap a
+meal" and "Log workout".
 
 ## Notes
 

@@ -83,7 +83,7 @@ export function buttonClass(
   className?: string,
 ) {
   return cn(
-    "inline-flex select-none items-center justify-center gap-2 font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex select-none items-center justify-center gap-2 font-medium press disabled:pointer-events-none disabled:opacity-50",
     buttonVariants[variant],
     buttonSizes[size],
     className,

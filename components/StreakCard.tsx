@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CountUp } from "@/components/CountUp";
 import { DumbbellIcon, FlameIcon } from "@/components/icons";
 import { buttonClass, Card } from "@/components/ui";
 import { calcStreaks } from "@/lib/utils";
@@ -24,7 +25,7 @@ export function StreakCard({
             Current streak
           </div>
           <div className="mt-1 text-5xl font-bold leading-none tabular-nums">
-            {current}
+            <CountUp value={current} duration={500} />
             <span className="ml-1.5 text-xl font-medium text-zinc-500">
               {current === 1 ? "day" : "days"}
             </span>
@@ -40,7 +41,7 @@ export function StreakCard({
         </div>
       </div>
 
-      <Link href="/log" className={buttonClass("primary", "lg", "w-full")}>
+      <Link href="/log" transitionTypes={["nav-forward"]} className={buttonClass("primary", "lg", "w-full")}>
         <DumbbellIcon className="h-5 w-5" />
         {active ? "Continue workout" : "Start workout"}
       </Link>

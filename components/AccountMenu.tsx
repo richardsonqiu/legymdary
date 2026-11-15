@@ -47,6 +47,19 @@ export function AccountMenu({
             )}
           </div>
           <div className="my-1 h-px bg-zinc-800" />
+          <a
+            href="/garmin"
+            className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+          >
+            Garmin connection
+          </a>
+          <a
+            href="/plan"
+            className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+          >
+            Goal plan
+          </a>
+          <div className="my-1 h-px bg-zinc-800" />
           <div className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
             Export CSV
           </div>
@@ -55,6 +68,7 @@ export function AccountMenu({
               ["workouts", "Workouts & sets"],
               ["meals", "Food log"],
               ["body", "Body stats"],
+              ["garmin", "Garmin daily data"],
             ] as const
           ).map(([type, label]) => (
             <a

@@ -1,18 +1,22 @@
 import Link from "next/link";
+import { PageTransition } from "@/components/PageTransition";
 import { FoodDiary } from "@/components/food/FoodDiary";
 import { TargetIcon } from "@/components/icons";
 import { PageHeader, buttonClass } from "@/components/ui";
-import { computePlan, planInputFrom, targetsFromPlan } from "@/lib/nutrition";
+import { activityBonus } from "@/lib/energy";
+import { getEnergyContext } from "@/lib/energy-data";
+import { syncGarminInBackgroundIfStale } from "@/lib/garmin/background";
+import { requireUserId } from "@/lib/session";
 import {
   getAiUsageSince,
-  getGoals,
-  getLatestBodyValues,
+  getGarminDaily,
   getMeals,
   getRecentMeals,
 } from "@/lib/queries";
 import { addDaysStr, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Food" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -29,22 +33,32 @@ export default async function FoodPage({
   const center = requested ?? todayStr();
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const [meals, goals, body, recentMeals, aiSpend] = await Promise.all([
+  const [meals, energy, recentMeals, aiSpend, garminDays, userId] = await Promise.all([
     getMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
-    getGoals(),
-    getLatestBodyValues(),
+    getEnergyContext(),
     getRecentMeals(8),
     getAiUsageSince(monthStart),
+    getGarminDaily(addDaysStr(center, -1), addDaysStr(center, 1)),
+    requireUserId(),
   ]);
-  const plan = computePlan(planInputFrom(goals, body));
+  if (energy.garmin) await syncGarminInBackgroundIfStale(userId);
+  const plan = energy.plan;
+  const adjust = !!energy.garmin?.adjustForActivity && !!energy.targets && !plan.usingOverride;
+  const garminByDate: Record<string, { burned: number | null; bonus: number }> = {};
+  for (const d of garminDays) {
+    garminByDate[d.date] = {
+      burned: d.totalKcal,
+      bonus: adjust ? activityBonus(d.activeKcal, energy.garminMaint?.avgActive ?? null) : 0,
+    };
+  }
 
   return (
-    <div>
+    <PageTransition className="space-y-0">
       <PageHeader
         title="Food"
         subtitle="Snap what you eat — AI estimates the calories"
         action={
-          <Link href="/plan" className={buttonClass("secondary", "sm")}>
+          <Link href="/plan" transitionTypes={["nav-forward"]} className={buttonClass("secondary", "sm")}>
             <TargetIcon className="h-4 w-4" /> Plan
           </Link>
         }
@@ -54,9 +68,10 @@ export default async function FoodPage({
         recentMeals={recentMeals}
         aiSpend={{ calls: aiSpend.calls, costUsd: aiSpend.costUsd }}
         requestedDate={requested}
-        targets={targetsFromPlan(plan)}
+        targets={energy.targets}
+        garminByDate={energy.garmin ? garminByDate : null}
         planMissing={plan.calorieTarget == null}
       />
-    </div>
+    </PageTransition>
   );
 }
