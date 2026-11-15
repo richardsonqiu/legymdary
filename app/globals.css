@@ -3,6 +3,20 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* The app's neutral scale is "zinc" in class names; retinted to a deep
+     night-blue so every surface, border and text tone shifts together. */
+  --color-zinc-50: #f5f7fb;
+  --color-zinc-100: #e8ecf4;
+  --color-zinc-200: #d2d9e6;
+  --color-zinc-300: #b3bdd0;
+  --color-zinc-400: #8c98b0;
+  --color-zinc-500: #67738c;
+  --color-zinc-600: #4a5570;
+  --color-zinc-700: #333d55;
+  --color-zinc-800: #222b40;
+  --color-zinc-900: #131a2b;
+  --color-zinc-950: #0a0f1c;
 }
 
 :root {
@@ -14,15 +28,15 @@ html {
 }
 
 body {
-  background-color: #09090b; /* zinc-950 */
-  color: #fafafa; /* zinc-50 */
+  background-color: #0a0f1c; /* zinc-950 (night blue) */
+  color: #f5f7fb;
   font-family: var(--font-sans);
-  /* A faint glow at the top so pure black doesn't feel flat. */
-  background-image: radial-gradient(
-    120% 60% at 50% -10%,
-    rgba(255, 255, 255, 0.05),
-    transparent 70%
-  );
+  /* Soft "night sky" atmosphere: teal glow top-left, indigo top-right,
+     fading into deep navy. */
+  background-image:
+    radial-gradient(90% 45% at 10% -5%, rgba(45, 212, 191, 0.13), transparent 70%),
+    radial-gradient(80% 40% at 95% 0%, rgba(99, 102, 241, 0.16), transparent 70%),
+    linear-gradient(180deg, #111a2e 0%, #0a0f1c 45%, #080c17 100%);
   background-attachment: fixed;
 }
 
@@ -37,21 +51,21 @@ input[type="number"] {
 }
 
 ::selection {
-  background: #fafafa;
-  color: #09090b;
+  background: #f5f7fb;
+  color: #0a0f1c;
 }
 
 /* Slim, monochrome scrollbar. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
+  scrollbar-color: #333d55 transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #333d55;
   border-radius: 9999px;
 }
 
@@ -278,4 +292,24 @@ input[type="number"] {
 }
 .animate-celebrate {
   animation: celebrate-in 420ms var(--ease-spring) backwards;
+}
+
+/* --- Score rings / arc gauge: draw in from empty --- */
+@keyframes ring-draw {
+  from { stroke-dashoffset: var(--ring-c); }
+}
+.score-ring-arc {
+  animation: ring-draw 900ms var(--ease-out-snappy) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .score-ring-arc { animation: none; }
+}
+
+/* --- Hero "sky": layered gradients that shift with the score tone --- */
+.hero-sky {
+  background:
+    radial-gradient(120% 70% at 50% 110%, rgba(10, 15, 28, 0.95), transparent 60%),
+    radial-gradient(70% 60% at 20% 10%, var(--sky-a, rgba(94, 234, 212, 0.35)), transparent 70%),
+    radial-gradient(70% 60% at 85% 20%, var(--sky-b, rgba(129, 140, 248, 0.35)), transparent 70%),
+    linear-gradient(180deg, #1c2a4a 0%, #121b31 60%, #0d1424 100%);
 }

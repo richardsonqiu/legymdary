@@ -94,7 +94,7 @@ export function EnergyBalanceCard({ rows }: { rows: EnergyRow[] }) {
               formatter={(v, name) => [`${fmt(Number(v))} kcal`, name === "eaten" ? "Eaten" : "Burned"]}
             />
             <Bar dataKey="eaten" fill="#34d399" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-            <Bar dataKey="burned" fill="#71717a" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="burned" fill="#67738c" radius={[3, 3, 0, 0]} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </ChartFrame>
