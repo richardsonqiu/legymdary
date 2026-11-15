@@ -119,6 +119,8 @@ logged data (keeps the exercise library).
 | `MEAL_AI_BACKUP_MODEL` | optional | Retry model (default `claude-sonnet-5-5`; `""` = off)  |
 | `MEAL_AI_EFFORT`       | optional | `low` (default), `medium` or `high`                    |
 | `MEAL_AI_DAILY_LIMIT`  | optional | AI photo analyses per user per day (default 60)        |
+| `INSIGHTS_AI_MODEL`    | optional | Daily brief model (default `claude-haiku-5-5`)         |
+| `INSIGHTS_AI_BACKUP_MODEL` | optional | Brief fallback (default `claude-sonnet-5-5`)       |
 | `CRON_SECRET`          | for Garmin | Auth for the daily Garmin sync cron                  |
 | `GARMIN_ENCRYPTION_KEY`| optional | Encrypts stored Garmin keys (default: `AUTH_SECRET`)   |
 
@@ -212,6 +214,28 @@ The analysis design built on top of this lives in
 
 The Personal API is intended for personal use, not commercial apps serving
 many users — see Garmin's FAQ before opening this app to the public.
+
+## Insights (daily analysis)
+
+The **Insights** tab analyses each day against your own baseline (method:
+[`docs/analysis-plan.md`](docs/analysis-plan.md); code: `lib/analysis/`).
+
+- **Readiness 0–100** — HRV, resting HR, sleep, sleep balance, load balance
+  and breathing/SpO2, each scored vs your 28-day baseline, with weights shown.
+- **Sleep** — performance vs Garmin's sleep need, 7-day sleep debt, bedtime
+  consistency, stages.
+- **Training** — strain (0–21) and acute:chronic load ratio, from Garmin
+  activity load and your logged strength volume.
+- **Fuel** — eaten vs burned and protein vs target.
+- **Patterns** — personal associations (late meals → sleep, alcohol → HRV…)
+  once there's enough history.
+- **Coach's brief + questions** — numbers are computed in code; Claude Haiku
+  5.5 (Sonnet 5.5 backup) writes the narrative from a compact day card,
+  about $0.0005 per report. A brief is written automatically each morning by
+  the cron once the night has synced.
+
+Garmin's rate limits pause the full import (honouring `Retry-After`); it then
+resumes automatically in the background and via the daily cron.
 
 ## Training extras
 

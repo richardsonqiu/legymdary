@@ -2,6 +2,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { lt } from "drizzle-orm";
 import { db } from "@/db";
 import { rateLimits } from "@/db/schema";
+import { generateDailyReport, getStoredReport } from "@/lib/analysis/report";
+import { latestDataDate } from "@/lib/analysis/service";
 import { runGarminImport } from "@/lib/garmin/raw-import";
 import { staleGarminUsers, syncGarminForUser } from "@/lib/garmin/sync";
 
@@ -33,9 +35,18 @@ export async function GET(request: Request) {
     results.push({ ok: r.ok, error: r.error });
     // Keep the full raw store current too (small time slice per user).
     if (r.ok && Date.now() - started < 40_000) {
-      await runGarminImport(userId, { budgetMs: 12_000 }).catch((err) =>
+      await runGarminImport(userId, { budgetMs: 20_000 }).catch((err) =>
         console.error("[garmin] cron raw import failed:", (err as Error).message),
       );
+    }
+    // Morning brief: write today's report once the night's data is in.
+    if (r.ok && process.env.ANTHROPIC_API_KEY && Date.now() - started < 50_000) {
+      try {
+        const date = await latestDataDate(userId);
+        if (!(await getStoredReport(userId, date))) await generateDailyReport(userId, date);
+      } catch (err) {
+        console.error("[insights] cron report failed:", (err as Error).message);
+      }
     }
   }
   return Response.json({

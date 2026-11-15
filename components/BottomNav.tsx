@@ -8,7 +8,7 @@ import {
   DumbbellIcon,
   ForkIcon,
   HomeIcon,
-  TrophyIcon,
+  SparkIcon,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ const items = [
   { href: "/food", label: "Food", Icon: ForkIcon },
   { href: "/history", label: "History", Icon: CalendarIcon },
   { href: "/stats", label: "Stats", Icon: BarsIcon },
-  { href: "/prs", label: "PRs", Icon: TrophyIcon },
+  { href: "/insights", label: "Insights", Icon: SparkIcon },
 ];
 
 export function BottomNav() {

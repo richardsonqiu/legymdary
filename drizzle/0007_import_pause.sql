@@ -1,0 +1,1 @@
+ALTER TABLE `garmin_connections` ADD `import_paused_until` integer;

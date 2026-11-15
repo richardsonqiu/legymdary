@@ -34,6 +34,8 @@ type Progress = typeof garminDatasets.$inferSelect;
 
 export type ImportStatus = {
   done: boolean;
+  /** When Garmin rate-limited us; the import resumes automatically after this. */
+  pausedUntil: string | null;
   stoppedReason?: string;
   calls: number;
   rowsWritten: number;
@@ -48,6 +50,9 @@ export type ImportStatus = {
     targetFrom: string | null;
     latestDate: string | null;
     rows: number;
+    /** Actual date range that has data. */
+    firstDataDate: string | null;
+    lastDataDate: string | null;
     percent: number;
   }[];
 };
@@ -101,6 +106,10 @@ export async function runGarminImport(
     .where(eq(garminConnections.userId, userId))
     .limit(1);
   if (!conn) throw new Error("Garmin isn't connected.");
+  if (conn.importPausedUntil && conn.importPausedUntil.getTime() > Date.now()) {
+    const status = await getImportStatus(userId);
+    return { ...status, stoppedReason: "Paused by Garmin's rate limit", calls: 0, rowsWritten: 0 };
+  }
 
   const today = addDaysStr(todayStr(), 1); // pad for users ahead of the server's timezone
   const summaryFrom = addDaysStr(today, -SUMMARY_DAYS);
@@ -158,7 +167,11 @@ export async function runGarminImport(
         throw new StopImport("Garmin rejected the API key — reconnect on the Garmin page.");
       }
       if (err instanceof GarminError && err.status === 429) {
-        throw new StopImport("Garmin rate limit reached — the import will continue later.");
+        // Respect Retry-After (default 30 min, capped 6 h); resume automatically after.
+        const waitSec = Math.min(6 * 3600, Math.max(60, err.retryAfterSec ?? 30 * 60));
+        const until = new Date(Date.now() + waitSec * 1000);
+        await db.update(garminConnections).set({ importPausedUntil: until }).where(eq(garminConnections.userId, userId));
+        throw new StopImport("Garmin rate limit reached — the import resumes automatically.");
       }
       const status = err instanceof GarminError ? err.status : 0;
       const streak = progress.get(ds.id)!.emptyStreak + 1;
@@ -310,7 +323,7 @@ async function countRows(userId: string, dataset: string): Promise<number> {
 /** Progress per dataset, for the Data page. */
 export async function getImportStatus(userId: string): Promise<Omit<ImportStatus, "calls" | "rowsWritten">> {
   const [conn] = await db
-    .select({ historyDays: garminConnections.historyDays })
+    .select({ historyDays: garminConnections.historyDays, pausedUntil: garminConnections.importPausedUntil })
     .from(garminConnections)
     .where(eq(garminConnections.userId, userId))
     .limit(1);
@@ -320,13 +333,18 @@ export async function getImportStatus(userId: string): Promise<Omit<ImportStatus
   const [rows, counts] = await Promise.all([
     db.select().from(garminDatasets).where(eq(garminDatasets.userId, userId)),
     db
-      .select({ dataset: garminRaw.dataset, n: sql<number>`count(*)` })
+      .select({
+        dataset: garminRaw.dataset,
+        n: sql<number>`count(*)`,
+        first: sql<string | null>`min(${garminRaw.date})`,
+        last: sql<string | null>`max(${garminRaw.date})`,
+      })
       .from(garminRaw)
-      .where(eq(garminRaw.userId, userId))
+      .where(and(eq(garminRaw.userId, userId), sql`${garminRaw.payload} != 'null'`))
       .groupBy(garminRaw.dataset),
   ]);
   const byId = new Map(rows.map((r) => [r.dataset, r]));
-  const countById = new Map(counts.map((c) => [c.dataset, Number(c.n)]));
+  const countById = new Map(counts.map((c) => [c.dataset, c]));
 
   const datasets = DATASETS.map((d) => {
     const p = byId.get(d.id);
@@ -351,9 +369,12 @@ export async function getImportStatus(userId: string): Promise<Omit<ImportStatus
       backfilledTo: p?.backfilledTo ?? null,
       targetFrom: target,
       latestDate: p?.latestDate ?? null,
-      rows: countById.get(d.id) ?? 0,
+      rows: Number(countById.get(d.id)?.n ?? 0),
+      firstDataDate: countById.get(d.id)?.first ?? null,
+      lastDataDate: countById.get(d.id)?.last ?? null,
       percent,
     };
   });
-  return { done: datasets.every((d) => d.percent >= 100), datasets };
+  const paused = conn?.pausedUntil && conn.pausedUntil.getTime() > Date.now() ? conn.pausedUntil.toISOString() : null;
+  return { done: datasets.every((d) => d.percent >= 100), pausedUntil: paused, datasets };
 }

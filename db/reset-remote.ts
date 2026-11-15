@@ -13,6 +13,7 @@ import { createClient } from "@libsql/client";
 const TABLES = [
   "body_stats",
   "rate_limits",
+  "daily_reports",
   "garmin_raw",
   "garmin_datasets",
   "garmin_activities",
