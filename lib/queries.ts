@@ -689,6 +689,9 @@ export type WeekStats = {
   workouts: number;
   sets: number;
   volume: number;
+  /** Garmin activities of 15+ minutes (runs, rides, classes…). */
+  activities: number;
+  /** Completed days (before today) with food logged. */
   daysLogged: number;
   avgCalories: number | null;
   avgProtein: number | null;
@@ -698,8 +701,10 @@ export type WeeklyCheckin = {
   weekStart: string;
   thisWeek: WeekStats;
   lastWeek: WeekStats;
-  /** Daily totals for this week, to count target hits against the plan. */
+  /** Daily totals for this week's completed days (today excluded — it isn't over yet). */
   days: DayTotals[];
+  /** Today's totals so far. */
+  today: DayTotals | null;
   weightNow: number | null;
   weightWeekAgo: number | null;
 };
@@ -711,7 +716,8 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
   const lastStart = addDaysStr(weekStart, -7);
   const end = addDaysStr(weekStart, 6);
 
-  const [setRows, totals, weights] = await Promise.all([
+  const today = todayStr();
+  const [setRows, totals, weights, acts] = await Promise.all([
     db
       .select({
         date: workouts.date,
@@ -736,15 +742,21 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
         ),
       )
       .orderBy(asc(bodyStats.date)),
+    db
+      .select({ date: garminActivities.date, durationSec: garminActivities.durationSec })
+      .from(garminActivities)
+      .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, lastStart, end))),
   ]);
 
   function stats(from: string, to: string): WeekStats {
     const rows = setRows.filter((r) => r.date >= from && r.date <= to && !r.isWarmup);
-    const days = totals.filter((t) => t.date >= from && t.date <= to);
+    // Nutrition is judged on finished days only; a half-eaten today would skew it.
+    const days = totals.filter((t) => t.date >= from && t.date <= to && t.date < today);
     return {
       workouts: new Set(rows.map((r) => r.workoutId)).size,
       sets: rows.length,
       volume: rows.reduce((a, r) => a + r.weight * r.reps, 0),
+      activities: acts.filter((a) => a.date >= from && a.date <= to && (a.durationSec ?? 0) >= 15 * 60).length,
       daysLogged: days.length,
       avgCalories: days.length
         ? days.reduce((a, d) => a + d.calories, 0) / days.length
@@ -766,7 +778,8 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
     weekStart,
     thisWeek: stats(weekStart, end),
     lastWeek: stats(lastStart, addDaysStr(weekStart, -1)),
-    days: totals.filter((t) => t.date >= weekStart),
+    days: totals.filter((t) => t.date >= weekStart && t.date < today),
+    today: totals.find((t) => t.date === today) ?? null,
     weightNow: latest?.weight ?? null,
     weightWeekAgo: weekAgo?.weight ?? null,
   };
@@ -811,6 +824,18 @@ export async function getGarminDaily(from: string, to: string): Promise<GarminDa
     .from(garminDaily)
     .where(and(eq(garminDaily.userId, userId), between(garminDaily.date, from, to)))
     .orderBy(asc(garminDaily.date));
+}
+
+/** Most recent Garmin activity, or null. */
+export async function getLatestGarminActivity(): Promise<GarminActivity | null> {
+  const userId = await requireUserId();
+  const [row] = await db
+    .select()
+    .from(garminActivities)
+    .where(eq(garminActivities.userId, userId))
+    .orderBy(desc(garminActivities.date), desc(garminActivities.startTimeLocal))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function getGarminActivities(from: string, to: string): Promise<GarminActivity[]> {

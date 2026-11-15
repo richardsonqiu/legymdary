@@ -28,15 +28,27 @@ export function WeeklyCheckin({
       : null;
 
   const tips: string[] = [];
-  if (t.workouts === 0 && l.workouts > 0) tips.push("No sessions yet this week — even a short one keeps momentum.");
+  const sessions = t.workouts + t.activities;
+  if (sessions === 0 && l.workouts + l.activities > 0) tips.push("No sessions yet this week — even a short one keeps momentum.");
   if (proteinHits != null && t.daysLogged >= 2 && proteinHits < t.daysLogged / 2)
     tips.push("Protein is lagging — add a lean protein to your next meal or a shake.");
-  if (t.daysLogged === 0) tips.push("Log meals to see how your intake tracks against your plan.");
+  if (t.daysLogged === 0)
+    tips.push(
+      data.today
+        ? "Food targets are scored on finished days — today's meals count from tomorrow."
+        : "Log meals to see how your intake tracks against your plan.",
+    );
 
   return (
     <Card className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <Metric label="Workouts" value={String(t.workouts)} prev={l.workouts} cur={t.workouts} />
+        <Metric
+          label="Workouts"
+          value={String(sessions)}
+          prev={l.workouts + l.activities}
+          cur={sessions}
+          note={t.activities ? `${t.workouts} gym · ${t.activities} Garmin` : undefined}
+        />
         <Metric label="Sets" value={String(t.sets)} prev={l.sets} cur={t.sets} />
         <Metric
           label="Volume"
@@ -88,11 +100,13 @@ function Metric({
   value,
   prev,
   cur,
+  note,
 }: {
   label: string;
   value: string;
   prev: number;
   cur: number;
+  note?: string;
 }) {
   const diff = cur - prev;
   return (
@@ -114,6 +128,7 @@ function Metric({
           : diff === 0
             ? "same as last wk"
             : `${diff > 0 ? "▲" : "▼"} vs last wk`}
+        {note && <span className="block text-zinc-500">{note}</span>}
       </div>
     </div>
   );

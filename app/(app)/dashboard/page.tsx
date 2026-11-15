@@ -28,7 +28,9 @@ import {
   getWeeklyCheckin,
   getBodyScans,
   getConsistencyDays,
+  getLatestGarminActivity,
 } from "@/lib/queries";
+import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
@@ -51,6 +53,7 @@ export default async function DashboardPage() {
     energy,
     weekly,
     scans,
+    latestActivity,
   ] = await Promise.all([
     getConsistencyDays(addDaysStr(serverToday, -380), addDaysStr(serverToday, 1)),
     getActiveWorkout(),
@@ -62,6 +65,7 @@ export default async function DashboardPage() {
     getEnergyContext(),
     getWeeklyCheckin(),
     getBodyScans(),
+    getLatestGarminActivity(),
   ]);
   const foodTargets = energy.targets;
 
@@ -202,15 +206,26 @@ export default async function DashboardPage() {
         >
           Last workout
         </SectionTitle>
-        {lastFinished ? (
-          <Card>
-            <WorkoutSummary workout={lastFinished} />
-          </Card>
+        {latestActivity || lastFinished ? (
+          <div className="space-y-2">
+            {/* Newest first: a Garmin activity (tap for full stats) and/or the last gym session. */}
+            {latestActivity && (!lastFinished || latestActivity.date >= lastFinished.date) && (
+              <GarminActivityList activities={[latestActivity]} />
+            )}
+            {lastFinished && (
+              <Card>
+                <WorkoutSummary workout={lastFinished} />
+              </Card>
+            )}
+            {latestActivity && lastFinished && latestActivity.date < lastFinished.date && (
+              <GarminActivityList activities={[latestActivity]} />
+            )}
+          </div>
         ) : (
           <EmptyState
             icon={<DumbbellIcon className="h-6 w-6" />}
             title="No workouts yet"
-            description="Start your first session to begin your gym diary."
+            description="Log a gym session on the Log tab, or connect Garmin to bring in runs, rides and more."
           />
         )}
       </section>
