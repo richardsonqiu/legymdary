@@ -7,6 +7,7 @@ import { TodayGuide, type GuideInput } from "@/components/guide/TodayGuide";
 import { TodayScores, type TodayScoresInput } from "@/components/score/TodayScores";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
 import { activeDaysInWeek, WEEKLY_TARGET } from "@/lib/streaks";
+import { sceneFor, sceneStyle } from "@/lib/scenes";
 import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
 import { TodayFoodCard } from "@/components/food/TodayFoodCard";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
@@ -150,6 +151,7 @@ export default async function DashboardPage() {
       <div
         aria-hidden
         className="home-backdrop pointer-events-none absolute -inset-x-4 -top-[max(1.5rem,env(safe-area-inset-top))] -z-10 h-[680px]"
+        style={sceneStyle(sceneFor(serverToday))}
       />
       {garminSyncing && <AutoRefresh />}
       <header className="flex items-start justify-between gap-3">

@@ -52,37 +52,23 @@ export function DayCell({
   );
 }
 
-/** Legend that matches DayCell exactly. */
+/** One-line legend that matches DayCell. */
 export function DayLegend({ layer = "both" }: { layer?: Layer }) {
-  const sw = "inline-block h-3 w-3 rounded-[3px]";
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-zinc-400">
-      {layer === "both" && (
-        <span className="flex items-center gap-1.5">
-          <span className="inline-flex h-4 w-4 flex-col overflow-hidden rounded-[3px]">
+    <div className="flex items-center gap-2 text-xs text-zinc-400">
+      {layer === "both" ? (
+        <>
+          <span className="inline-flex h-4 w-4 flex-col overflow-hidden rounded-[4px]">
             <span className="flex-1 bg-emerald-500" />
             <span className="flex-1 bg-sky-500" />
           </span>
-          top = exercise · bottom = food
-        </span>
-      )}
-      {layer !== "food" && (
-        <span className="flex items-center gap-1">
-          Exercise
-          {EX.slice(1).map((c) => (
-            <span key={c} className={cn(sw, c)} />
-          ))}
-          <span className="text-zinc-500">more</span>
-        </span>
-      )}
-      {layer !== "exercise" && (
-        <span className="flex items-center gap-1">
-          Food
-          <span className={cn(sw, FOOD[1])} />
-          <span className="text-zinc-500">1–2 meals</span>
-          <span className={cn(sw, FOOD[2])} />
-          <span className="text-zinc-500">3+</span>
-        </span>
+          Top half = exercise · bottom half = food logged
+        </>
+      ) : (
+        <>
+          <span className={cn("inline-block h-4 w-4 rounded-[4px]", layer === "exercise" ? EX[3] : FOOD[2])} />
+          {layer === "exercise" ? "Trained" : "Food logged"} · brighter = more
+        </>
       )}
     </div>
   );

@@ -3,9 +3,7 @@
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import Link from "next/link";
 import { useMemo, useSyncExternalStore } from "react";
-import { CountUp } from "@/components/CountUp";
 import { Celebration } from "@/components/consistency/Celebration";
-import { DayCell, DayLegend } from "@/components/consistency/DayCell";
 import { DumbbellIcon } from "@/components/icons";
 import { buttonClass, Card } from "@/components/ui";
 import type { ConsistencyDay } from "@/lib/queries";
@@ -15,7 +13,6 @@ import {
   isActiveDay,
   isLoggedDay,
   milestoneReached,
-  nextMilestone,
   weekStreak,
   WEEK_MILESTONES,
   WEEKLY_TARGET,
@@ -33,7 +30,11 @@ export function StreaksCard({
   days: ConsistencyDay[];
   active: { name: string; count: number } | null;
 }) {
-  const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
   const byDate = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
   const today = mounted ? todayStr() : null;
 
@@ -44,20 +45,36 @@ export function StreaksCard({
     const weekStart = startOfWeek(parseISO(today), { weekStartsOn: 1 });
     const week = Array.from({ length: 7 }, (_, i) => {
       const date = ds(addDays(weekStart, i));
-      return { date, active: isActiveDay(byDate.get(date)), logged: isLoggedDay(byDate.get(date)), future: date > today };
+      return {
+        date,
+        active: isActiveDay(byDate.get(date)),
+        logged: isLoggedDay(byDate.get(date)),
+        future: date > today,
+      };
     });
     // Streak start dates make each celebration unique to that streak.
-    const foodStart = ds(addDays(parseISO(today), -(fs.current - (isLoggedDay(byDate.get(today)) ? 1 : 0))));
-    const weekStartStreak = ds(addDays(weekStart, -7 * Math.max(0, ws.current - (ws.thisWeek >= WEEKLY_TARGET ? 1 : 0))));
+    const foodStart = ds(
+      addDays(
+        parseISO(today),
+        -(fs.current - (isLoggedDay(byDate.get(today)) ? 1 : 0)),
+      ),
+    );
+    const weekStartStreak = ds(
+      addDays(
+        weekStart,
+        -7 * Math.max(0, ws.current - (ws.thisWeek >= WEEKLY_TARGET ? 1 : 0)),
+      ),
+    );
     return { ws, fs, week, foodStart, weekStartStreak };
   }, [byDate, today]);
 
-  if (!data) return <div className="h-56 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/50" />;
+  if (!data)
+    return (
+      <div className="h-56 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/50" />
+    );
   const { ws, fs, week } = data;
   const foodM = milestoneReached(fs.current, FOOD_MILESTONES);
   const weekM = milestoneReached(ws.current, WEEK_MILESTONES);
-  const nextFood = nextMilestone(fs.current, FOOD_MILESTONES);
-  const nextWeek = nextMilestone(ws.current, WEEK_MILESTONES);
   const left = Math.max(0, WEEKLY_TARGET - ws.thisWeek);
 
   return (
@@ -78,67 +95,113 @@ export function StreaksCard({
           text={`You've logged your food ${foodM} days straight. Awareness is the first step to change.`}
         />
       )}
-      <Card className="space-y-4 border-zinc-700/70 bg-gradient-to-b from-zinc-900 to-zinc-900/40">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="text-xs text-zinc-400">💪 Training streak</div>
-            <div className="mt-1 text-4xl font-bold leading-none tabular-nums">
-              <CountUp value={ws.current} duration={500} />
-              <span className="ml-1 text-base font-medium text-zinc-500">{ws.current === 1 ? "week" : "weeks"}</span>
-            </div>
-            <div className="mt-1 text-[11px] text-zinc-500">
-              {nextWeek ? `${nextWeek - ws.current} to the ${nextWeek}-week badge` : `best ${ws.longest}`}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-zinc-400">🥗 Logging streak</div>
-            <div className="mt-1 text-4xl font-bold leading-none tabular-nums">
-              <CountUp value={fs.current} duration={500} />
-              <span className="ml-1 text-base font-medium text-zinc-500">{fs.current === 1 ? "day" : "days"}</span>
-            </div>
-            <div className="mt-1 text-[11px] text-zinc-500">
-              {nextFood ? `${nextFood - fs.current} to the ${nextFood}-day badge` : `best ${fs.longest}`}
-            </div>
+      <Card className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <div className="font-semibold">This week</div>
+          <div
+            className={cn(
+              "text-sm",
+              left === 0 ? "text-teal-300" : "text-zinc-400",
+            )}
+          >
+            {left === 0
+              ? `✓ ${ws.thisWeek} workouts — goal hit`
+              : `${ws.thisWeek} of ${WEEKLY_TARGET} workouts`}
           </div>
         </div>
 
-        <div>
-          <div className="mb-1.5 flex items-baseline justify-between text-xs">
-            <span className="text-zinc-400">This week</span>
-            <span className={cn(left === 0 ? "text-emerald-300" : "text-zinc-500")}>
-              {left === 0
-                ? `✓ ${ws.thisWeek} active days — week goal hit`
-                : `${ws.thisWeek} of ${WEEKLY_TARGET} active days · ${left} to go`}
+        {/* Two simple rows: did I train? did I log food? */}
+        <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] items-center gap-y-2.5 text-center">
+          <span />
+          {week.map((d) => (
+            <span
+              key={d.date}
+              className={cn(
+                "text-[11px]",
+                d.date === today ? "font-bold text-zinc-50" : "text-zinc-500",
+              )}
+            >
+              {format(parseISO(d.date), "EEEEE")}
             </span>
-          </div>
-          <div className="grid grid-cols-7 gap-1.5">
-            {week.map((d) => (
-              <div key={d.date} className="space-y-1 text-center">
-                <DayCell
-                  d={byDate.get(d.date)}
-                  future={d.future}
-                  className={cn("aspect-square rounded-lg", d.date === today && "ring-2 ring-zinc-100/80")}
-                />
-                <div className="text-[10px] text-zinc-500">{format(parseISO(d.date), "EEEEE")}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2">
-            <DayLegend />
-          </div>
-          <p className="mt-1 text-[10px] text-zinc-600">Trained = logged sets or 15+ min Garmin activity.</p>
+          ))}
+          <span className="text-left text-xs text-zinc-300">Exercise</span>
+          {week.map((d) => (
+            <Dot
+              key={d.date}
+              on={d.active}
+              future={d.future}
+              today={d.date === today}
+              color="bg-teal-400"
+            />
+          ))}
+          <span className="text-left text-xs text-zinc-300">Food</span>
+          {week.map((d) => (
+            <Dot
+              key={d.date}
+              on={d.logged}
+              future={d.future}
+              today={d.date === today}
+              color="bg-sky-400"
+            />
+          ))}
         </div>
 
-        <Link href="/log" transitionTypes={["nav-forward"]} className={buttonClass("primary", "lg", "w-full")}>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-zinc-300">
+            🔥 <b className="text-zinc-50">{ws.current}</b> week
+            {ws.current === 1 ? "" : "s"} training streak
+          </span>
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-zinc-300">
+            🥗 <b className="text-zinc-50">{fs.current}</b> day
+            {fs.current === 1 ? "" : "s"} logging food
+          </span>
+        </div>
+
+        <Link
+          href="/log"
+          transitionTypes={["nav-forward"]}
+          className={buttonClass("primary", "lg", "w-full")}
+        >
           <DumbbellIcon className="h-5 w-5" />
           {active ? "Continue workout" : "Start workout"}
         </Link>
         {active && (
           <p className="-mt-1 text-center text-xs text-zinc-500">
-            {active.name} · {active.count} exercise{active.count === 1 ? "" : "s"} in progress
+            {active.name} · {active.count} exercise
+            {active.count === 1 ? "" : "s"} in progress
           </p>
         )}
       </Card>
     </div>
+  );
+}
+
+function Dot({
+  on,
+  future,
+  today,
+  color,
+}: {
+  on: boolean;
+  future: boolean;
+  today: boolean;
+  color: string;
+}) {
+  return (
+    <span className="flex justify-center">
+      <span
+        className={cn(
+          "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold",
+          future
+            ? "border border-dashed border-zinc-700"
+            : on
+              ? cn(color, "text-zinc-950")
+              : "border border-zinc-700",
+          today && !on && "border-zinc-300",
+        )}
+      >
+        {on && !future ? "✓" : ""}
+      </span>
+    </span>
   );
 }

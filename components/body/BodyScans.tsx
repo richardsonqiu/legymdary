@@ -6,6 +6,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { CHART, ChartFrame, Segmented, tooltipLabelStyle, tooltipStyle } from "@/components/charts/common";
 import { ImageIcon, PencilIcon, PlusIcon, TrashIcon, XIcon } from "@/components/icons";
 import { Explain } from "@/components/Explain";
+import { BodyFigure } from "@/components/body/BodyFigure";
 import { Portal } from "@/components/Portal";
 import { Button, Card, inputClass } from "@/components/ui";
 import type { BodyScan } from "@/db/schema";
@@ -41,6 +42,7 @@ export function BodyScans({ scans, targetBodyFat }: { scans: BodyScan[]; targetB
   const prev = scans.length > 1 ? scans[scans.length - 2] : null;
   const change = latest && prev ? compareScans(prev, latest) : null;
   const seg = latest ? parseSegments(latest.segmentalLean) : null;
+  const segFat = latest ? parseSegments(latest.segmentalFat) : null;
   const balance = segmentBalance(seg);
   const lm = latest ? leanMass(latest) : null;
   const balanceLabels = latest?.balance ? (JSON.parse(latest.balance) as Record<string, string | null>) : null;
@@ -129,35 +131,13 @@ export function BodyScans({ scans, targetBodyFat }: { scans: BodyScan[]; targetB
             </div>
           </Card>
 
-          {seg && (
-            <Card className="space-y-2.5">
+          {(seg || segFat) && (
+            <Card className="space-y-3">
               <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Segmental lean (% of ideal)
+                By body part (% of ideal)
                 <Explain k="segmental" />
               </div>
-              {SEGMENTS.filter((k) => seg[k]).map((k) => {
-                const p = seg[k]!.pct;
-                return (
-                  <div key={k}>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-zinc-300">{SEGMENT_LABEL[k]}</span>
-                      <span className="tabular-nums text-zinc-500">
-                        {seg[k]!.kg != null ? `${seg[k]!.kg} kg` : ""}
-                        {p != null ? ` · ${p}%` : ""}
-                      </span>
-                    </div>
-                    {p != null && (
-                      <div className="relative mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                        <div
-                          className={cn("bar-fill h-full rounded-full", p >= 100 ? "bg-emerald-400" : p >= 90 ? "bg-sky-400" : "bg-amber-400")}
-                          style={{ width: `${Math.min(100, (p / 130) * 100)}%` }}
-                        />
-                        <div className="absolute inset-y-0 w-px bg-zinc-400" style={{ left: `${(100 / 130) * 100}%` }} title="100% = ideal" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              <BodyFigure lean={seg} fat={segFat} />
               {balanceLabels && (
                 <p className="text-xs text-zinc-500">
                   Balance — upper: {balanceLabels.upper ?? "–"}, lower: {balanceLabels.lower ?? "–"}, upper-lower:{" "}

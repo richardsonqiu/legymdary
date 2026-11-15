@@ -326,14 +326,14 @@ input[type="number"] {
       rgba(10, 15, 28, 0.85) 82%,
       #0a0f1c 100%
     ),
-    url("/bg-dawn.webp") center 22% / cover no-repeat;
+    var(--scene, url("/bg-dawn.webp")) var(--scene-pos, center 22%) / cover no-repeat;
 }
 /* A card with the photo inside (used where there's no page backdrop). */
 .hero-photo {
   background:
     radial-gradient(70% 55% at 50% 45%, var(--sky-a, transparent), transparent 75%),
     linear-gradient(180deg, rgba(10, 15, 28, 0.35) 0%, rgba(10, 15, 28, 0.45) 50%, rgba(10, 15, 28, 0.88) 100%),
-    url("/bg-dawn-hero.webp") center 35% / cover no-repeat;
+    var(--scene-hero, url("/bg-dawn-hero.webp")) center 35% / cover no-repeat;
 }
 /* Frosted glass over a photo. */
 .glass {
