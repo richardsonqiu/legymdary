@@ -5,6 +5,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART, ChartFrame, Segmented, tooltipLabelStyle, tooltipStyle } from "@/components/charts/common";
 import { ImageIcon, PencilIcon, PlusIcon, TrashIcon, XIcon } from "@/components/icons";
+import { Explain } from "@/components/Explain";
 import { Portal } from "@/components/Portal";
 import { Button, Card, inputClass } from "@/components/ui";
 import type { BodyScan } from "@/db/schema";
@@ -130,7 +131,10 @@ export function BodyScans({ scans, targetBodyFat }: { scans: BodyScan[]; targetB
 
           {seg && (
             <Card className="space-y-2.5">
-              <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Segmental lean (% of ideal)</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Segmental lean (% of ideal)
+                <Explain k="segmental" />
+              </div>
               {SEGMENTS.filter((k) => seg[k]).map((k) => {
                 const p = seg[k]!.pct;
                 return (

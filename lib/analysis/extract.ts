@@ -58,6 +58,7 @@ export type DayRow = {
   respirationAvg: number | null;
   // Training
   activities: {
+    id: string | null;
     name: string;
     type: string | null;
     min: number;
@@ -199,6 +200,7 @@ const FIELDS: Record<string, string[]> = {
     "totalKilocalories",
   ],
   activities: [
+    "activityId",
     "activityTrainingLoad",
     "hrTimeInZone_1",
     "hrTimeInZone_2",
@@ -363,7 +365,9 @@ export async function extractDays(
         cardio += l;
         haveLoad = true;
       }
+      const idNum = num(a, "activityId");
       return {
+        id: idNum != null ? String(idNum) : str(a, "activityId"),
         name:
           str(a, "activityName") ??
           str(a, "activityType.typeKey") ??

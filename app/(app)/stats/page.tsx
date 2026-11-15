@@ -37,7 +37,7 @@ export default async function StatsPage() {
       </section>
 
       <section>
-        <SectionTitle>Body composition (InBody)</SectionTitle>
+        <SectionTitle help="bodyComp">Body composition (InBody)</SectionTitle>
         <BodyScans scans={scans} targetBodyFat={goals?.targetBodyFat ?? null} />
       </section>
 

@@ -87,7 +87,7 @@ export default async function InsightsPage({
       )}
 
       <section>
-        <SectionTitle>Readiness</SectionTitle>
+        <SectionTitle help="readiness">Readiness</SectionTitle>
         <ReadinessHero r={card.readiness} />
       </section>
 
@@ -102,25 +102,24 @@ export default async function InsightsPage({
       </section>
 
       <section>
-        <SectionTitle>Last night</SectionTitle>
+        <SectionTitle help="sleep">Last night</SectionTitle>
         <SleepRecoveryCard card={card} />
       </section>
 
       <section>
-        <SectionTitle>Yesterday</SectionTitle>
+        <SectionTitle help="strain">Yesterday</SectionTitle>
         <YesterdayCard card={card} />
       </section>
 
       {card.bodyComposition && (
         <section>
-          <SectionTitle
+          <SectionTitle help="bodyComp"
             action={
               <Link href="/stats" className="text-xs text-zinc-400">
                 Scans →
               </Link>
             }
-          >
-            Body composition
+          >Body composition
           </SectionTitle>
           <BodyCompositionCard card={card} />
         </section>
@@ -129,7 +128,7 @@ export default async function InsightsPage({
       <PatternsAndFlags card={card} />
 
       <section>
-        <SectionTitle>30-day trends</SectionTitle>
+        <SectionTitle help="hrv">30-day trends</SectionTitle>
         <Card>
           <TrendChart series={series} />
         </Card>

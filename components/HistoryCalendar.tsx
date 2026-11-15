@@ -13,10 +13,10 @@ import {
 } from "date-fns";
 import { useMemo, useState } from "react";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
-import { ChevronLeftIcon, ChevronRightIcon, FlameIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
 import type { WorkoutDetail } from "@/lib/queries";
-import { calcStreaks, cn, toDateStr } from "@/lib/utils";
+import { cn, toDateStr } from "@/lib/utils";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -29,13 +29,6 @@ export function HistoryCalendar({ workouts }: { workouts: WorkoutDetail[] }) {
       map.set(w.date, list);
     }
     return map;
-  }, [workouts]);
-
-  const { current, longest } = useMemo(() => {
-    const days = workouts
-      .filter((w) => w.exercises.some((e) => e.sets.length > 0))
-      .map((w) => w.date);
-    return calcStreaks(days);
   }, [workouts]);
 
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
@@ -53,32 +46,6 @@ export function HistoryCalendar({ workouts }: { workouts: WorkoutDetail[] }) {
 
   return (
     <div className="space-y-5">
-      {/* Streaks */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-zinc-500">
-            <FlameIcon className="h-4 w-4" /> Current streak
-          </div>
-          <div className="mt-1 text-3xl font-bold tabular-nums">
-            {current}
-            <span className="ml-1 text-sm font-medium text-zinc-500">
-              {current === 1 ? "day" : "days"}
-            </span>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="text-xs uppercase tracking-wide text-zinc-500">
-            Longest streak
-          </div>
-          <div className="mt-1 text-3xl font-bold tabular-nums">
-            {longest}
-            <span className="ml-1 text-sm font-medium text-zinc-500">
-              {longest === 1 ? "day" : "days"}
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Calendar */}
       <Card>
         <div className="mb-3 flex items-center justify-between">

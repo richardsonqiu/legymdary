@@ -19,10 +19,13 @@ your phone at the gym. Every account gets its own private diary.
   `weight × (1 + reps / 30)`, with a live PR badge while logging.
 - **Progress charts** — per-exercise weight/volume/1RM over 30 / 90 days / all
   time, body-stat line charts with a range selector, and weekly volume.
-- **History calendar + consistency heatmap** — a month view with workout days
-  highlighted, a GitHub-style year heatmap, and current & longest streaks.
-- **Dashboard** — today's date, current streak, last workout, latest body stats,
-  and PRs hit this week.
+- **Consistency calendar** (History) — exercise and food logging in a Week,
+  Month or GitHub-style Year grid; filter Both / Exercise / Food.
+- **Streaks & celebrations** — a weekly training streak (3+ active days a week)
+  and a daily food-logging streak, with confetti at milestones.
+- **Dashboard "Today" guide** — written for beginners: *where you are now* →
+  *your target* → *do this today* (auto-ticking action items), plus a
+  getting-started checklist and "?" explanations next to jargon.
 
 ## Tech stack
 
@@ -266,6 +269,14 @@ resumes automatically in the background and via the daily cron.
 - **Weekly check-in** (dashboard) — workouts, sets and volume vs last week,
   average calories/protein and days on target, and 7-day weight change.
 - **CSV export** — account menu → export workouts, food log or body stats.
+
+## Activity details
+
+Tap any Garmin activity (History, Insights) to open `/activities/[id]`, built
+from data already imported: time, distance, pace/speed, heart rate and zones,
+training effect in plain words, training load, Body Battery impact, intensity
+minutes, splits, cadence/power/running dynamics, strength sets and a .FIT
+download.
 
 ## Security
 
