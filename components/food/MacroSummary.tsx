@@ -65,10 +65,10 @@ export function MacroSummary({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 space-y-2.5">
-        <div className="flex items-baseline justify-between text-sm">
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
           <span className="text-zinc-400">Eaten</span>
-          <span className="tabular-nums">
+          <span className="whitespace-nowrap tabular-nums">
             <span className="font-semibold">
               <CountUp value={eaten} />
             </span>
@@ -77,40 +77,76 @@ export function MacroSummary({
             )}
           </span>
         </div>
-        <MacroBar label="Protein" value={totals.protein} target={targets?.protein} color="bg-sky-400" />
-        <MacroBar label="Carbs" value={totals.carbs} target={targets?.carbs} color="bg-violet-400" />
-        <MacroBar label="Fat" value={totals.fat} target={targets?.fat} color="bg-rose-400" />
+        <MacroBar label="Protein" value={totals.protein} target={targets?.protein} color="bg-sky-400" kind="protein" />
+        <MacroBar label="Carbs" value={totals.carbs} target={targets?.carbs} color="bg-violet-400" kind="limit" />
+        <MacroBar label="Fat" value={totals.fat} target={targets?.fat} color="bg-rose-400" kind="limit" />
       </div>
     </div>
   );
 }
 
+/**
+ * Macro progress with a verdict. Protein: more is fine ("hit" once reached).
+ * Carbs/fat: within ±10% is on target; above that is flagged as over.
+ */
 function MacroBar({
   label,
   value,
   target,
   color,
+  kind,
 }: {
   label: string;
   value: number;
   target?: number | null;
   color: string;
+  kind: "protein" | "limit";
 }) {
+  const v = Math.round(value);
   const pct = target ? Math.min(100, (value / target) * 100) : 0;
+  let status: { text: string; tone: "good" | "over" | "muted" } | null = null;
+  if (target) {
+    const diff = Math.round(target - value);
+    if (kind === "protein") {
+      status = value >= target * 0.95 ? { text: "✓ goal hit", tone: "good" } : { text: `${diff} g to go`, tone: "muted" };
+    } else if (value > target * 1.1) {
+      status = { text: `${-diff} g over`, tone: "over" };
+    } else if (value >= target * 0.9) {
+      status = { text: "✓ on target", tone: "good" };
+    } else {
+      status = { text: `${diff} g left`, tone: "muted" };
+    }
+  }
+  const over = status?.tone === "over";
   return (
     <div>
-      <div className="flex justify-between text-[11px] text-zinc-500">
-        <span>{label}</span>
-        <span className="tabular-nums">
-          {Math.round(value)}
+      <div className="flex items-baseline justify-between gap-2 text-[11px]">
+        <span className="text-zinc-400">{label}</span>
+        <span className="tabular-nums text-zinc-500">
+          <span className={cn("font-semibold", over ? "text-amber-300" : "text-zinc-200")}>{v}</span>
           {target ? ` / ${target}` : ""} g
         </span>
       </div>
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
         {target ? (
-          <div className={cn("bar-fill h-full rounded-full", color)} style={{ width: `${pct}%` }} />
+          <div
+            className={cn("bar-fill h-full rounded-full", over ? "bg-amber-400" : color)}
+            style={{ width: `${pct}%` }}
+          />
         ) : null}
       </div>
+      {status && (
+        <div
+          className={cn(
+            "mt-0.5 text-right text-[10px]",
+            status.tone === "good" && "text-emerald-300/90",
+            status.tone === "over" && "text-amber-300",
+            status.tone === "muted" && "text-zinc-600",
+          )}
+        >
+          {status.text}
+        </div>
+      )}
     </div>
   );
 }

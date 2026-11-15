@@ -61,8 +61,21 @@ const MealEstimate = z.object({
     .describe("Short, friendly name for the meal, e.g. 'Chicken rice bowl'"),
   items: z.array(
     z.object({
-      name: z.string(),
-      portion: z.string().describe("Estimated amount, e.g. '1 cup (180 g)'"),
+      dish: z
+        .string()
+        .describe("The dish this component belongs to (e.g. 'Kaya toast'); same as name for simple foods"),
+      name: z.string().describe("The component, e.g. 'White bread', 'Kaya', 'Butter', 'Soft-boiled egg'"),
+      portion: z.string().describe("Estimated amount, e.g. '2 slices (60 g)'"),
+      reference: z
+        .string()
+        .describe(
+          "The per-unit reference value used and its source, e.g. '1 slice white bread (30 g) = 80 kcal · 3 g P · 15 g C · 1 g F (USDA)'",
+        ),
+      amount: z.string().describe("How the quantity was judged from the photo/description, e.g. '2 slices visible, standard thickness'"),
+      calculation: z.string().describe("The arithmetic from reference to total, e.g. '2 × 80 kcal = 160 kcal'"),
+      assumptions: z
+        .string()
+        .describe("Preparation and hidden-calorie assumptions, e.g. 'toasted, no extra spread'; empty string if none"),
       calories: z.number(),
       protein_g: z.number(),
       carbs_g: z.number(),
@@ -100,8 +113,15 @@ const SYSTEM = `You are a nutrition estimator inside a gym diary app. The user p
 
 How to estimate:
 - Identify each distinct food or drink visible. Use plate, cutlery, hands and packaging to judge portion sizes, and state the portion you assumed in grams or common units.
+- Break composite dishes into their components, each as its own item with the same "dish" name. Example: kaya toast → white bread (2 slices), kaya (1 tbsp), butter (1 pat); soft-boiled eggs → eggs (2 large) as their own dish; kopi → coffee, condensed milk, sugar.
+- Show your working for every item so the user can check it:
+  - reference: the per-unit value you used and its source (USDA FoodData Central, Singapore HPB energy & nutrient composition, or the brand's label), e.g. "1 large egg (50 g) = 72 kcal · 6 g P · 0 g C · 5 g F (USDA)".
+  - amount: how many units you see and why, e.g. "2 eggs in the saucer".
+  - calculation: the arithmetic from reference to total, e.g. "2 × 72 = 144 kcal".
+  - assumptions: preparation and hidden calories, e.g. "soft-boiled, no oil; dash of soy sauce ≈ 5 kcal".
+- The item's calories and macros must equal the calculation's result.
 - Account for hidden calories that are typical for the dish (cooking oil, butter, dressings, sauces, sugar in drinks), and mention the main assumption in notes.
-- Use standard nutrition values (USDA-style). Calories in kcal, macros in grams. Round calories to the nearest 5 and macros to the nearest gram.
+- Use standard nutrition values (USDA FoodData Central; Singapore HPB for local dishes). Calories in kcal, macros in grams. Round calories to the nearest 5 and macros to the nearest gram.
 - If the user adds a description, trust it over what you infer from the image (e.g. brand, portion, "only ate half").
 - If the photo is a nutrition label or menu item, use the stated values.
 - If the image does not show food or drink, set is_food to false and return an empty items list.
@@ -189,6 +209,11 @@ async function attempt(
         items: out.items.map((it) => ({
           name: it.name,
           portion: it.portion,
+          dish: it.dish || null,
+          reference: it.reference || null,
+          amount: it.amount || null,
+          calculation: it.calculation || null,
+          assumptions: it.assumptions || null,
           calories: Math.max(0, Math.round(it.calories)),
           protein: Math.max(0, Math.round(it.protein_g)),
           carbs: Math.max(0, Math.round(it.carbs_g)),

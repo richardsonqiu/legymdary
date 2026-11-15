@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { PlusIcon, SparkIcon, TrashIcon, XIcon } from "@/components/icons";
+import { ItemExplanation } from "@/components/food/ItemExplanation";
 import { Portal } from "@/components/Portal";
 import { Button, Field, inputClass } from "@/components/ui";
 import { analyzeMeal, saveMeal, updateMeal } from "@/lib/actions";
@@ -274,6 +275,13 @@ export function MealComposer({
                     key={idx}
                     className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3"
                   >
+                    {it.dish &&
+                      it.dish.trim().toLowerCase() !== it.name.trim().toLowerCase() &&
+                      items[idx - 1]?.dish !== it.dish && (
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                          {it.dish}
+                        </div>
+                      )}
                     <div className="flex gap-2">
                       <input
                         value={it.name}
@@ -324,6 +332,7 @@ export function MealComposer({
                               );
                               patchItem(idx, {
                                 [k]: Number.isFinite(n) ? n : 0,
+                                ...(it.reference ? { edited: true } : {}),
                               });
                             }}
                             className={cn(
@@ -334,6 +343,7 @@ export function MealComposer({
                         </label>
                       ))}
                     </div>
+                    <ItemExplanation item={it} />
                   </li>
                 ))}
               </ul>
