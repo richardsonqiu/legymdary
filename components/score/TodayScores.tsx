@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArcGauge, ScoreRing, toneFor, toneWord } from "@/components/score/Score";
+import { ArcGauge, ScoreRing, toneWord } from "@/components/score/Score";
 import type { Readiness } from "@/lib/analysis/metrics";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +21,6 @@ const ADVICE: Record<Readiness["band"], string> = {
   normal: "Train as planned — keep the intensity steady.",
   easy: "Go light today: a walk, mobility or rest. Sleep early.",
 };
-const SKY: Record<string, [string, string]> = {
-  great: ["rgba(94,234,212,0.38)", "rgba(129,140,248,0.32)"],
-  good: ["rgba(125,211,252,0.32)", "rgba(165,180,252,0.30)"],
-  low: ["rgba(252,211,77,0.30)", "rgba(244,114,182,0.22)"],
-  none: ["rgba(125,211,252,0.18)", "rgba(129,140,248,0.18)"],
-};
 
 /** Home's top section: a row of score rings and one big "how am I today" gauge. */
 export function TodayScores({ s }: { s: TodayScoresInput }) {
@@ -36,8 +30,6 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
 
   const r = s.readiness;
   const heroValue = r ? r.score : fuelPct != null ? Math.min(100, Math.round(fuelPct)) : null;
-  const tone = toneFor(heroValue);
-  const [a, b] = SKY[tone];
   const top = r
     ? [...r.contributors].sort((x, y) => y.weight - x.weight).slice(0, 3)
     : [];
@@ -45,7 +37,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
   return (
     <section className="space-y-4">
       {/* Score rings */}
-      <div className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      <div className="grid grid-cols-5 gap-1">
         <ScoreRing value={r?.score ?? null} label="Readiness" href="/insights" />
         <ScoreRing
           value={s.sleepScore}
@@ -71,8 +63,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
       {/* Hero */}
       <Link
         href={r ? "/insights" : "/food"}
-        className="hero-sky press relative block overflow-hidden rounded-[28px] border border-white/10 px-5 pb-5 pt-6"
-        style={{ ["--sky-a" as string]: a, ["--sky-b" as string]: b }}
+        className="glass press relative block overflow-hidden rounded-[28px] border border-white/15 px-5 pb-5 pt-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)]"
       >
         <div className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
           {r ? "Readiness" : "Today's food"}
@@ -104,7 +95,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
         {top.length > 0 && (
           <div className="mt-4 grid grid-cols-3 gap-2">
             {top.map((c) => (
-              <div key={c.key} className="rounded-2xl bg-black/20 px-2 py-2 text-center">
+              <div key={c.key} className="rounded-2xl bg-black/25 px-2 py-2 text-center">
                 <div className="text-[10px] uppercase tracking-wide text-zinc-400">{c.label}</div>
                 <div
                   className={cn(
