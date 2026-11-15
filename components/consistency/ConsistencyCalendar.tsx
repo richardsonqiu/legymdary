@@ -7,47 +7,12 @@ import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
 import type { ConsistencyDay } from "@/lib/queries";
 import { isActiveDay, isLoggedDay } from "@/lib/streaks";
+import { DayCell, DayLegend, exLevel, type Layer } from "@/components/consistency/DayCell";
 import { cn, todayStr } from "@/lib/utils";
 
-type Layer = "both" | "exercise" | "food";
 type View = "week" | "month" | "year";
 const ds = (d: Date) => format(d, "yyyy-MM-dd");
 const noop = () => () => {};
-
-/** 0–4 exercise intensity from logged sets + Garmin minutes. */
-function exLevel(d?: ConsistencyDay) {
-  if (!isActiveDay(d)) return 0;
-  const score = d!.sets + d!.garminMin / 6;
-  return score >= 25 ? 4 : score >= 15 ? 3 : score >= 8 ? 2 : 1;
-}
-/** 0 none · 1 some meals · 2 three or more meals. */
-const foodLevel = (d?: ConsistencyDay) => (!isLoggedDay(d) ? 0 : d!.meals >= 3 ? 2 : 1);
-
-const EX = ["bg-zinc-800/80", "bg-emerald-900", "bg-emerald-700", "bg-emerald-500", "bg-emerald-300"];
-const FOOD = ["bg-zinc-800/80", "bg-sky-800", "bg-sky-400"];
-
-function Cell({ d, layer, future, size = "sm" }: { d?: ConsistencyDay; layer: Layer; future: boolean; size?: "sm" | "lg" }) {
-  const ex = exLevel(d);
-  const fd = foodLevel(d);
-  const base = size === "sm" ? "h-3 w-3 rounded-[3px]" : "h-full w-full rounded-lg";
-  if (future) return <div className={cn(base, "bg-zinc-900/40")} />;
-  if (layer === "food") return <div className={cn(base, FOOD[fd])} />;
-  if (layer === "exercise") return <div className={cn(base, EX[ex])} />;
-  // Both: exercise fill + a food dot.
-  return (
-    <div className={cn(base, EX[ex], "relative")}>
-      {fd > 0 && (
-        <span
-          className={cn(
-            "absolute rounded-full",
-            fd === 2 ? "bg-sky-300" : "bg-sky-600",
-            size === "sm" ? "bottom-[1px] right-[1px] h-[5px] w-[5px]" : "bottom-1.5 right-1.5 h-2 w-2",
-          )}
-        />
-      )}
-    </div>
-  );
-}
 
 function tip(d: ConsistencyDay | undefined, date: string) {
   const parts = [format(parseISO(date), "EEE d MMM")];
@@ -107,7 +72,7 @@ export function ConsistencyCalendar({ days }: { days: ConsistencyDay[] }) {
         </div>
       )}
 
-      <Legend layer={layer} />
+      <DayLegend layer={layer} />
     </Card>
   );
 }
@@ -125,13 +90,9 @@ function WeekView({ byDate, today, layer }: { byDate: Map<string, ConsistencyDay
             <div className={cn("text-[10px] uppercase", date === today ? "font-semibold text-zinc-100" : "text-zinc-500")}>
               {format(parseISO(date), "EEEEE")}
             </div>
-            <div className="aspect-square">
-              <Cell d={d} layer={layer} future={future} size="lg" />
-            </div>
+            <DayCell d={d} layer={layer} future={future} className="aspect-square rounded-lg" />
             <div className="text-[10px] leading-tight text-zinc-500">
-              {future ? "" : isActiveDay(d) ? "💪" : ""}
-              {future ? "" : isLoggedDay(d) ? "🍽️" : ""}
-              {!future && !isActiveDay(d) && !isLoggedDay(d) ? "–" : ""}
+              {format(parseISO(date), "d")}
             </div>
           </div>
         );
@@ -199,16 +160,22 @@ function MonthView({
           const d = byDate.get(c);
           const out = !inMonth(c);
           return (
-            <div key={c} title={tip(d, c)} className={cn("relative aspect-square", out && "opacity-25")}>
-              <Cell d={d} layer={layer} future={c > today} size="lg" />
-              <span
-                className={cn(
-                  "pointer-events-none absolute left-1.5 top-1 text-[10px] tabular-nums",
-                  c === today ? "font-bold text-white" : exLevel(d) >= 3 && layer !== "food" ? "text-zinc-950/70" : "text-zinc-400",
-                )}
+            <div key={c} title={tip(d, c)} className={cn(out && "opacity-25")}>
+              <DayCell
+                d={d}
+                layer={layer}
+                future={c > today}
+                className={cn("aspect-square rounded-lg", c === today && "ring-2 ring-zinc-100/80")}
               >
-                {Number(c.slice(8))}
-              </span>
+                <span
+                  className={cn(
+                    "pointer-events-none absolute left-1.5 top-1 text-[10px] tabular-nums",
+                    c === today ? "font-bold text-white" : exLevel(d) >= 3 && layer !== "food" ? "text-zinc-950/70" : "text-zinc-300",
+                  )}
+                >
+                  {Number(c.slice(8))}
+                </span>
+              </DayCell>
             </div>
           );
         })}
@@ -238,39 +205,12 @@ function YearGrid({ byDate, today, layer }: { byDate: Map<string, ConsistencyDay
             </div>
             {wk.map((d) => (
               <div key={d} title={tip(byDate.get(d), d)}>
-                <Cell d={byDate.get(d)} layer={layer} future={d > today} />
+                <DayCell d={byDate.get(d)} layer={layer} future={d > today} className="h-3 w-3 rounded-[3px]" />
               </div>
             ))}
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function Legend({ layer }: { layer: Layer }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-zinc-500">
-      {layer !== "food" && (
-        <span className="flex items-center gap-1">
-          Exercise: less
-          {EX.slice(1).map((c) => (
-            <span key={c} className={cn("h-2.5 w-2.5 rounded-[3px]", c)} />
-          ))}
-          more
-        </span>
-      )}
-      {layer === "food" && (
-        <span className="flex items-center gap-1">
-          Food: <span className={cn("h-2.5 w-2.5 rounded-[3px]", FOOD[1])} /> some meals
-          <span className={cn("ml-1 h-2.5 w-2.5 rounded-[3px]", FOOD[2])} /> 3+ meals
-        </span>
-      )}
-      {layer === "both" && (
-        <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-sky-300" /> food logged
-        </span>
-      )}
     </div>
   );
 }

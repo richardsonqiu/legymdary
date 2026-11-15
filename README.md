@@ -19,8 +19,15 @@ your phone at the gym. Every account gets its own private diary.
   `weight × (1 + reps / 30)`, with a live PR badge while logging.
 - **Progress charts** — per-exercise weight/volume/1RM over 30 / 90 days / all
   time, body-stat line charts with a range selector, and weekly volume.
-- **Consistency calendar** (History) — exercise and food logging in a Week,
-  Month or GitHub-style Year grid; filter Both / Exercise / Food.
+- **Navigation** — 5 tabs, each with sub-tabs: **Home** · **Train** (Workout,
+  History, Exercises) · **Food** (Today, Plan & goals) · **Progress** (Body &
+  training, PRs) · **Insights** (Daily, Garmin).
+- **Consistency calendar** (Train → History) — Week, Month or GitHub-style Year
+  grid. Each day is split: top half = exercise (green), bottom half = food
+  logged (blue); filter Both / Exercise / Food.
+- **Weekly training** (Progress) — gym sessions logged here plus Garmin
+  activities, in minutes or sessions per week, and a 90-day breakdown by
+  activity type.
 - **Streaks & celebrations** — a weekly training streak (3+ active days a week)
   and a daily food-logging streak, with confetti at milestones.
 - **Dashboard "Today" guide** — written for beginners: *where you are now* →

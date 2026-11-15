@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { FoodDiary } from "@/components/food/FoodDiary";
-import { TargetIcon } from "@/components/icons";
-import { PageHeader, buttonClass } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { activityBonus } from "@/lib/energy";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
@@ -59,11 +57,6 @@ export default async function FoodPage({
       <PageHeader
         title="Food"
         subtitle="Snap what you eat — AI estimates the calories"
-        action={
-          <Link href="/plan" transitionTypes={["nav-forward"]} className={buttonClass("secondary", "sm")}>
-            <TargetIcon className="h-4 w-4" /> Plan
-          </Link>
-        }
       />
       <FoodDiary
         meals={meals}

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { GoalsForm } from "@/components/plan/GoalsForm";
 import { ProjectionChart } from "@/components/plan/ProjectionChart";
-import { ArrowLeftIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { weightTrendPerWeek, type Plan } from "@/lib/nutrition";
@@ -50,14 +49,6 @@ export default async function PlanPage() {
       <PageHeader
         title="Plan"
         subtitle="Weight & body-fat goal → daily targets"
-        action={
-          <Link
-            href="/food" transitionTypes={["nav-back"]}
-            className="flex h-9 items-center gap-1 rounded-lg px-2 text-sm text-zinc-400 hover:bg-zinc-800"
-          >
-            <ArrowLeftIcon className="h-4 w-4" /> Food
-          </Link>
-        }
       />
 
       {/* Targets */}

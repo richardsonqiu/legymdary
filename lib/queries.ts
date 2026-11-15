@@ -457,6 +457,79 @@ export async function getWeeklyVolume(
   return out.reverse();
 }
 
+export type TrainingWeek = {
+  week: string;
+  gymSessions: number;
+  gymMin: number;
+  garminSessions: number;
+  garminMin: number;
+};
+export type ActivityTypeSummary = { type: string; count: number; minutes: number; km: number; kcal: number };
+
+/**
+ * All training per week — gym sessions logged here plus Garmin activities —
+ * and a by-type breakdown of the last 90 days of Garmin activities.
+ */
+export async function getTrainingOverview(weeks = 12): Promise<{
+  weeks: TrainingWeek[];
+  types: ActivityTypeSummary[];
+}> {
+  const userId = await requireUserId();
+  const today = todayStr();
+  const from = addDaysStr(startOfWeekStr(today), -7 * (weeks - 1));
+  const [gym, acts] = await Promise.all([
+    db
+      .select({ date: workouts.date, createdAt: workouts.createdAt, finishedAt: workouts.finishedAt })
+      .from(workouts)
+      .where(and(eq(workouts.userId, userId), gte(workouts.date, from), isNotNull(workouts.finishedAt))),
+    db
+      .select({
+        date: garminActivities.date,
+        type: garminActivities.type,
+        durationSec: garminActivities.durationSec,
+        distanceM: garminActivities.distanceM,
+        calories: garminActivities.calories,
+      })
+      .from(garminActivities)
+      .where(and(eq(garminActivities.userId, userId), gte(garminActivities.date, addDaysStr(today, -90)))),
+  ]);
+  const byWeek = new Map<string, TrainingWeek>();
+  let cur = from;
+  for (let i = 0; i < weeks; i++) {
+    byWeek.set(cur, { week: cur, gymSessions: 0, gymMin: 0, garminSessions: 0, garminMin: 0 });
+    cur = addDaysStr(cur, 7);
+  }
+  for (const w of gym) {
+    const row = byWeek.get(startOfWeekStr(w.date));
+    if (!row) continue;
+    row.gymSessions++;
+    // Session length from start to finish, clamped to something plausible.
+    const min = w.finishedAt && w.createdAt ? (w.finishedAt.getTime() - w.createdAt.getTime()) / 60000 : 45;
+    row.gymMin += Math.round(Math.min(180, Math.max(10, min)));
+  }
+  const types = new Map<string, ActivityTypeSummary>();
+  for (const a of acts) {
+    const row = a.date >= from ? byWeek.get(startOfWeekStr(a.date)) : undefined;
+    if (row) {
+      row.garminSessions++;
+      row.garminMin += Math.round((a.durationSec ?? 0) / 60);
+    }
+    const t = a.type ?? "other";
+    const s = types.get(t) ?? { type: t, count: 0, minutes: 0, km: 0, kcal: 0 };
+    s.count++;
+    s.minutes += (a.durationSec ?? 0) / 60;
+    s.km += (a.distanceM ?? 0) / 1000;
+    s.kcal += a.calories ?? 0;
+    types.set(t, s);
+  }
+  return {
+    weeks: [...byWeek.values()],
+    types: [...types.values()]
+      .map((t) => ({ ...t, minutes: Math.round(t.minutes), km: Math.round(t.km * 10) / 10, kcal: Math.round(t.kcal) }))
+      .sort((a, b) => b.minutes - a.minutes),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Body stats                                                          */
 /* ------------------------------------------------------------------ */

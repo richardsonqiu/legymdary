@@ -11,25 +11,29 @@ import {
   getBodyStats,
   getGoals,
   getLatestBodyStat,
+  getTrainingOverview,
   getWeeklyVolume,
 } from "@/lib/queries";
+import { TrainingWeeksChart } from "@/components/charts/TrainingWeeksChart";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Stats" };
+export const metadata = { title: "Progress" };
 
 export default async function StatsPage() {
-  const [bodyStats, latest, weekly, progress, scans, goals] = await Promise.all([
+  const [bodyStats, latest, weekly, progress, scans, goals, training] = await Promise.all([
     getBodyStats(),
     getLatestBodyStat(),
     getWeeklyVolume(12),
     getAllExerciseProgress(),
     getBodyScans(),
     getGoals(),
+    getTrainingOverview(12),
   ]);
+  const hasGym = weekly.some((w) => w.sets > 0) || progress.exercises.length > 0;
 
   return (
     <PageTransition className="space-y-7">
-      <PageHeader title="Stats" subtitle="Body, volume & progress" />
+      <PageHeader title="Progress" subtitle="Your body and training over time" />
 
       <section>
         <SectionTitle>Log body stats</SectionTitle>
@@ -49,24 +53,30 @@ export default async function StatsPage() {
       </section>
 
       <section>
-        <SectionTitle>Weekly volume</SectionTitle>
+        <SectionTitle>Weekly training</SectionTitle>
         <Card>
-          <p className="mb-2 text-xs text-zinc-500">
-            Total working sets per week
-          </p>
-          <WeeklyVolumeChart weeks={weekly} />
+          <TrainingWeeksChart weeks={training.weeks} types={training.types} />
         </Card>
       </section>
 
-      <section>
-        <SectionTitle>Exercise progress</SectionTitle>
-        <Card>
-          <ExerciseProgressChart
-            exercises={progress.exercises}
-            byExercise={progress.byExercise}
-          />
-        </Card>
-      </section>
+      {hasGym && (
+        <>
+          <section>
+            <SectionTitle>Gym volume</SectionTitle>
+            <Card>
+              <p className="mb-2 text-xs text-zinc-500">Working sets per week (logged on the Log tab)</p>
+              <WeeklyVolumeChart weeks={weekly} />
+            </Card>
+          </section>
+
+          <section>
+            <SectionTitle>Exercise progress</SectionTitle>
+            <Card>
+              <ExerciseProgressChart exercises={progress.exercises} byExercise={progress.byExercise} />
+            </Card>
+          </section>
+        </>
+      )}
     </PageTransition>
   );
 }
