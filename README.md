@@ -184,6 +184,32 @@ never written back to Garmin.
 - Garmin activities show on History and the Garmin page; CSV export includes
   Garmin daily data. Disconnecting can also delete all imported data.
 
+### All Garmin data (`/garmin/data`)
+
+**Import everything** pulls every Personal API dataset (all 26 endpoints) into
+a lossless raw store (`garmin_raw`, one JSON payload per dataset per day /
+activity / snapshot):
+
+- **Summaries, 1 year:** daily summaries, sleep, HRV, Body Battery, steps,
+  stress, hydration, weigh-ins, activities and wellness sessions.
+- **Per-day detail, 30 days–2 years (default 90):** full daily summary,
+  detailed sleep, every HRV reading, all-day heart rate, SpO2, the Garmin food
+  log and cycle data.
+- **Per activity:** full details and structured workout steps (e.g. strength sets).
+- **Snapshots:** profile settings, HR zones, fitness age and weight goals.
+
+The import runs in ~40-second resumable steps, skips data an account doesn't
+have, and is kept current by the daily cron. The same page offers:
+
+- a raw viewer;
+- a **data inventory** (every field's coverage and ranges, identifiers
+  redacted);
+- a full NDJSON export;
+- on-demand `.FIT` downloads at `/api/garmin/fit/<activityId>`.
+
+The analysis design built on top of this lives in
+[`docs/analysis-plan.md`](docs/analysis-plan.md).
+
 The Personal API is intended for personal use, not commercial apps serving
 many users — see Garmin's FAQ before opening this app to the public.
 

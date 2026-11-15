@@ -32,7 +32,7 @@ export type SyncResult = {
 
 const TOKEN_MARGIN_MS = 60 * 60 * 1000; // refresh 1h before expiry, like Garmin's own client
 
-async function bearerToken(conn: GarminConnection, force = false): Promise<string> {
+export async function bearerToken(conn: GarminConnection, force = false): Promise<string> {
   if (
     !force &&
     conn.tokenEnc &&

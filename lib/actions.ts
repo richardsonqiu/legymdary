@@ -9,6 +9,8 @@ import {
   garminActivities,
   garminConnections,
   garminDaily,
+  garminDatasets,
+  garminRaw,
   exercises,
   goals,
   meals,
@@ -21,6 +23,7 @@ import {
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
 import { encryptSecret } from "@/lib/garmin/crypto";
+import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import {
   ACTIVITY_LEVELS,
@@ -800,9 +803,48 @@ export async function disconnectGarmin(deleteData: boolean): Promise<void> {
   if (deleteData) {
     await db.delete(garminDaily).where(eq(garminDaily.userId, userId));
     await db.delete(garminActivities).where(eq(garminActivities.userId, userId));
+    await db.delete(garminRaw).where(eq(garminRaw.userId, userId));
+    await db.delete(garminDatasets).where(eq(garminDatasets.userId, userId));
     await db
       .delete(bodyStats)
       .where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, "garmin")));
   }
   revalidateAll();
+}
+
+/* ------------------------------------------------------------------ */
+/* Garmin full-data import (raw store)                                 */
+/* ------------------------------------------------------------------ */
+
+/** Runs one time-boxed step of the "import everything" job. Call repeatedly until done. */
+export async function runGarminImportStep(): Promise<ImportStatus | { error: string }> {
+  const userId = await requireUserId();
+  const limit = await rateLimit(`garmin:import:${userId}`, 120, HOUR);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
+  try {
+    const res = await runGarminImport(userId, { budgetMs: 40_000 });
+    revalidatePath("/garmin/data");
+    return res;
+  } catch (err) {
+    return { error: (err as Error).message };
+  }
+}
+
+/** How many days of detailed (per-day) Garmin data to import: 30–730. */
+export async function setGarminHistoryDays(days: number): Promise<void> {
+  const userId = await requireUserId();
+  const allowed = [30, 90, 180, 365, 730];
+  const d = allowed.includes(Number(days)) ? Number(days) : 90;
+  await db.update(garminConnections).set({ historyDays: d }).where(eq(garminConnections.userId, userId));
+  revalidatePath("/garmin/data");
+}
+
+/** Retry a dataset previously marked unavailable (e.g. after a new device). */
+export async function retryGarminDataset(dataset: string): Promise<void> {
+  const userId = await requireUserId();
+  await db
+    .update(garminDatasets)
+    .set({ status: "ok", emptyStreak: 0, lastError: null, backfilledTo: null, latestDate: null })
+    .where(and(eq(garminDatasets.userId, userId), eq(garminDatasets.dataset, clip(dataset, 60))));
+  revalidatePath("/garmin/data");
 }

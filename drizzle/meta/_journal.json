@@ -43,6 +43,13 @@
       "when": 1794587604013,
       "tag": "0005_security_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794712272408,
+      "tag": "0006_garmin_raw_import",
+      "breakpoints": true
     }
   ]
 }

@@ -55,6 +55,26 @@ export async function exchangeKey(apiKey: string): Promise<{ token: string; expi
   return { token, expiresAt: jwtExpiry(token) };
 }
 
+/** Raw GET of any Personal API path; returns parsed JSON (or null on 204/empty). */
+export async function getJson(
+  token: string,
+  path: string,
+  query?: Record<string, string | number | boolean>,
+): Promise<unknown> {
+  return get<unknown>(token, path, query as Record<string, string | number>);
+}
+
+/** Streams a binary file (e.g. an activity's original .FIT zip). */
+export async function getBinary(token: string, path: string): Promise<Response> {
+  const res = await fetch(BASE + path, {
+    headers: { Accept: "*/*", Authorization: `Bearer ${token}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!res.ok) throw new GarminError(`Garmin ${path} failed (${res.status}).`, res.status, path);
+  return res;
+}
+
 async function get<T>(token: string, path: string, query?: Record<string, string | number>): Promise<T> {
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(query ?? {})) url.searchParams.set(k, String(v));

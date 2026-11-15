@@ -289,6 +289,8 @@ export const garminConnections = sqliteTable("garmin_connections", {
   adjustForActivity: integer("adjust_for_activity", { mode: "boolean" })
     .notNull()
     .default(false),
+  /** How far back the full-detail importer goes (days). */
+  historyDays: integer("history_days").notNull().default(90),
   connectedAt: integer("connected_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -364,6 +366,56 @@ export const rateLimits = sqliteTable("rate_limits", {
   windowStart: integer("window_start").notNull(),
   count: integer("count").notNull().default(0),
 });
+
+/**
+ * Lossless store of every Garmin Personal API response: one row per dataset
+ * per day (or per activity / per snapshot). `payload` is the raw JSON, so any
+ * field Garmin provides can be analysed later without re-fetching.
+ */
+export const garminRaw = sqliteTable(
+  "garmin_raw",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    dataset: text("dataset").notNull(),
+    key: text("key").notNull(), // YYYY-MM-DD, activity id, or "latest"
+    date: text("date"), // local calendar day the row belongs to, when known
+    payload: text("payload").notNull(),
+    fetchedAt: integer("fetched_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("garmin_raw_user_dataset_key_unique").on(t.userId, t.dataset, t.key),
+    index("garmin_raw_user_date_idx").on(t.userId, t.date),
+  ],
+);
+
+/** Per-user import progress for each Garmin dataset. */
+export const garminDatasets = sqliteTable(
+  "garmin_datasets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    dataset: text("dataset").notNull(),
+    /** "ok" | "unavailable" (device/account has no such data) | "error" */
+    status: text("status").notNull().default("ok"),
+    lastError: text("last_error"),
+    /** Oldest day fully fetched so far (backfill walks this backwards). */
+    backfilledTo: text("backfilled_to"),
+    /** Newest day fetched. */
+    latestDate: text("latest_date"),
+    emptyStreak: integer("empty_streak").notNull().default(0),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("garmin_datasets_user_dataset_unique").on(t.userId, t.dataset)],
+);
 
 export const workoutsRelations = relations(workouts, ({ many }) => ({
   workoutExercises: many(workoutExercises),
