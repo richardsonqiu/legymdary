@@ -4,10 +4,12 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreaksCard } from "@/components/consistency/StreaksCard";
 import { TodayGuide, type GuideInput } from "@/components/guide/TodayGuide";
+import { TodayScores, type TodayScoresInput } from "@/components/score/TodayScores";
+import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
+import { activeDaysInWeek, WEEKLY_TARGET } from "@/lib/streaks";
 import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
 import { TodayFoodCard } from "@/components/food/TodayFoodCard";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
-import { ReadinessCard } from "@/components/garmin/ReadinessCard";
 import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
@@ -69,6 +71,28 @@ export default async function DashboardPage() {
   ]);
   const foodTargets = energy.targets;
 
+  // ---- Score rings + readiness hero (recovery needs Garmin) ----
+  let card: Awaited<ReturnType<typeof buildAnalysis>>["card"] | null = null;
+  if (energy.garmin && user?.id) {
+    const latest = await latestDataDate(user.id);
+    // Only show recovery for last night (or the night before if today's sync hasn't landed yet).
+    if (latest >= addDaysStr(serverToday, -1)) card = (await buildAnalysis(user.id, latest)).card;
+  }
+  const todayGarmin = energy.garminDays.find((d) => d.date === serverToday) ?? null;
+  const todayFood = foodTotals.find((d) => d.date === serverToday);
+  const scores: TodayScoresInput = {
+    readiness: card?.readiness ?? null,
+    sleepScore: card?.lastNight.sleepScore ?? null,
+    sleepHours: card?.lastNight.sleepHours != null ? Math.round(card.lastNight.sleepHours * 10) / 10 : null,
+    eaten: Math.round(todayFood?.calories ?? 0),
+    kcalTarget: foodTargets?.calories ?? null,
+    steps: todayGarmin?.steps ?? null,
+    stepGoal: 8000,
+    weekActive: activeDaysInWeek(new Map(consistencyDays.map((d) => [d.date, d])), serverToday),
+    weekTarget: WEEKLY_TARGET,
+    garminConnected: !!energy.garmin,
+  };
+
   // ---- Inputs for the plain-language "Today" guide ----
   const { plan, body, goals } = energy;
   const [scanCur, scanPrev] = [scans[scans.length - 1], scans[scans.length - 2]];
@@ -128,6 +152,8 @@ export default async function DashboardPage() {
         <AccountMenu name={user?.name} email={user?.email} />
       </header>
 
+      <TodayScores s={scores} />
+
       <TodayGuide g={guide} />
 
       <StreaksCard
@@ -156,19 +182,6 @@ export default async function DashboardPage() {
       {/* Garmin */}
       {energy.garmin ? (
         <>
-          <section>
-            <SectionTitle
-              help="readiness"
-              action={
-                <Link href="/insights" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
-                  Insights →
-                </Link>
-              }
-            >
-              Readiness
-            </SectionTitle>
-            <ReadinessCard byDate={energy.readinessByDate} />
-          </section>
           <section>
             <SectionTitle help="energy">Energy balance</SectionTitle>
             <EnergyBalanceCard rows={energyRows} />

@@ -19,6 +19,9 @@ your phone at the gym. Every account gets its own private diary.
   `weight × (1 + reps / 30)`, with a live PR badge while logging.
 - **Progress charts** — per-exercise weight/volume/1RM over 30 / 90 days / all
   time, body-stat line charts with a range selector, and weekly volume.
+- **Look** — night-blue theme with soft gradient "sky" backgrounds, translucent
+  cards, a row of score rings on Home (Readiness, Sleep, Food, Steps, Week) and a
+  large readiness gauge with a plain-language verdict.
 - **Navigation** — 5 tabs, each with sub-tabs: **Home** · **Train** (Workout,
   History, Exercises) · **Food** (Today, Plan & goals) · **Progress** (Body &
   training, PRs) · **Insights** (Daily, Garmin).

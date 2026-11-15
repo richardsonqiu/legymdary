@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArcGauge, RangeBar, toneFor, toneWord } from "@/components/score/Score";
 import { Explain } from "@/components/Explain";
 import { Card } from "@/components/ui";
 import type { DayCard } from "@/lib/analysis/service";
@@ -6,11 +7,6 @@ import { cn } from "@/lib/utils";
 
 /** Server-safe presentational cards for the Insights page. */
 
-const bandStyle = {
-  push: { ring: "stroke-emerald-400", text: "text-emerald-300", chip: "bg-emerald-500/15 text-emerald-300" },
-  normal: { ring: "stroke-sky-400", text: "text-sky-300", chip: "bg-sky-500/15 text-sky-300" },
-  easy: { ring: "stroke-amber-400", text: "text-amber-300", chip: "bg-amber-500/15 text-amber-300" },
-} as const;
 
 export function ReadinessHero({ r }: { r: DayCard["readiness"] }) {
   if (!r) {
@@ -24,64 +20,58 @@ export function ReadinessHero({ r }: { r: DayCard["readiness"] }) {
       </Card>
     );
   }
-  const st = bandStyle[r.band];
-  const size = 132;
-  const stroke = 12;
-  const rad = (size - stroke) / 2;
-  const c = 2 * Math.PI * rad;
+  const tone = toneFor(r.score);
+  const sky: Record<string, [string, string]> = {
+    great: ["rgba(94,234,212,0.38)", "rgba(129,140,248,0.32)"],
+    good: ["rgba(125,211,252,0.32)", "rgba(165,180,252,0.30)"],
+    low: ["rgba(252,211,77,0.30)", "rgba(244,114,182,0.22)"],
+    none: ["rgba(125,211,252,0.18)", "rgba(129,140,248,0.18)"],
+  };
+  const [a, b] = sky[tone];
   return (
-    <Card className="space-y-4">
-      <div className="flex items-center gap-5">
-        <div className="relative shrink-0" style={{ width: size, height: size }}>
-          <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
-            <circle cx={size / 2} cy={size / 2} r={rad} fill="none" strokeWidth={stroke} className="stroke-zinc-800" />
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={rad}
-              fill="none"
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={c}
-              strokeDashoffset={c * (1 - r.score / 100)}
-              style={{ ["--ring-c" as string]: c }}
-              className={cn("ring-progress", st.ring)}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-semibold tabular-nums tracking-tight">{r.score}</span>
-            <span className="text-[10px] uppercase tracking-wide text-zinc-500">readiness</span>
+    <div className="space-y-3">
+      <div
+        className="hero-sky relative overflow-hidden rounded-[28px] border border-white/10 px-5 pb-5 pt-5"
+        style={{ ["--sky-a" as string]: a, ["--sky-b" as string]: b }}
+      >
+        <div className="relative mx-auto flex w-[220px] justify-center">
+          <ArcGauge value={r.score} />
+          <div className="absolute inset-x-0 top-[58px] text-center">
+            <div className="text-6xl font-light leading-none tabular-nums tracking-tight">{r.score}</div>
+            <div className="mt-1.5 text-sm font-medium text-zinc-200">{toneWord(r.score)}</div>
           </div>
         </div>
-        <div className="min-w-0">
-          <div className={cn("text-xl font-semibold", st.text)}>{r.label}</div>
-          <span className={cn("mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", st.chip)}>
+        <div className="-mt-6 text-center">
+          <div className="text-lg font-semibold">{r.label}</div>
+          <span className="mt-1 inline-flex rounded-full bg-black/25 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
             {r.confidence} confidence
           </span>
         </div>
       </div>
-      <ul className="space-y-2.5">
-        {r.contributors.map((k) => (
-          <li key={k.key}>
-            <div className="flex items-baseline justify-between gap-3 text-xs">
-              <span className="text-zinc-300">
-                {k.label} <span className="text-zinc-600">· {k.weight}%</span>
-              </span>
-              <span className="truncate text-right tabular-nums text-zinc-500">{k.detail}</span>
-            </div>
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className={cn(
-                  "bar-fill h-full rounded-full",
-                  k.score >= 70 ? "bg-emerald-400" : k.score >= 45 ? "bg-sky-400" : "bg-amber-400",
-                )}
-                style={{ width: `${Math.max(4, k.score)}%` }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Card>
+      <Card>
+        <ul className="space-y-3.5">
+          {r.contributors.map((k) => (
+            <li key={k.key}>
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-zinc-200">
+                  {k.label} <span className="text-xs text-zinc-500">· {k.weight}%</span>
+                </span>
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    k.score >= 75 ? "text-teal-200" : k.score >= 50 ? "text-sky-200" : "text-amber-200",
+                  )}
+                >
+                  {toneWord(k.score)}
+                </span>
+              </div>
+              <div className="mt-0.5 truncate text-[11px] tabular-nums text-zinc-500">{k.detail}</div>
+              <RangeBar value={k.score} className="mt-1.5" />
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
   );
 }
 

@@ -4,23 +4,23 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export const CHART = {
-  line: "#fafafa", // zinc-50
-  lineSoft: "#a1a1aa", // zinc-400
-  grid: "#27272a", // zinc-800
-  axis: "#71717a", // zinc-500
-  bar: "#d4d4d8", // zinc-300
+  line: "#f5f7fb", // zinc-50
+  lineSoft: "#8c98b0", // zinc-400
+  grid: "#222b40", // zinc-800
+  axis: "#67738c", // zinc-500
+  bar: "#b3bdd0", // zinc-300
 };
 
 export const tooltipStyle = {
-  background: "#18181b",
-  border: "1px solid #3f3f46",
+  background: "#131a2b",
+  border: "1px solid #333d55",
   borderRadius: 10,
-  color: "#fafafa",
+  color: "#f5f7fb",
   fontSize: 12,
   padding: "6px 10px",
 };
 
-export const tooltipLabelStyle = { color: "#a1a1aa", marginBottom: 2 };
+export const tooltipLabelStyle = { color: "#8c98b0", marginBottom: 2 };
 
 const emptySubscribe = () => () => {};
 
