@@ -38,7 +38,7 @@ export type GuideInput = {
   hasScan: boolean;
 };
 
-type Action = { key: string; text: string; why: string; href: string; done: boolean };
+type Action = { key: string; text: string; why: string; href: string; done: boolean; hint?: string };
 
 export function TodayGuide({ g }: { g: GuideInput }) {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
@@ -94,13 +94,14 @@ export function TodayGuide({ g }: { g: GuideInput }) {
   /* ---------- 3. Do this today ---------- */
   const actions: Action[] = [];
   const meals = t?.count ?? 0;
-  const mealGoal = hour < 11 ? 1 : hour < 16 ? 2 : 3;
+  const nextMeal = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 21 ? "dinner" : "snacks";
   actions.push({
     key: "log",
-    text: meals >= mealGoal ? `Meals logged (${meals})` : `Snap your ${["breakfast", "lunch", "dinner"][Math.min(meals, 2)]}`,
+    text: meals > 0 ? `Food logged today (${meals} meal${meals === 1 ? "" : "s"})` : `Snap your ${nextMeal}`,
     why: "Logging is the habit that makes everything else work.",
     href: "/food",
-    done: meals >= mealGoal,
+    done: meals > 0,
+    hint: meals > 0 ? `Keep snapping each meal — ${nextMeal} next.` : undefined,
   });
   if (g.targets?.protein) {
     const left = Math.round(g.targets.protein - (t?.protein ?? 0));
@@ -209,6 +210,7 @@ export function TodayGuide({ g }: { g: GuideInput }) {
                       {a.text}
                     </span>
                     {!a.done && <span className="block text-xs text-zinc-500">{a.why}</span>}
+                    {a.done && a.hint && <span className="block text-xs text-emerald-200/60">{a.hint}</span>}
                   </span>
                 </Link>
               </li>
