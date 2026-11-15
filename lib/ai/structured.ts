@@ -34,7 +34,8 @@ export async function structuredCall<S extends z.ZodType>(opts: {
   feature: string;
   schema: S;
   system: string;
-  user: string;
+  /** Text, or content blocks (e.g. images + text). */
+  user: string | Anthropic.Beta.Messages.BetaContentBlockParam[];
   models: string[];
   effort?: "low" | "medium" | "high";
 }): Promise<StructuredResult<z.infer<S>>> {

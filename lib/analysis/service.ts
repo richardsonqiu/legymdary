@@ -1,6 +1,6 @@
-import { and, desc, eq, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { bodyStats, garminDaily, garminRaw, goals } from "@/db/schema";
+import { bodyScans, garminDaily, garminRaw, goals } from "@/db/schema";
 import { extractDays, type DayRow } from "@/lib/analysis/extract";
 import {
   baselineAt,
@@ -19,6 +19,8 @@ import {
   type Pattern,
   type Readiness,
 } from "@/lib/analysis/metrics";
+import { compareScans, leanMass, parseSegments, segmentBalance } from "@/lib/body-scan";
+import { latestBodyValues } from "@/lib/body-values";
 import { isFullyLogged } from "@/lib/energy";
 import { computePlan, planInputFrom } from "@/lib/nutrition";
 import { addDaysStr, todayStr } from "@/lib/utils";
@@ -111,6 +113,28 @@ export type DayCard = {
     currentWeight: number | null;
     vo2max: number | null;
   };
+  /** Latest body-composition scan (InBody) on or before this day, with change vs the previous scan. */
+  bodyComposition: {
+    date: string;
+    daysAgo: number;
+    weightKg: number | null;
+    skeletalMuscleKg: number | null;
+    fatMassKg: number | null;
+    bodyFatPct: number | null;
+    leanMassKg: number | null;
+    visceralFatLevel: number | null;
+    waistHipRatio: number | null;
+    bmrKcal: number | null;
+    sincePrevious: {
+      days: number;
+      weightKg: number | null;
+      muscleKg: number | null;
+      fatKg: number | null;
+      bodyFatPct: number | null;
+      verdict: string | null;
+    } | null;
+    segmental: { armsPctOfIdeal: number | null; legsPctOfIdeal: number | null; upperLowerGap: number | null; advice: string | null } | null;
+  } | null;
   patterns: Pattern[];
   flags: Flag[];
   coverage: { garminDays: number; loggedDays: number; hrvDays: number; sleepDays: number };
@@ -153,21 +177,23 @@ export async function latestDataDate(userId: string): Promise<string> {
 export async function buildAnalysis(userId: string, date: string): Promise<Analysis> {
   const from = addDaysStr(date, -120);
   // All independent reads in one round trip.
-  const [{ rows }, [g], [w]] = await Promise.all([
+  const [{ rows }, [g], [w], scans] = await Promise.all([
     extractDays(userId, from, date),
     db.select().from(goals).where(eq(goals.userId, userId)).limit(1),
+    latestBodyValues(userId, date).then((b) => [b] as const),
     db
-      .select({ weight: bodyStats.weight, bodyFat: bodyStats.bodyFat })
-      .from(bodyStats)
-      .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight), lte(bodyStats.date, date)))
-      .orderBy(desc(bodyStats.date))
-      .limit(1),
+      .select()
+      .from(bodyScans)
+      .where(and(eq(bodyScans.userId, userId), lte(bodyScans.date, date)))
+      .orderBy(desc(bodyScans.date))
+      .limit(2),
   ]);
   const i = rows.length - 1;
   const today = rows[i];
   const yIdx = i - 1;
   const y = rows[yIdx];
   const plan = computePlan(planInputFrom(g ?? null, { weight: w?.weight ?? null, bodyFat: w?.bodyFat ?? null }));
+  // (weight = newest reading; body fat prefers recent manual/InBody values — see lib/body-values.ts)
 
   const hrvB = baselineAt(rows, i, "hrv");
   const rhrKey = today.sleepAvgHr != null ? "sleepAvgHr" : "rhr";
@@ -261,8 +287,51 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       currentWeight: w?.weight ?? null,
       vo2max: vo2,
     },
+    bodyComposition: (() => {
+      const [cur, prev] = scans;
+      if (!cur) return null;
+      const ch = prev ? compareScans(prev, cur) : null;
+      const bal = segmentBalance(parseSegments(cur.segmentalLean));
+      return {
+        date: cur.date,
+        daysAgo: Math.round((Date.parse(date) - Date.parse(cur.date)) / 86_400_000),
+        weightKg: cur.weight,
+        skeletalMuscleKg: cur.skeletalMuscle,
+        fatMassKg: cur.fatMass,
+        bodyFatPct: cur.bodyFatPct,
+        leanMassKg: leanMass(cur),
+        visceralFatLevel: cur.visceralFat,
+        waistHipRatio: cur.waistHip,
+        bmrKcal: cur.bmr,
+        sincePrevious: ch
+          ? { days: ch.days, weightKg: ch.weight, muscleKg: ch.muscle, fatKg: ch.fat, bodyFatPct: ch.bodyFatPct, verdict: ch.verdict?.text ?? null }
+          : null,
+        segmental: bal
+          ? { armsPctOfIdeal: bal.armsPct, legsPctOfIdeal: bal.legsPct, upperLowerGap: bal.upperLowerGap, advice: bal.advice }
+          : null,
+      };
+    })(),
     patterns: personalPatterns(rows.slice(0, i + 1)),
-    flags: flagsAt(rows, i, { proteinTarget: plan.protein }),
+    flags: [
+      ...flagsAt(rows, i, { proteinTarget: plan.protein }),
+      ...(() => {
+        const out: Flag[] = [];
+        const [cur, prev] = scans;
+        if (!cur) return out;
+        const ch = prev ? compareScans(prev, cur) : null;
+        if (ch?.verdict?.tone === "bad") {
+          out.push({ level: "warn", text: `Body scan (${cur.date}): ${ch.verdict.text.toLowerCase()} since the previous scan.` });
+        }
+        if (cur.visceralFat != null && cur.visceralFat >= 10) {
+          out.push({ level: "warn", text: `Visceral fat level ${cur.visceralFat} is in the high range (10+).` });
+        }
+        const bal = segmentBalance(parseSegments(cur.segmentalLean));
+        if (bal?.upperLowerGap != null && bal.upperLowerGap >= 8) {
+          out.push({ level: "info", text: `Legs are ${bal.upperLowerGap} points behind arms in lean mass — favour lower-body work.` });
+        }
+        return out;
+      })(),
+    ],
     coverage: {
       garminDays: rows.filter((r) => r.totalKcal != null).length,
       loggedDays: rows.filter((r) => isFullyLogged({ date: r.date, calories: r.intakeKcal, count: r.mealCount })).length,

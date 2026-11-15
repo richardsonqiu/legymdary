@@ -242,3 +242,25 @@ export function PatternsAndFlags({ card }: { card: DayCard }) {
     </Card>
   );
 }
+
+export function BodyCompositionCard({ card }: { card: DayCard }) {
+  const b = card.bodyComposition;
+  if (!b) return null;
+  const sp = b.sincePrevious;
+  const sign = (v: number | null, unit: string) => (v == null ? "–" : `${v > 0 ? "+" : ""}${v} ${unit}`);
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-baseline justify-between text-xs text-zinc-500">
+        <span>Latest scan {b.date}</span>
+        <span>{b.daysAgo === 0 ? "today" : `${b.daysAgo} days ago`}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <Metric label="Muscle" value={b.skeletalMuscleKg != null ? `${b.skeletalMuscleKg} kg` : "–"} sub={sp ? sign(sp.muscleKg, "kg") : null} tone={sp?.muscleKg == null ? null : sp.muscleKg >= 0 ? "good" : "bad"} />
+        <Metric label="Fat mass" value={b.fatMassKg != null ? `${b.fatMassKg} kg` : "–"} sub={sp ? sign(sp.fatKg, "kg") : null} tone={sp?.fatKg == null ? null : sp.fatKg <= 0 ? "good" : "bad"} />
+        <Metric label="Body fat" value={b.bodyFatPct != null ? `${b.bodyFatPct}%` : "–"} sub={b.visceralFatLevel != null ? `visceral ${b.visceralFatLevel}` : null} />
+      </div>
+      {sp?.verdict && <p className="text-sm text-zinc-300">{sp.verdict} (over {sp.days} days).</p>}
+      {b.segmental?.advice && <p className="text-xs text-amber-200/90">💡 {b.segmental.advice}</p>}
+    </Card>
+  );
+}

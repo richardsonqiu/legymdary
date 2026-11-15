@@ -216,6 +216,25 @@ The analysis design built on top of this lives in
 The Personal API is intended for personal use, not commercial apps serving
 many users — see Garmin's FAQ before opening this app to the public.
 
+## Body composition (InBody)
+
+Stats → **Body composition** stores InBody (or similar BIA) scans:
+
+- **Adding scans.** Upload screenshots of the InBody app's Detail and/or
+  History screens (a History screen yields every past date). Very tall
+  screenshots are cut into readable tiles, Claude Haiku 5.5 (Sonnet 5.5 backup)
+  reads the numbers, and you review/edit before saving. Manual entry works too.
+- **What's stored.** Weight, skeletal muscle, fat mass, body fat %, BMI,
+  visceral fat, waist-hip ratio, water, protein, mineral, BMR, SMI, score,
+  segmental lean/fat (kg and % of ideal), body type and balance.
+- **What you see.** Change vs the previous scan with a verdict (e.g. "lost
+  muscle and gained fat"), segmental balance advice (e.g. legs behind arms),
+  trends, and the weight at your target body fat if you keep your lean mass.
+- **Effect on the plan.** Each scan's weight and body fat feed body stats.
+  For body fat, the plan prefers a manual entry or a scan from the last 60
+  days over smart-scale estimates. The plan shows InBody's measured BMR, and
+  Insights/the daily brief use the latest scan.
+
 ## Insights (daily analysis)
 
 The **Insights** tab analyses each day against your own baseline (method:

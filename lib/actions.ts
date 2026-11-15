@@ -1,10 +1,11 @@
 "use server";
 
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   aiUsage,
+  bodyScans,
   bodyStats,
   garminActivities,
   garminConnections,
@@ -24,6 +25,7 @@ import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
 import { encryptSecret } from "@/lib/garmin/crypto";
 import { askAboutDay, generateDailyReport, type Report } from "@/lib/analysis/report";
+import { extractBodyScans, type ExtractedScan } from "@/lib/body-scan-ai";
 import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import {
@@ -887,4 +889,119 @@ export async function askAboutDayAction(
   const limit = await rateLimit(`ai:qa:${userId}`, 30, DAY);
   if (!limit.ok) return { ok: false, error: "Question limit reached for today." };
   return askAboutDay(userId, safeDate(date), q);
+}
+
+/* ------------------------------------------------------------------ */
+/* Body-composition scans (InBody)                                     */
+/* ------------------------------------------------------------------ */
+
+/** Reads scans from screenshot tiles; nothing is saved until the user confirms. */
+export async function extractBodyScansAction(
+  images: string[],
+): Promise<{ ok: true; scans: ExtractedScan[]; notes: string } | { ok: false; error: string }> {
+  const userId = await requireUserId();
+  const limit = await rateLimit(`ai:scan:${userId}`, 20, DAY);
+  if (!limit.ok) return { ok: false, error: "Daily scan-reading limit reached — try again tomorrow." };
+  const list = (Array.isArray(images) ? images : []).slice(0, 20);
+  const parsed = list.flatMap((img) => {
+    const m = IMAGE_DATA_URL_RE.exec(img ?? "");
+    return m && m[2].length < 3_000_000
+      ? [{ mediaType: m[1] as "image/jpeg" | "image/png" | "image/webp", base64: m[2] }]
+      : [];
+  });
+  if (!parsed.length) return { ok: false, error: "Add at least one screenshot." };
+  return extractBodyScans(userId, parsed);
+}
+
+const SEG_KEYS = ["leftArm", "rightArm", "trunk", "leftLeg", "rightLeg"] as const;
+function cleanSegments(v: unknown): string | null {
+  if (!v || typeof v !== "object") return null;
+  const out: Record<string, { kg: number | null; pct: number | null }> = {};
+  for (const k of SEG_KEYS) {
+    const s = (v as Record<string, unknown>)[k] as Record<string, unknown> | null | undefined;
+    const kg = numOrNull(s?.kg);
+    const pct = numOrNull(s?.pct);
+    if (kg != null || pct != null) {
+      out[k] = { kg: kg != null && kg > 0 && kg < 100 ? kg : null, pct: pct != null && pct > 0 && pct < 400 ? pct : null };
+    }
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+}
+
+/** Saves reviewed scans (upsert per date) and mirrors weight/body fat into body stats. */
+export async function saveBodyScans(scans: ExtractedScan[]): Promise<{ saved: number } | { error: string }> {
+  const userId = await requireUserId();
+  if (!Array.isArray(scans) || !scans.length) return { error: "Nothing to save." };
+  const range = (v: unknown, lo: number, hi: number) => {
+    const n = numOrNull(v);
+    return n != null && n >= lo && n <= hi ? n : null;
+  };
+  let saved = 0;
+  for (const s of scans.slice(0, 50)) {
+    const date = safeDate(s?.date, "");
+    if (!date) continue;
+    const vals = {
+      time: /^\d{1,2}:\d{2}$/.test(String(s.time ?? "")) ? String(s.time) : null,
+      device: "InBody",
+      score: range(s.score, 0, 120),
+      weight: range(s.weight, 20, 400),
+      skeletalMuscle: range(s.skeletalMuscle, 5, 100),
+      fatMass: range(s.fatMass, 0.5, 250),
+      bodyFatPct: range(s.bodyFatPct, 2, 75),
+      bmi: range(s.bmi, 10, 80),
+      visceralFat: range(s.visceralFat, 1, 30),
+      waistHip: range(s.waistHip, 0.5, 1.6),
+      totalBodyWater: range(s.totalBodyWater, 10, 120),
+      protein: range(s.protein, 2, 40),
+      mineral: range(s.mineral, 0.5, 10),
+      bmr: range(s.bmr, 600, 4000),
+      smi: range(s.smi, 3, 20),
+      segmentalLean: cleanSegments(s.segmentalLean),
+      segmentalFat: cleanSegments(s.segmentalFat),
+      bodyType: clip(s.bodyType, 80) || null,
+      balance: s.balance
+        ? JSON.stringify({
+            upper: clip(s.balance.upper, 40) || null,
+            lower: clip(s.balance.lower, 40) || null,
+            upperLower: clip(s.balance.upperLower, 40) || null,
+          })
+        : null,
+    };
+    await db
+      .insert(bodyScans)
+      .values({ userId, date, ...vals })
+      .onConflictDoUpdate({ target: [bodyScans.userId, bodyScans.date], set: vals });
+    // Mirror into body stats so the plan uses measured weight + body fat.
+    // A manual entry for that day wins; scans override Garmin scale imports.
+    if (vals.weight != null || vals.bodyFatPct != null) {
+      const bs = { weight: vals.weight, bodyFat: vals.bodyFatPct };
+      await db
+        .insert(bodyStats)
+        .values({ userId, date, ...bs, source: "inbody" })
+        .onConflictDoUpdate({
+          target: [bodyStats.userId, bodyStats.date],
+          set: { ...bs, source: "inbody" },
+          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin')`,
+        });
+    }
+    saved++;
+  }
+  revalidateAll();
+  revalidatePath("/stats");
+  return { saved };
+}
+
+export async function deleteBodyScan(id: number): Promise<void> {
+  const userId = await requireUserId();
+  const [scan] = await db
+    .select({ date: bodyScans.date })
+    .from(bodyScans)
+    .where(and(eq(bodyScans.id, id), eq(bodyScans.userId, userId)))
+    .limit(1);
+  if (!scan) return;
+  await db.delete(bodyScans).where(eq(bodyScans.id, id));
+  await db
+    .delete(bodyStats)
+    .where(and(eq(bodyStats.userId, userId), eq(bodyStats.date, scan.date), eq(bodyStats.source, "inbody")));
+  revalidateAll();
 }

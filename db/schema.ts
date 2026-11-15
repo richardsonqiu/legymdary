@@ -419,6 +419,45 @@ export const garminDatasets = sqliteTable(
   (t) => [uniqueIndex("garmin_datasets_user_dataset_unique").on(t.userId, t.dataset)],
 );
 
+/**
+ * Body-composition scans (InBody or similar BIA). One per user per day.
+ * Segmental values are JSON: { leftArm, rightArm, trunk, leftLeg, rightLeg }
+ * each { kg, pct } (pct = % of the device's ideal for your height/weight).
+ */
+export const bodyScans = sqliteTable(
+  "body_scans",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    time: text("time"),
+    device: text("device").notNull().default("InBody"),
+    score: real("score"),
+    weight: real("weight"),
+    skeletalMuscle: real("skeletal_muscle"),
+    fatMass: real("fat_mass"),
+    bodyFatPct: real("body_fat_pct"),
+    bmi: real("bmi"),
+    visceralFat: real("visceral_fat"),
+    waistHip: real("waist_hip"),
+    totalBodyWater: real("total_body_water"),
+    protein: real("protein"),
+    mineral: real("mineral"),
+    bmr: real("bmr"),
+    smi: real("smi"),
+    segmentalLean: text("segmental_lean"),
+    segmentalFat: text("segmental_fat"),
+    bodyType: text("body_type"),
+    balance: text("balance"), // JSON { upper, lower, upperLower }
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("body_scans_user_date_unique").on(t.userId, t.date)],
+);
+
 /** One AI-written daily report per user per day (generated once, cached). */
 export const dailyReports = sqliteTable(
   "daily_reports",
@@ -481,3 +520,4 @@ export type Template = typeof templates.$inferSelect;
 export type GarminDaily = typeof garminDaily.$inferSelect;
 export type GarminActivity = typeof garminActivities.$inferSelect;
 export type GarminConnection = typeof garminConnections.$inferSelect;
+export type BodyScan = typeof bodyScans.$inferSelect;
