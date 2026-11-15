@@ -168,7 +168,8 @@ encrypted (AES-256-GCM), exchanged for a 24-hour bearer token as needed, and
 never written back to Garmin.
 
 - **Sync** — 30 days on connect; afterwards a background sync after page loads
-  (at most every 3h), a daily Vercel Cron (`/api/cron/garmin`, needs
+  when the last sync is over 15 min old (the page then refreshes itself
+  a few seconds later with the new data), a daily Vercel Cron (`/api/cron/garmin`, needs
   `CRON_SECRET`), and a "Sync now" button. Pulls daily summaries (calories
   burned, steps, resting HR, stress, Body Battery), sleep, HRV, activities and
   scale weigh-ins.
@@ -275,6 +276,24 @@ resumes automatically in the background and via the daily cron.
 Open the site on your phone → Share → **Add to Home Screen** (iOS) or the
 install prompt (Android). It launches full-screen with shortcuts for "Snap a
 meal" and "Log workout".
+
+## Performance
+
+- **Tabs feel instant.** The bottom nav prefetches each tab with its data, and
+  just-visited tabs are reused for 30 s (`experimental.staleTimes`). Any save
+  through a server action invalidates this cache.
+- **Few round trips.** Pages start all their independent queries at once, and
+  shared lookups are cached per request. Background Garmin work runs after
+  the response (`after()`).
+- **Small payloads.** Insights pulls only the ~40 Garmin fields it needs via
+  SQLite `json_extract`. Meal photos are served from `/api/meal-photo/<id>`
+  (private, immutable cache) instead of being embedded in pages.
+- **Co-locate the database.** Every query is a network round trip to Turso, so
+  keep the Turso database in, or next to, the Vercel function region
+  (`vercel.json` → `regions`).
+- **Diagnose locally.** `DB_TRACE=1` logs every query, and
+  `DB_SIMULATE_LATENCY_MS=60` adds a delay per round trip to mimic a remote
+  database and expose waterfalls.
 
 ## Notes
 

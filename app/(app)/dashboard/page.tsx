@@ -27,7 +27,8 @@ import {
   getWorkoutDates,
 } from "@/lib/queries";
 import { getEnergyContext } from "@/lib/energy-data";
-import { syncGarminInBackgroundIfStale } from "@/lib/garmin/background";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { scheduleGarminSync } from "@/lib/garmin/background";
 import { getSessionUser } from "@/lib/session";
 import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
 
@@ -58,7 +59,7 @@ export default async function DashboardPage() {
     getWeeklyCheckin(),
   ]);
   const foodTargets = energy.targets;
-  if (user?.id && energy.garmin) await syncGarminInBackgroundIfStale(user.id);
+  const garminSyncing = user?.id ? scheduleGarminSync(user.id, energy.garmin) : false;
   const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
   const energyRows = energy.intake.map((d) => ({
     date: d.date,
@@ -75,6 +76,7 @@ export default async function DashboardPage() {
 
   return (
     <PageTransition className="space-y-6">
+      {garminSyncing && <AutoRefresh />}
       <header className="flex items-start justify-between gap-3">
         <DashboardHeading firstName={firstName} />
         <AccountMenu name={user?.name} email={user?.email} />

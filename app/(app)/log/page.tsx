@@ -13,16 +13,23 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Log workout" };
 
 export default async function LogPage() {
+  // Start every independent read at once; only "last time" depends on the active workout.
+  const exercisesP = getAllExercises();
+  const datesP = getWorkoutDates();
+  const templatesP = getTemplates();
   const active = await getActiveWorkout();
 
   if (active) {
     const [exercises, lastByExercise] = await Promise.all([
-      getAllExercises(),
+      exercisesP,
       getLastPerformances(
         active.id,
         active.exercises.map((e) => e.exerciseId),
       ),
     ]);
+    // Settle the unused reads so they never surface as unhandled rejections.
+    void datesP.catch(() => {});
+    void templatesP.catch(() => {});
     return (
       <PageTransition className="">
         <WorkoutEditor
@@ -34,7 +41,8 @@ export default async function LogPage() {
     );
   }
 
-  const [dates, templates] = await Promise.all([getWorkoutDates(), getTemplates()]);
+  void exercisesP.catch(() => {});
+  const [dates, templates] = await Promise.all([datesP, templatesP]);
   return (
     <PageTransition className="">
       <StartWorkout canDuplicate={dates.length > 0} templates={templates} />

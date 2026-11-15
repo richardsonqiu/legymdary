@@ -13,7 +13,8 @@ import { ChevronLeftIcon, ChevronRightIcon, WatchIcon } from "@/components/icons
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
 import { getStoredReport } from "@/lib/analysis/report";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
-import { syncGarminInBackgroundIfStale } from "@/lib/garmin/background";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { scheduleGarminSync } from "@/lib/garmin/background";
 import { getGarminStatus } from "@/lib/queries";
 import { requireUserId } from "@/lib/session";
 import { addDaysStr, formatPretty } from "@/lib/utils";
@@ -32,16 +33,17 @@ export default async function InsightsPage({
   const sp = await searchParams;
   const [garmin, latest] = await Promise.all([getGarminStatus(), latestDataDate(userId)]);
   const date = typeof sp.date === "string" && DATE_RE.test(sp.date) ? sp.date : latest;
-  if (garmin) await syncGarminInBackgroundIfStale(userId);
 
   const [{ card, series }, stored] = await Promise.all([
     buildAnalysis(userId, date),
     getStoredReport(userId, date),
   ]);
   const isLatest = date >= latest;
+  const garminSyncing = scheduleGarminSync(userId, garmin);
 
   return (
     <PageTransition className="space-y-6">
+      {garminSyncing && <AutoRefresh />}
       <PageHeader title="Insights" subtitle="Recovery, sleep, load and fuel — vs your own baseline" />
 
       <div className="flex items-center justify-between gap-2">

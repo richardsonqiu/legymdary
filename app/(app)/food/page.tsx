@@ -5,7 +5,8 @@ import { TargetIcon } from "@/components/icons";
 import { PageHeader, buttonClass } from "@/components/ui";
 import { activityBonus } from "@/lib/energy";
 import { getEnergyContext } from "@/lib/energy-data";
-import { syncGarminInBackgroundIfStale } from "@/lib/garmin/background";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { scheduleGarminSync } from "@/lib/garmin/background";
 import { requireUserId } from "@/lib/session";
 import {
   getAiUsageSince,
@@ -41,7 +42,7 @@ export default async function FoodPage({
     getGarminDaily(addDaysStr(center, -1), addDaysStr(center, 1)),
     requireUserId(),
   ]);
-  if (energy.garmin) await syncGarminInBackgroundIfStale(userId);
+  const garminSyncing = scheduleGarminSync(userId, energy.garmin);
   const plan = energy.plan;
   const adjust = !!energy.garmin?.adjustForActivity && !!energy.targets && !plan.usingOverride;
   const garminByDate: Record<string, { burned: number | null; bonus: number }> = {};
@@ -54,6 +55,7 @@ export default async function FoodPage({
 
   return (
     <PageTransition className="space-y-0">
+      {garminSyncing && <AutoRefresh />}
       <PageHeader
         title="Food"
         subtitle="Snap what you eat — AI estimates the calories"

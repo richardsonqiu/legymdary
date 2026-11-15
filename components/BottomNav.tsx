@@ -37,6 +37,8 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
+              // Fully prefetch each tab (data included) so switching is instant.
+              prefetch
               aria-current={active ? "page" : undefined}
               // Slide toward the tab you picked: right-hand tabs move forward.
               transitionTypes={
