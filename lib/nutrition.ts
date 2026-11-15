@@ -28,6 +28,18 @@ export type MealItem = {
   protein: number;
   carbs: number;
   fat: number;
+  /** Dish this component belongs to (e.g. "Kaya toast" → bread, kaya, butter). */
+  dish?: string | null;
+  /** Reference value used, e.g. "1 large egg (50 g) = 72 kcal · 6 g P · 0 g C · 5 g F (USDA)". */
+  reference?: string | null;
+  /** How the amount was judged, e.g. "2 eggs, seen on plate". */
+  amount?: string | null;
+  /** The arithmetic, e.g. "2 × 72 kcal = 144 kcal". */
+  calculation?: string | null;
+  /** Preparation/hidden-calorie assumptions, e.g. "soft-boiled, no oil". */
+  assumptions?: string | null;
+  /** The user changed the numbers after the AI estimate. */
+  edited?: boolean;
 };
 
 export type Macros = { calories: number; protein: number; carbs: number; fat: number };
@@ -98,6 +110,8 @@ export type Plan = {
   protein: number | null; // g
   fat: number | null; // g
   carbs: number | null; // g
+  /** "bodyweight": protein/fat per kg; "percent": 25/30/45 % split (no weight logged). */
+  macroBasis: "bodyweight" | "percent" | null;
   weeksToGoal: number | null;
 };
 
@@ -194,7 +208,15 @@ export function computePlan(i: PlanInput): Plan {
   let protein: number | null = null;
   let fat: number | null = null;
   let carbs: number | null = null;
-  if (calorieTarget != null && w != null) {
+  let macroBasis: Plan["macroBasis"] = null;
+  if (calorieTarget != null && w == null) {
+    // No weight logged: a standard split still gives every macro a goal.
+    macroBasis = "percent";
+    protein = round((calorieTarget * 0.25) / 4, 5);
+    fat = round((calorieTarget * 0.3) / 9, 5);
+    carbs = round((calorieTarget * 0.45) / 4, 5);
+  } else if (calorieTarget != null && w != null) {
+    macroBasis = "bodyweight";
     const perKg = direction === "lose" ? 2.0 : 1.8;
     protein = w * perKg;
     if (leanMass != null) protein = Math.min(protein, leanMass * 2.6);
@@ -231,6 +253,7 @@ export function computePlan(i: PlanInput): Plan {
     protein,
     fat,
     carbs,
+    macroBasis,
     weeksToGoal,
   };
 }

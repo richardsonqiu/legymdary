@@ -466,6 +466,10 @@ function cleanItems(items: unknown): MealItem[] {
     const name = String(it.name ?? "").trim().slice(0, 120);
     if (!name) return [];
     const n = (v: unknown) => Math.max(0, Math.round(numOrNull(v) ?? 0));
+    const t = (v: unknown, max: number) => {
+      const x = String(v ?? "").trim().slice(0, max);
+      return x || null;
+    };
     return [
       {
         name,
@@ -474,6 +478,12 @@ function cleanItems(items: unknown): MealItem[] {
         protein: n(it.protein),
         carbs: n(it.carbs),
         fat: n(it.fat),
+        dish: t(it.dish, 80),
+        reference: t(it.reference, 200),
+        amount: t(it.amount, 160),
+        calculation: t(it.calculation, 160),
+        assumptions: t(it.assumptions, 200),
+        edited: it.edited === true,
       },
     ];
   });

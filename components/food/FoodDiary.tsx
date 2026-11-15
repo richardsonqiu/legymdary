@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation";
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
 import {
@@ -53,6 +54,7 @@ export function FoodDiary({
   targets,
   planMissing,
   garminByDate,
+  macroSplitNote,
 }: {
   meals: Meal[];
   /** Distinct recent meals for one-tap "eat again" (no AI call). */
@@ -63,6 +65,8 @@ export function FoodDiary({
   requestedDate: string | null;
   targets: DailyTargets;
   planMissing: boolean;
+  /** True when macro goals use a standard % split because no weight is logged. */
+  macroSplitNote?: boolean;
   /** Garmin burn + activity bonus per date (null when Garmin isn't connected). */
   garminByDate?: Record<string, { burned: number | null; bonus: number }> | null;
 }) {
@@ -231,6 +235,15 @@ export function FoodDiary({
               </span>
             )}
           </div>
+        )}
+        {macroSplitNote && !planMissing && (
+          <Link
+            href="/stats"
+            className="mt-3 block text-[11px] leading-snug text-zinc-500 underline-offset-2 hover:underline"
+          >
+            Macro goals use a standard 25/45/30 % split of your calories. Log your weight on Stats to
+            get protein matched to your body (≈ 1.8–2 g per kg) →
+          </Link>
         )}
         {planMissing && (
           <Link
@@ -417,17 +430,35 @@ function MealRow({
       {open && (
         <div className="border-t border-zinc-800/80 px-3 py-2.5">
           {items.length > 0 && (
-            <ul className="mb-2 space-y-1 text-xs">
-              {items.map((it, i) => (
-                <li key={i} className="flex justify-between gap-3">
-                  <span className="min-w-0 truncate text-zinc-300">
-                    {it.name}
-                    {it.portion && <span className="text-zinc-500"> · {it.portion}</span>}
-                  </span>
-                  <span className="shrink-0 tabular-nums text-zinc-500">{it.calories} kcal</span>
-                </li>
+            <div className="mb-2 space-y-2.5">
+              {groupByDish(items).map((g, gi) => (
+                <div key={gi} className="space-y-1.5">
+                  {g.dish && (
+                    <div className="flex justify-between text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                      <span>{g.dish}</span>
+                      <span className="tabular-nums">
+                        {g.items.reduce((a, x) => a + x.item.calories, 0)} kcal
+                      </span>
+                    </div>
+                  )}
+                  {g.items.map(({ item: it, index }) => (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between gap-3 text-xs">
+                        <span className="min-w-0 text-zinc-300">
+                          {it.name}
+                          {it.portion && <span className="text-zinc-500"> · {it.portion}</span>}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-zinc-400">{it.calories} kcal</span>
+                      </div>
+                      <div className="text-[10px] tabular-nums text-zinc-600">
+                        P {it.protein} g · C {it.carbs} g · F {it.fat} g
+                      </div>
+                      <ItemExplanation item={it} />
+                    </div>
+                  ))}
+                </div>
               ))}
-            </ul>
+            </div>
           )}
           {meal.notes && <p className="mb-2 text-xs text-zinc-500">{meal.notes}</p>}
           <div className="flex justify-end gap-2">
