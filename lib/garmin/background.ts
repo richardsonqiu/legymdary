@@ -1,35 +1,38 @@
 import { after } from "next/server";
-import { db } from "@/db";
-import { garminConnections } from "@/db/schema";
-import { rateLimit } from "@/lib/rate-limit";
 import { runGarminImport } from "@/lib/garmin/raw-import";
 import { syncGarminForUser } from "@/lib/garmin/sync";
-import { eq } from "drizzle-orm";
+import { rateLimit } from "@/lib/rate-limit";
 
-const STALE_MS = 3 * 60 * 60 * 1000; // re-sync at most every 3 hours
+/** Re-sync Garmin when the last sync is older than this. */
+export const GARMIN_SYNC_STALE_MS = 15 * 60 * 1000;
 
 /**
- * Called from pages: if the user's Garmin data is stale, sync it *after* the
- * response is sent so page loads never wait on Garmin. Fresh data shows up on
- * the next visit (or immediately via "Sync now").
+ * Called from pages with the Garmin status they already loaded, so it adds
+ * no database round trips to the response. All Garmin work runs *after* the
+ * page is sent (Next.js `after()`).
+ *
+ * Returns true when a sync was scheduled; the page can render <AutoRefresh>
+ * to pull the fresh data in a few seconds later.
  */
-export async function syncGarminInBackgroundIfStale(userId: string) {
-  const [conn] = await db
-    .select({ status: garminConnections.status, lastSyncAt: garminConnections.lastSyncAt })
-    .from(garminConnections)
-    .where(eq(garminConnections.userId, userId))
-    .limit(1);
-  if (!conn || conn.status !== "ok") return;
-  const syncStale = !conn.lastSyncAt || Date.now() - conn.lastSyncAt.getTime() >= STALE_MS;
-  // Advance the full raw import (e.g. after a rate-limit pause) at most every 30 min.
-  const importSlot = (await rateLimit(`garmin:bgimport:${userId}`, 1, 30 * 60 * 1000)).ok;
-  if (!syncStale && !importSlot) return;
+export function scheduleGarminSync(
+  userId: string,
+  status: { status: string; lastSyncAt: Date | null } | null,
+): boolean {
+  if (!status || status.status !== "ok") return false;
+  const stale = !status.lastSyncAt || Date.now() - status.lastSyncAt.getTime() >= GARMIN_SYNC_STALE_MS;
   after(async () => {
     try {
-      if (syncStale) await syncGarminForUser(userId, { days: 3 });
-      if (importSlot) await runGarminImport(userId, { budgetMs: 20_000 });
+      // Dedupe: several tabs opened at once shouldn't each hit Garmin.
+      if (stale && (await rateLimit(`garmin:bgsync:${userId}`, 1, 10 * 60 * 1000)).ok) {
+        await syncGarminForUser(userId, { days: 3 });
+      }
+      // Keep advancing the full raw import (e.g. after a rate-limit pause).
+      if ((await rateLimit(`garmin:bgimport:${userId}`, 1, 30 * 60 * 1000)).ok) {
+        await runGarminImport(userId, { budgetMs: 20_000 });
+      }
     } catch (err) {
       console.error("[garmin] background sync failed:", err);
     }
   });
+  return stale;
 }

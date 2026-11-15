@@ -133,37 +133,40 @@ export type Analysis = { date: string; card: DayCard; series: SeriesPoint[] };
 /** Latest day with Garmin sleep/HRV/daily data, else today. */
 export async function latestDataDate(userId: string): Promise<string> {
   const cap = addDaysStr(todayStr(), 1);
-  const [raw] = await db
-    .select({ date: garminRaw.date })
-    .from(garminRaw)
-    .where(and(eq(garminRaw.userId, userId), eq(garminRaw.dataset, "sleep_summary"), lte(garminRaw.date, cap)))
-    .orderBy(desc(garminRaw.date))
-    .limit(1);
-  if (raw?.date) return raw.date;
-  const [typed] = await db
-    .select({ date: garminDaily.date })
-    .from(garminDaily)
-    .where(and(eq(garminDaily.userId, userId), lte(garminDaily.date, cap)))
-    .orderBy(desc(garminDaily.date))
-    .limit(1);
-  return typed?.date ?? todayStr();
+  const [[raw], [typed]] = await Promise.all([
+    db
+      .select({ date: garminRaw.date })
+      .from(garminRaw)
+      .where(and(eq(garminRaw.userId, userId), eq(garminRaw.dataset, "sleep_summary"), lte(garminRaw.date, cap)))
+      .orderBy(desc(garminRaw.date))
+      .limit(1),
+    db
+      .select({ date: garminDaily.date })
+      .from(garminDaily)
+      .where(and(eq(garminDaily.userId, userId), lte(garminDaily.date, cap)))
+      .orderBy(desc(garminDaily.date))
+      .limit(1),
+  ]);
+  return raw?.date ?? typed?.date ?? todayStr();
 }
 
 export async function buildAnalysis(userId: string, date: string): Promise<Analysis> {
   const from = addDaysStr(date, -120);
-  const { rows } = await extractDays(userId, from, date);
+  // All independent reads in one round trip.
+  const [{ rows }, [g], [w]] = await Promise.all([
+    extractDays(userId, from, date),
+    db.select().from(goals).where(eq(goals.userId, userId)).limit(1),
+    db
+      .select({ weight: bodyStats.weight, bodyFat: bodyStats.bodyFat })
+      .from(bodyStats)
+      .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight), lte(bodyStats.date, date)))
+      .orderBy(desc(bodyStats.date))
+      .limit(1),
+  ]);
   const i = rows.length - 1;
   const today = rows[i];
   const yIdx = i - 1;
   const y = rows[yIdx];
-
-  const [g] = await db.select().from(goals).where(eq(goals.userId, userId)).limit(1);
-  const [w] = await db
-    .select({ weight: bodyStats.weight, bodyFat: bodyStats.bodyFat })
-    .from(bodyStats)
-    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight), lte(bodyStats.date, date)))
-    .orderBy(desc(bodyStats.date))
-    .limit(1);
   const plan = computePlan(planInputFrom(g ?? null, { weight: w?.weight ?? null, bodyFat: w?.bodyFat ?? null }));
 
   const hrvB = baselineAt(rows, i, "hrv");

@@ -47,12 +47,17 @@ const nextConfig: NextConfig = {
   experimental: {
     // Meal photos are downscaled on the client (~100–300 KB) before upload.
     serverActions: { bodySizeLimit: "4mb" },
+    // Reuse a just-visited tab for 30 s, so flipping between tabs is instant.
+    // (Fully prefetched tabs are kept 5 min; any save via a server action
+    // invalidates this cache, so your own changes always show.)
+    staleTimes: { dynamic: 30, static: 300 },
   },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
-      // Personal data exports must never be cached by shared caches.
-      { source: "/api/(.*)", headers: [{ key: "Cache-Control", value: "no-store" }] },
+      // Personal data exports must never be cached by shared caches
+      // (meal photos set their own private, immutable caching).
+      { source: "/api/((?!meal-photo/).*)", headers: [{ key: "Cache-Control", value: "no-store" }] },
     ];
   },
 };

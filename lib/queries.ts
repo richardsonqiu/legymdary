@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   and,
   asc,
@@ -10,6 +11,7 @@ import {
   isNull,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -456,16 +458,18 @@ export async function getWeeklyVolume(
 /* Body stats                                                          */
 /* ------------------------------------------------------------------ */
 
-export async function getBodyStats(): Promise<BodyStat[]> {
+/** Cached per request: several components on a page share it. */
+export const getBodyStats = cache(async function getBodyStats(): Promise<BodyStat[]> {
   const userId = await requireUserId();
   return db
     .select()
     .from(bodyStats)
     .where(eq(bodyStats.userId, userId))
     .orderBy(asc(bodyStats.date));
-}
+});
 
-export async function getLatestBodyStat(): Promise<BodyStat | null> {
+/** Cached per request: several components on a page share it. */
+export const getLatestBodyStat = cache(async function getLatestBodyStat(): Promise<BodyStat | null> {
   const userId = await requireUserId();
   const rows = await db
     .select()
@@ -474,20 +478,47 @@ export async function getLatestBodyStat(): Promise<BodyStat | null> {
     .orderBy(desc(bodyStats.date))
     .limit(1);
   return rows[0] ?? null;
-}
+});
 
 /* ------------------------------------------------------------------ */
 /* Food log + goals                                                    */
 /* ------------------------------------------------------------------ */
 
 /** Meals (with thumbnails) for an inclusive range of calendar days. */
+/**
+ * Meal columns without the photo blob; `photo` becomes a URL to
+ * /api/meal-photo/<id> (browser-cached) so page payloads stay small.
+ */
+const mealCols = {
+  id: meals.id,
+  userId: meals.userId,
+  date: meals.date,
+  mealType: meals.mealType,
+  name: meals.name,
+  calories: meals.calories,
+  protein: meals.protein,
+  carbs: meals.carbs,
+  fat: meals.fat,
+  items: meals.items,
+  notes: meals.notes,
+  aiEstimated: meals.aiEstimated,
+  createdAt: meals.createdAt,
+  hasPhoto: sql<number>`${meals.photo} is not null`,
+};
+type MealRowLite = Omit<Meal, "photo"> & { hasPhoto: number };
+const withPhotoUrl = ({ hasPhoto, ...m }: MealRowLite): Meal => ({
+  ...m,
+  photo: hasPhoto ? `/api/meal-photo/${m.id}` : null,
+});
+
 export async function getMeals(from: string, to: string): Promise<Meal[]> {
   const userId = await requireUserId();
-  return db
-    .select()
+  const rows = await db
+    .select(mealCols)
     .from(meals)
     .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
     .orderBy(asc(meals.date), asc(meals.createdAt));
+  return rows.map(withPhotoUrl);
 }
 
 export type DayTotals = {
@@ -530,7 +561,8 @@ export async function getDailyTotals(
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export async function getGoals(): Promise<Goals | null> {
+/** Cached per request: several components on a page share it. */
+export const getGoals = cache(async function getGoals(): Promise<Goals | null> {
   const userId = await requireUserId();
   const rows = await db
     .select()
@@ -538,45 +570,51 @@ export async function getGoals(): Promise<Goals | null> {
     .where(eq(goals.userId, userId))
     .limit(1);
   return rows[0] ?? null;
-}
+});
 
 /** Latest known weight and body fat, each from its most recent entry. */
-export async function getLatestBodyValues(): Promise<{
+/** Cached per request: several components on a page share it. */
+export const getLatestBodyValues = cache(async function getLatestBodyValues(): Promise<{
   weight: number | null;
   weightDate: string | null;
   bodyFat: number | null;
   bodyFatDate: string | null;
 }> {
   const userId = await requireUserId();
-  const [w] = await db
-    .select({ v: bodyStats.weight, date: bodyStats.date })
-    .from(bodyStats)
-    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight)))
-    .orderBy(desc(bodyStats.date))
-    .limit(1);
-  const [bf] = await db
-    .select({ v: bodyStats.bodyFat, date: bodyStats.date })
-    .from(bodyStats)
-    .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.bodyFat)))
-    .orderBy(desc(bodyStats.date))
-    .limit(1);
+  // Both lookups in one round trip.
+  const [[w], [bf]] = await Promise.all([
+    db
+      .select({ v: bodyStats.weight, date: bodyStats.date })
+      .from(bodyStats)
+      .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.weight)))
+      .orderBy(desc(bodyStats.date))
+      .limit(1),
+    db
+      .select({ v: bodyStats.bodyFat, date: bodyStats.date })
+      .from(bodyStats)
+      .where(and(eq(bodyStats.userId, userId), isNotNull(bodyStats.bodyFat)))
+      .orderBy(desc(bodyStats.date))
+      .limit(1),
+  ]);
   return {
     weight: w?.v ?? null,
     weightDate: w?.date ?? null,
     bodyFat: bf?.v ?? null,
     bodyFatDate: bf?.date ?? null,
   };
-}
+});
 
 /** Most recent distinct meals (by name) for one-tap "eat again". */
 export async function getRecentMeals(limit = 6): Promise<Meal[]> {
   const userId = await requireUserId();
-  const rows = await db
-    .select()
-    .from(meals)
-    .where(eq(meals.userId, userId))
-    .orderBy(desc(meals.createdAt))
-    .limit(60);
+  const rows = (
+    await db
+      .select(mealCols)
+      .from(meals)
+      .where(eq(meals.userId, userId))
+      .orderBy(desc(meals.createdAt))
+      .limit(60)
+  ).map(withPhotoUrl);
   const seen = new Set<string>();
   const out: Meal[] = [];
   for (const r of rows) {
@@ -763,7 +801,8 @@ export type GarminStatus = {
 };
 
 /** Connection status without any secrets. */
-export async function getGarminStatus(): Promise<GarminStatus | null> {
+/** Cached per request: several components on a page share it. */
+export const getGarminStatus = cache(async function getGarminStatus(): Promise<GarminStatus | null> {
   const userId = await requireUserId();
   const [row] = await db
     .select({
@@ -778,7 +817,7 @@ export async function getGarminStatus(): Promise<GarminStatus | null> {
     .where(eq(garminConnections.userId, userId))
     .limit(1);
   return row ?? null;
-}
+});
 
 export async function getGarminDaily(from: string, to: string): Promise<GarminDaily[]> {
   const userId = await requireUserId();

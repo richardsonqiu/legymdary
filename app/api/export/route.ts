@@ -59,7 +59,19 @@ export async function GET(request: Request) {
     );
   } else if (type === "meals") {
     const rows = await db
-      .select()
+      .select({
+        date: meals.date,
+        mealType: meals.mealType,
+        name: meals.name,
+        calories: meals.calories,
+        protein: meals.protein,
+        carbs: meals.carbs,
+        fat: meals.fat,
+        aiEstimated: meals.aiEstimated,
+        items: meals.items,
+        notes: meals.notes,
+        createdAt: meals.createdAt,
+      })
       .from(meals)
       .where(eq(meals.userId, userId))
       .orderBy(asc(meals.date), asc(meals.createdAt));
