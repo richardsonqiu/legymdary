@@ -1,4 +1,5 @@
 import { ConsistencyHeatmap } from "@/components/ConsistencyHeatmap";
+import { PageTransition } from "@/components/PageTransition";
 import { HistoryCalendar } from "@/components/HistoryCalendar";
 import { CalendarIcon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, SectionTitle } from "@/components/ui";
@@ -7,6 +8,7 @@ import { getGarminActivities, getGarminStatus, getWorkoutDetails } from "@/lib/q
 import { addDaysStr, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "History" };
 
 export default async function HistoryPage() {
   const today = todayStr();
@@ -17,7 +19,7 @@ export default async function HistoryPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <PageTransition className="space-y-6">
       <PageHeader title="History" subtitle="Your training calendar" />
       {workouts.length === 0 ? (
         <EmptyState
@@ -42,6 +44,6 @@ export default async function HistoryPage() {
           <GarminActivityList activities={activities} />
         </section>
       )}
-    </div>
+    </PageTransition>
   );
 }

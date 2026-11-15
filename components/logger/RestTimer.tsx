@@ -9,6 +9,7 @@ import {
   type Ref,
 } from "react";
 import { XIcon } from "@/components/icons";
+import { Portal } from "@/components/Portal";
 import { cn } from "@/lib/utils";
 
 export type RestTimerHandle = { start: () => void };
@@ -35,7 +36,10 @@ function write(key: string, v: string | null) {
 
 function beep() {
   try {
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AC =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
     const ctx = new AC();
     [0, 0.25, 0.5].forEach((t) => {
       const o = ctx.createOscillator();
@@ -54,7 +58,8 @@ function beep() {
   }
 }
 
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const fmt = (s: number) =>
+  `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 /**
  * Floating rest timer above the bottom nav. Starts automatically when a set is
@@ -68,7 +73,11 @@ export function RestTimer({ ref }: { ref?: Ref<RestTimerHandle> }) {
     () => true,
     () => false,
   );
-  return mounted ? <RestTimerInner ref={ref} /> : null;
+  return mounted ? (
+    <Portal>
+      <RestTimerInner ref={ref} />
+    </Portal>
+  ) : null;
 }
 
 const noop = () => () => {};
@@ -96,7 +105,9 @@ function RestTimerInner({ ref }: { ref?: Ref<RestTimerHandle> }) {
     write(END_KEY, String(end));
   }
 
-  useImperativeHandle(ref, () => ({ start: () => startWith(duration) }), [duration]);
+  useImperativeHandle(ref, () => ({ start: () => startWith(duration) }), [
+    duration,
+  ]);
 
   // Tick while running; fire vibration + beep once at zero.
   useEffect(() => {
@@ -152,7 +163,9 @@ function RestTimerInner({ ref }: { ref?: Ref<RestTimerHandle> }) {
                   onClick={() => pickPreset(p)}
                   className={cn(
                     "h-9 rounded-lg px-2.5 text-xs font-medium tabular-nums",
-                    p === duration ? "bg-zinc-100 text-zinc-950" : "text-zinc-300 hover:bg-zinc-800",
+                    p === duration
+                      ? "bg-zinc-100 text-zinc-950"
+                      : "text-zinc-300 hover:bg-zinc-800",
                   )}
                 >
                   {fmt(p)}
@@ -176,8 +189,10 @@ function RestTimerInner({ ref }: { ref?: Ref<RestTimerHandle> }) {
     <div className="fixed inset-x-0 bottom-[84px] z-30 mx-auto max-w-2xl px-4">
       <div
         className={cn(
-          "relative overflow-hidden rounded-2xl border shadow-xl backdrop-blur",
-          done ? "border-emerald-400/50 bg-emerald-500/15" : "border-zinc-700 bg-zinc-900/95",
+          "animate-item-in relative overflow-hidden rounded-2xl border shadow-xl backdrop-blur",
+          done
+            ? "border-emerald-400/50 bg-emerald-500/15"
+            : "border-zinc-700 bg-zinc-900/95",
         )}
       >
         {running && (

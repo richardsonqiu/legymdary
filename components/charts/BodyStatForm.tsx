@@ -14,17 +14,23 @@ export function BodyStatForm({ latest }: { latest: BodyStat | null }) {
   const [waist, setWaist] = useState("");
   const [bodyFat, setBodyFat] = useState("");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   function submit() {
     if (!weight && !waist && !bodyFat) return;
+    setError(null);
     start(async () => {
-      await logBodyStat({
+      const res = await logBodyStat({
         date,
         weight: weight || null,
         waist: waist || null,
         bodyFat: bodyFat || null,
       });
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
       setWeight("");
       setWaist("");
       setBodyFat("");
@@ -83,6 +89,7 @@ export function BodyStatForm({ latest }: { latest: BodyStat | null }) {
       >
         {saved ? "Saved ✓" : pending ? "Saving…" : "Save entry"}
       </Button>
+      {error && <p className="text-center text-sm text-amber-300">{error}</p>}
       <p className="text-center text-xs text-zinc-600">
         Leave a field blank to skip it. One entry per day.
       </p>

@@ -118,6 +118,7 @@ logged data (keeps the exercise library).
 | `MEAL_AI_MODEL`        | optional | Primary photo model (default `claude-haiku-5-5`)       |
 | `MEAL_AI_BACKUP_MODEL` | optional | Retry model (default `claude-sonnet-5-5`; `""` = off)  |
 | `MEAL_AI_EFFORT`       | optional | `low` (default), `medium` or `high`                    |
+| `MEAL_AI_DAILY_LIMIT`  | optional | AI photo analyses per user per day (default 60)        |
 | `CRON_SECRET`          | for Garmin | Auth for the daily Garmin sync cron                  |
 | `GARMIN_ENCRYPTION_KEY`| optional | Encrypts stored Garmin keys (default: `AUTH_SECRET`)   |
 
@@ -195,6 +196,35 @@ many users — see Garmin's FAQ before opening this app to the public.
 - **Weekly check-in** (dashboard) — workouts, sets and volume vs last week,
   average calories/protein and days on target, and 7-day weight change.
 - **CSV export** — account menu → export workouts, food log or body stats.
+
+## Security
+
+- **Dependencies** — Next.js 16.4.6, next-auth 5.0.0-beta.32 and
+  @auth/drizzle-adapter 1.11.3 patch the critical/high advisories (proxy
+  bypass, Server Actions DoS, Auth.js fail-open). `npm audit --omit=dev` is
+  clean; remaining moderate findings are in dev-only tooling (ESLint,
+  drizzle-kit).
+- **Auth** — every server action and query re-checks the session (the proxy is
+  only a first gate); all data is scoped to the signed-in user. Passwords use
+  scrypt with constant-time comparison; email/password length is capped.
+- **Rate limits** (database-backed, so they hold on serverless) — sign-in: 10
+  per account and 30 per IP per 15 min; sign-up: 5 per IP per hour; AI photo
+  analysis: 8/min and `MEAL_AI_DAILY_LIMIT` (default 60)/day per user; Garmin
+  connect 10/hour, sync 20/hour.
+- **Headers** — CSP (no third-party scripts, no framing, no plugins),
+  `X-Frame-Options: DENY`, `nosniff`, strict referrer policy, restrictive
+  Permissions-Policy, COOP, and HSTS on Vercel. `X-Powered-By` removed.
+- **Secrets** — Garmin keys/tokens AES-256-GCM encrypted at rest; the cron
+  endpoint compares `CRON_SECRET` in constant time; API responses are
+  `no-store`; CSV exports are guarded against formula injection.
+- **Input validation** — dates, numeric ranges, text lengths and image data
+  URLs are validated server-side on every write.
+
+## Install as an app
+
+Open the site on your phone → Share → **Add to Home Screen** (iOS) or the
+install prompt (Android). It launches full-screen with shortcuts for "Snap a
+meal" and "Log workout".
 
 ## Notes
 

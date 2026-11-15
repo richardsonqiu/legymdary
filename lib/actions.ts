@@ -29,6 +29,7 @@ import {
   type MealItem,
 } from "@/lib/nutrition";
 import { requireUserId } from "@/lib/session";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
 import { estimate1RM, todayStr } from "@/lib/utils";
 
 function revalidateAll() {
@@ -46,6 +47,18 @@ function revalidateAll() {
     revalidatePath(p);
   }
 }
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+/** A YYYY-MM-DD string that is a real calendar date, else the fallback. */
+function safeDate(v: unknown, fallback = todayStr()): string {
+  if (typeof v !== "string" || !DATE_ONLY.test(v)) return fallback;
+  const d = new Date(`${v}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? fallback : v;
+}
+const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
 
 function numOrNull(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
@@ -88,8 +101,8 @@ export async function createWorkout(input: {
   date: string;
 }): Promise<number> {
   const userId = await requireUserId();
-  const name = input.name?.trim() || "Workout";
-  const date = input.date || todayStr();
+  const name = clip(input.name, 80) || "Workout";
+  const date = safeDate(input.date);
   const [row] = await db
     .insert(workouts)
     .values({ userId, name, date })
@@ -134,9 +147,9 @@ export async function updateWorkout(
 ): Promise<void> {
   const userId = await requireUserId();
   const patch: Record<string, unknown> = {};
-  if (input.name !== undefined) patch.name = input.name.trim() || "Workout";
-  if (input.date !== undefined && input.date) patch.date = input.date;
-  if (input.notes !== undefined) patch.notes = input.notes?.trim() || null;
+  if (input.name !== undefined) patch.name = clip(input.name, 80) || "Workout";
+  if (input.date !== undefined && input.date) patch.date = safeDate(input.date);
+  if (input.notes !== undefined) patch.notes = clip(input.notes, 2000) || null;
   if (Object.keys(patch).length) {
     await db
       .update(workouts)
@@ -238,11 +251,11 @@ export async function logSet(input: {
   const userId = await requireUserId();
   const reps = Math.round(Number(input.reps));
   const weight = Number(input.weight);
-  if (!Number.isFinite(reps) || reps <= 0) {
-    throw new Error("Reps must be a positive number.");
+  if (!Number.isFinite(reps) || reps <= 0 || reps > 1000) {
+    throw new Error("Reps must be between 1 and 1000.");
   }
-  if (!Number.isFinite(weight) || weight < 0) {
-    throw new Error("Weight must be zero or more.");
+  if (!Number.isFinite(weight) || weight < 0 || weight > 2000) {
+    throw new Error("Weight must be between 0 and 2000 kg.");
   }
   const isWarmup = !!input.isWarmup;
 
@@ -281,7 +294,7 @@ export async function logSet(input: {
     reps,
     weight,
     isWarmup,
-    notes: input.notes?.toString().trim() || null,
+    notes: clip(input.notes, 500) || null,
     position,
   });
 
@@ -318,10 +331,10 @@ export async function createExercise(input: {
   equipment: string;
 }): Promise<{ id: number } | { error: string }> {
   const userId = await requireUserId();
-  const name = input.name?.trim();
+  const name = clip(input.name, 80);
   if (!name) return { error: "Please enter a name." };
-  const muscleGroup = input.muscleGroup?.trim() || "Other";
-  const equipment = input.equipment?.trim() || "Other";
+  const muscleGroup = clip(input.muscleGroup, 40) || "Other";
+  const equipment = clip(input.equipment, 40) || "Other";
 
   // Reject if it clashes with a built-in or one of the user's own exercises.
   const existing = await db
@@ -349,15 +362,22 @@ export async function logBodyStat(input: {
   weight?: number | string | null;
   waist?: number | string | null;
   bodyFat?: number | string | null;
-}): Promise<void> {
+}): Promise<{ error?: string }> {
   const userId = await requireUserId();
-  const date = input.date || todayStr();
+  const date = safeDate(input.date);
+  const bad = (v: number | null, lo: number, hi: number) => v != null && (v < lo || v > hi);
+  const weight = numOrNull(input.weight);
+  const waist = numOrNull(input.waist);
+  const bodyFat = numOrNull(input.bodyFat);
+  if (bad(weight, 20, 400)) return { error: "Weight should be between 20 and 400 kg." };
+  if (bad(waist, 30, 250)) return { error: "Waist should be between 30 and 250 cm." };
+  if (bad(bodyFat, 2, 75)) return { error: "Body fat should be between 2 and 75%." };
   const vals = {
     userId,
     date,
-    weight: numOrNull(input.weight),
-    waist: numOrNull(input.waist),
-    bodyFat: numOrNull(input.bodyFat),
+    weight,
+    waist,
+    bodyFat,
   };
   await db
     .insert(bodyStats)
@@ -372,6 +392,7 @@ export async function logBodyStat(input: {
       },
     });
   revalidateAll();
+  return {};
 }
 
 export async function deleteBodyStat(id: number): Promise<void> {
@@ -397,6 +418,16 @@ export async function analyzeMeal(input: {
 }): Promise<MealAnalysis | { error: string }> {
   const userId = await requireUserId();
   const m = IMAGE_DATA_URL_RE.exec(input.image ?? "");
+  // Cost guard: burst + daily caps per user (tunable via MEAL_AI_DAILY_LIMIT).
+  const daily = Math.max(1, Number(process.env.MEAL_AI_DAILY_LIMIT) || 60);
+  const [burst, perDay] = await Promise.all([
+    rateLimit(`ai:min:${userId}`, 8, 60 * 1000),
+    rateLimit(`ai:day:${userId}`, daily, DAY),
+  ]);
+  if (!burst.ok) return { error: "You're analysing photos very quickly — wait a moment and try again." };
+  if (!perDay.ok) {
+    return { error: `Daily AI photo limit reached (${daily}). You can still enter meals manually.` };
+  }
   if (!m) return { error: "Unsupported image. Please use a JPEG or PNG photo." };
   if (m[2].length > 5_000_000) return { error: "That photo is too large." };
   const res = await analyzeMealImage({
@@ -707,6 +738,8 @@ export async function connectGarmin(
   apiKey: string,
 ): Promise<{ ok: true; sync: SyncResult } | { error: string }> {
   const userId = await requireUserId();
+  const limit = await rateLimit(`garmin:connect:${userId}`, 10, HOUR);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
   const key = apiKey?.trim();
   if (!key || key.length < 16 || key.length > 4096 || /\s/.test(key)) {
     return { error: "That doesn't look like a Garmin API key. Copy it exactly as shown." };
@@ -742,6 +775,10 @@ export async function connectGarmin(
 
 export async function syncGarminNow(): Promise<SyncResult> {
   const userId = await requireUserId();
+  const limit = await rateLimit(`garmin:sync:${userId}`, 20, HOUR);
+  if (!limit.ok) {
+    return { ok: false, days: 0, activities: 0, weighIns: 0, warnings: [], error: tooMany(limit.retryAfterSec) };
+  }
   const res = await syncGarminForUser(userId, { days: 7 });
   revalidateAll();
   return res;

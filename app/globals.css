@@ -90,3 +90,135 @@ input[type="number"] {
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+/* ================================================================== */
+/* Motion — short, springy, and off for prefers-reduced-motion        */
+/* ================================================================== */
+
+:root {
+  --ease-out-snappy: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* --- Page transitions (React <ViewTransition> + Link transitionTypes) --- */
+@keyframes vt-fade-in { from { opacity: 0; } }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-slide-from { from { transform: translateX(var(--vt-offset)); } }
+@keyframes vt-slide-to { to { transform: translateX(var(--vt-offset)); } }
+
+::view-transition-old(.nav-forward) {
+  --vt-offset: -32px;
+  animation: 120ms ease-in both vt-fade-out, 220ms var(--ease-out-snappy) both vt-slide-to;
+}
+::view-transition-new(.nav-forward) {
+  --vt-offset: 32px;
+  animation: 200ms ease-out 60ms both vt-fade-in, 260ms var(--ease-out-snappy) both vt-slide-from;
+}
+::view-transition-old(.nav-back) {
+  --vt-offset: 32px;
+  animation: 120ms ease-in both vt-fade-out, 220ms var(--ease-out-snappy) both vt-slide-to;
+}
+::view-transition-new(.nav-back) {
+  --vt-offset: -32px;
+  animation: 200ms ease-out 60ms both vt-fade-in, 260ms var(--ease-out-snappy) both vt-slide-from;
+}
+/* The page root morphs as a whole; keep the default crossfade quick. */
+::view-transition-group(root) {
+  animation-duration: 180ms;
+}
+
+/* --- Staggered entrance for page sections --- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+/* fill-mode "backwards" (not "both"): once finished, no transform lingers.
+   A lingering transform would turn each section into the containing block
+   for position:fixed children (rest timer, sheets, toasts) and misplace them. */
+.stagger > * {
+  animation: rise 360ms var(--ease-out-snappy) backwards;
+}
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(n + 7) { animation-delay: 240ms; }
+
+/* List items that appear after an action (new set, new meal). */
+.animate-item-in {
+  animation: rise 280ms var(--ease-spring) backwards;
+}
+
+/* --- Bottom sheet + backdrop --- */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+.animate-sheet {
+  animation: sheet-up 340ms var(--ease-out-snappy) backwards;
+}
+.animate-backdrop {
+  animation: backdrop-in 200ms ease-out backwards;
+}
+
+/* --- Progress fills grow in on first paint (CSS @starting-style) --- */
+.ring-progress {
+  transition: stroke-dashoffset 700ms var(--ease-out-snappy);
+}
+@starting-style {
+  .ring-progress {
+    stroke-dashoffset: var(--ring-c);
+  }
+}
+.bar-fill {
+  transition: width 600ms var(--ease-out-snappy);
+}
+@starting-style {
+  .bar-fill {
+    width: 0 !important;
+  }
+}
+
+/* --- Tactile press feedback --- */
+.press {
+  transition: transform 120ms var(--ease-out-snappy), background-color 150ms, color 150ms;
+}
+.press:active {
+  transform: scale(0.96);
+}
+
+/* Bottom-nav active pill slides in. */
+@keyframes pill-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+.animate-pill {
+  animation: pill-in 260ms var(--ease-spring) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

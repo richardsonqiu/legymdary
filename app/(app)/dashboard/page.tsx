@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageTransition } from "@/components/PageTransition";
 import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreakCard } from "@/components/StreakCard";
@@ -31,6 +32,7 @@ import { getSessionUser } from "@/lib/session";
 import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const serverToday = todayStr();
@@ -72,7 +74,7 @@ export default async function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
-    <div className="space-y-6">
+    <PageTransition className="space-y-6">
       <header className="flex items-start justify-between gap-3">
         <DashboardHeading firstName={firstName} />
         <AccountMenu name={user?.name} email={user?.email} />
@@ -89,7 +91,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/plan" className="text-xs text-zinc-400">
+            <Link href="/plan" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               Plan →
             </Link>
           }
@@ -109,7 +111,7 @@ export default async function DashboardPage() {
           <section>
             <SectionTitle
               action={
-                <Link href="/garmin" className="text-xs text-zinc-400">
+                <Link href="/garmin" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
                   Garmin →
                 </Link>
               }
@@ -125,7 +127,7 @@ export default async function DashboardPage() {
         </>
       ) : (
         <Link
-          href="/garmin"
+          href="/garmin" transitionTypes={["nav-forward"]}
           className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900/50"
         >
           <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
@@ -148,7 +150,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/history" className="text-xs text-zinc-400">
+            <Link href="/history" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               History →
             </Link>
           }
@@ -172,7 +174,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/stats" className="text-xs text-zinc-400">
+            <Link href="/stats" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               Update →
             </Link>
           }
@@ -224,7 +226,7 @@ export default async function DashboardPage() {
       <section>
         <SectionTitle
           action={
-            <Link href="/prs" className="text-xs text-zinc-400">
+            <Link href="/prs" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               All PRs →
             </Link>
           }
@@ -268,7 +270,7 @@ export default async function DashboardPage() {
           </p>
         )}
       </section>
-    </div>
+    </PageTransition>
   );
 }
 

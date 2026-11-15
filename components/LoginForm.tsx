@@ -33,9 +33,11 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       });
       if (res?.error) {
         setError(
-          mode === "signup"
-            ? "Account created — please sign in."
-            : "Invalid email or password.",
+          res.code === "rate_limited"
+            ? "Too many sign-in attempts. Please wait 15 minutes and try again."
+            : mode === "signup"
+              ? "Account created — please sign in."
+              : "Invalid email or password.",
         );
         if (mode === "signup") setMode("signin");
         return;
