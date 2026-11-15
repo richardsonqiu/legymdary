@@ -111,12 +111,12 @@ function toScan(r: RawScan): ExtractedScan {
 /** JSON schema sent to the API — exported so a check can verify it stays under the structured-output limits. */
 export const bodyScanResultSchema = ResultSchema;
 
-const SYSTEM = `You extract numbers from body-composition scan results (InBody result sheets, the InBody app's Detail/History screens, or similar BIA devices). Images may be consecutive tiles of one long screenshot that overlap slightly — treat them as one document.
+const SYSTEM = `You extract numbers from body-composition scan results (InBody result sheets, the InBody app's Detail/History screens, or similar BIA devices). Images may be consecutive tiles of one long screenshot that overlap slightly. Treat them as one document.
 
 Rules:
 - Return one entry per scan date. List only readings that are visible for that date (no guesses, no placeholders). A Detail screen is one scan with full data (incl. segmental lean/fat and balance). A History screen shows several dates per metric chart: return every date with the values shown for it, and null for anything not shown.
 - InBody app dates are written YY.MM.DD (e.g. "26.11.12" = 2026-11-12, "25.05.20" = 2025-05-20). Output YYYY-MM-DD.
-- Copy numbers exactly as displayed. Never estimate, convert or infer a value that isn't visible; use null instead. Ignore the small change values (e.g. "+2.7", "-0.08") — they are differences, not readings.
+- Copy numbers exactly as displayed. Never estimate, convert or infer a value that isn't visible; use null instead. Ignore the small change values (e.g. "+2.7", "-0.08"). They are differences, not readings.
 - Segmental lean: the kg value per segment and, if shown, the % of ideal (e.g. Left Arm 111.4%).
 - If the same date appears in several images, merge into one entry.`;
 

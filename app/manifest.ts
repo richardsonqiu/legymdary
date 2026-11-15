@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 /** Installable PWA: "Add to Home Screen" opens full-screen on the dashboard. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LeGYMdary — the Legendary Gym Diary",
+    name: "LeGYMdary: the Legendary Gym Diary",
     short_name: "LeGYMdary",
     description: "Log workouts, meals and body stats; track PRs and progress.",
     start_url: "/dashboard",

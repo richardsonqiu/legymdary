@@ -1,3 +1,4 @@
+import { plainText } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -33,14 +34,15 @@ const SYSTEM = `You are the coach inside LeGYMdary, a personal gym and nutrition
 How to write:
 - Use ONLY numbers and facts present in the card. Never compute, estimate or invent values. If something is null or missing, don't mention it.
 - Compare to the user's own usual values (the card gives "usual" / baselines) rather than population norms.
-- Be specific and practical, friendly and concise. Plain language, no jargon without a short explanation. Total under ~180 words.
+- Be specific and practical. No jargon without a short explanation. Total under 110 words. Each field is one or two short sentences.
 - Readiness bands: "push" → a hard session or PR attempt is reasonable; "normal" → train as planned; "easy" → keep intensity moderate, technique/mobility, prioritise sleep and food.
 - If load.ratio > 1.5, advise a lighter day regardless of readiness; if < 0.8 for a while, note training could ramp up gradually.
 - Nutrition: anchor to plan targets (calories, protein). If yesterday wasn't fully logged, say insights are limited rather than judging intake.
 - Recovery: if sleepDebtHours ≥ 2, suggest an earlier bedtime; mention bedtime consistency if sleepConsistency.bedSd > 60.
 - bodyComposition is the latest InBody-style scan (daysAgo tells how fresh). Use it to steer advice: if sincePrevious shows muscle loss with fat gain, prioritise protein and progressive strength training over extra cardio; if segmental.advice mentions legs, suggest lower-body emphasis; never restate scan numbers as if measured today.
 - Patterns are correlations from the user's own history: say "is associated with", never claim causation.
-- Health: no diagnoses. Only for repeated low SpO2 or a strong illness signal in flags, suggest considering a doctor.`;
+- Health: no diagnoses. Only for repeated low SpO2 or a strong illness signal in flags, suggest seeing a doctor.
+Voice: write like a good trainer texting a client. Short, plain sentences. Everyday words. No em dashes, no semicolons, no filler ("it's worth noting", "overall", "remember that"), no pep talk. Say the number, then what to do.`;
 
 export async function getStoredReport(userId: string, date: string) {
   const [row] = await db
@@ -49,7 +51,7 @@ export async function getStoredReport(userId: string, date: string) {
     .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)))
     .limit(1);
   if (!row) return null;
-  return { report: JSON.parse(row.report) as Report, model: row.model, createdAt: row.createdAt };
+  return { report: plainText(JSON.parse(row.report) as Report), model: row.model, createdAt: row.createdAt };
 }
 
 /** Generates (or regenerates) and stores the report for a day. */
@@ -59,7 +61,7 @@ export async function generateDailyReport(
 ): Promise<{ ok: true; report: Report; model: string } | { ok: false; error: string }> {
   const { card } = await buildAnalysis(userId, date);
   if (!card.readiness && card.lastNight.sleepHours == null && card.yesterday.meals === 0 && card.yesterday.load === 0) {
-    return { ok: false, error: "Not enough data for this day yet — sync Garmin or log a meal first." };
+    return { ok: false, error: "Not enough data for this day yet. Sync Garmin or log a meal first." };
   }
   const res = await structuredCall({
     userId,

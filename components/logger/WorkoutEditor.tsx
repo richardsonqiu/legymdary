@@ -147,7 +147,7 @@ export function WorkoutEditor({
         });
         if (res.isPR) {
           setToast({
-            text: `New PR · ${ex.name} — est. 1RM ${kg(res.e1rm)}kg`,
+            text: `New PR · ${ex.name} · est. 1RM ${kg(res.e1rm)} kg`,
             pr: true,
           });
         }
@@ -175,7 +175,7 @@ export function WorkoutEditor({
     });
   }
   function saveTemplate() {
-    const tplName = prompt("Save as template — name:", workout.name);
+    const tplName = prompt("Template name:", workout.name);
     if (!tplName?.trim()) return;
     start(async () => {
       const res = await saveWorkoutAsTemplate(workout.id, tplName);
@@ -232,7 +232,7 @@ export function WorkoutEditor({
         <div className="grid grid-cols-3 gap-2 pt-1">
           <Mini label="exercises" value={`${workout.exerciseCount}`} />
           <Mini label="sets" value={`${workout.totalSets}`} />
-          <Mini label="volume" value={`${kg(workout.totalVolume)}kg`} />
+          <Mini label="volume" value={`${kg(workout.totalVolume)} kg`} />
         </div>
       </Card>
 

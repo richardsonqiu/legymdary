@@ -34,7 +34,7 @@ import {
   sumMacros,
   type MealItem,
 } from "@/lib/nutrition";
-import { requireUserId } from "@/lib/session";
+import { requireUserId, userToday } from "@/lib/session";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
 import { estimate1RM, todayStr } from "@/lib/utils";
 
@@ -132,7 +132,7 @@ export async function duplicateLastWorkout(): Promise<number | null> {
 
   const [row] = await db
     .insert(workouts)
-    .values({ userId, name: last.name, date: todayStr() })
+    .values({ userId, name: last.name, date: await userToday() })
     .returning({ id: workouts.id });
 
   if (last.workoutExercises.length) {
@@ -431,7 +431,7 @@ export async function analyzeMeal(input: {
     rateLimit(`ai:min:${userId}`, 8, 60 * 1000),
     rateLimit(`ai:day:${userId}`, daily, DAY),
   ]);
-  if (!burst.ok) return { error: "You're analysing photos very quickly — wait a moment and try again." };
+  if (!burst.ok) return { error: "Too many photos at once. Wait a moment and try again." };
   if (!perDay.ok) {
     return { error: `Daily AI photo limit reached (${daily}). You can still enter meals manually.` };
   }
@@ -718,7 +718,7 @@ export async function startWorkoutFromTemplate(
 
   const [row] = await db
     .insert(workouts)
-    .values({ userId, name: tpl.name, date: DATE_RE.test(date) ? date : todayStr() })
+    .values({ userId, name: tpl.name, date: DATE_RE.test(date) ? date : await userToday() })
     .returning({ id: workouts.id });
   if (items.length) {
     await db.insert(workoutExercises).values(
@@ -873,7 +873,7 @@ export async function generateReportAction(
   const userId = await requireUserId();
   const d = safeDate(date);
   const limit = await rateLimit(`ai:report:${userId}`, 12, DAY);
-  if (!limit.ok) return { ok: false, error: "Daily report limit reached — try again tomorrow." };
+  if (!limit.ok) return { ok: false, error: "Daily report limit reached. Try again tomorrow." };
   const res = await generateDailyReport(userId, d);
   revalidatePath("/insights");
   return res;
@@ -901,7 +901,7 @@ export async function extractBodyScansAction(
 ): Promise<{ ok: true; scans: ExtractedScan[]; notes: string } | { ok: false; error: string }> {
   const userId = await requireUserId();
   const limit = await rateLimit(`ai:scan:${userId}`, 20, DAY);
-  if (!limit.ok) return { ok: false, error: "Daily scan-reading limit reached — try again tomorrow." };
+  if (!limit.ok) return { ok: false, error: "Daily scan limit reached. Try again tomorrow." };
   const list = (Array.isArray(images) ? images : []).slice(0, 20);
   const parsed = list.flatMap((img) => {
     const m = IMAGE_DATA_URL_RE.exec(img ?? "");

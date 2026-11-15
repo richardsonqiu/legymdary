@@ -12,15 +12,18 @@ import {
   getGoals,
   getLatestBodyStat,
   getTrainingOverview,
+  getWeeklyCheckin,
   getWeeklyVolume,
 } from "@/lib/queries";
+import { WeeklyCheckin } from "@/components/WeeklyCheckin";
+import { getEnergyContext } from "@/lib/energy-data";
 import { TrainingWeeksChart } from "@/components/charts/TrainingWeeksChart";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Progress" };
 
 export default async function StatsPage() {
-  const [bodyStats, latest, weekly, progress, scans, goals, training] = await Promise.all([
+  const [bodyStats, latest, weekly, progress, scans, goals, training, checkin, energy] = await Promise.all([
     getBodyStats(),
     getLatestBodyStat(),
     getWeeklyVolume(12),
@@ -28,12 +31,14 @@ export default async function StatsPage() {
     getBodyScans(),
     getGoals(),
     getTrainingOverview(12),
+    getWeeklyCheckin(),
+    getEnergyContext(),
   ]);
   const hasGym = weekly.some((w) => w.sets > 0) || progress.exercises.length > 0;
 
   return (
     <PageTransition className="space-y-7">
-      <PageHeader title="Progress" subtitle="Your body and training over time" />
+      <PageHeader title="Progress" subtitle="Body and training over time" />
 
       <section>
         <SectionTitle>Log body stats</SectionTitle>
@@ -53,6 +58,11 @@ export default async function StatsPage() {
       </section>
 
       <section>
+        <SectionTitle>This week vs last week</SectionTitle>
+        <WeeklyCheckin data={checkin} targets={energy.targets} />
+      </section>
+
+      <section>
         <SectionTitle>Weekly training</SectionTitle>
         <Card>
           <TrainingWeeksChart weeks={training.weeks} types={training.types} />
@@ -64,7 +74,7 @@ export default async function StatsPage() {
           <section>
             <SectionTitle>Gym volume</SectionTitle>
             <Card>
-              <p className="mb-2 text-xs text-zinc-500">Working sets per week (logged on the Log tab)</p>
+              <p className="mb-2 text-xs text-zinc-500">Sets per week, from your logged workouts</p>
               <WeeklyVolumeChart weeks={weekly} />
             </Card>
           </section>

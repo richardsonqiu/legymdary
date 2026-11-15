@@ -8,7 +8,7 @@ import type { Readiness } from "@/lib/energy";
 import type { DailyTargets } from "@/lib/nutrition";
 import type { ConsistencyDay, DayTotals } from "@/lib/queries";
 import { activeDaysInWeek, isActiveDay, WEEKLY_TARGET } from "@/lib/streaks";
-import { cn, formatMedium, todayStr } from "@/lib/utils";
+import { cn, formatMedium, formatShort, todayStr } from "@/lib/utils";
 
 const noop = () => () => {};
 
@@ -38,11 +38,15 @@ export type GuideInput = {
   hasScan: boolean;
 };
 
-type Action = { key: string; text: string; why: string; href: string; done: boolean; hint?: string };
+type Action = { key: string; text: string; href: string; done: boolean };
+type Stat = { label: string; value: string; sub?: string; warn?: boolean };
+
+const signed = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}`;
+const num = (v: number) => Math.round(v).toLocaleString("en-US");
 
 export function TodayGuide({ g }: { g: GuideInput }) {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
-  if (!mounted) return <div className="h-72 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/50" />;
+  if (!mounted) return <div className="h-72 animate-pulse rounded-3xl border border-zinc-800 bg-zinc-900/50" />;
   const today = todayStr();
   const hour = new Date().getHours();
   const t = g.totals.find((d) => d.date === today);
@@ -52,63 +56,49 @@ export function TodayGuide({ g }: { g: GuideInput }) {
   const readiness = g.readinessByDate[today] ?? null;
   const weighedRecently = g.weightDate != null && (Date.parse(today) - Date.parse(g.weightDate)) / 86_400_000 <= 7;
 
-  /* ---------- 1. Where you are ---------- */
-  const now: { icon: string; text: string; tone?: "good" | "warn" }[] = [];
-  if (g.weight != null) {
-    const bf = g.bodyFat != null ? ` and ${g.bodyFat}% body fat` : "";
-    const src = g.bodyFatSource === "inbody" ? " (InBody)" : "";
-    now.push({ icon: "⚖️", text: `You weigh ${g.weight} kg${bf}${src}, measured ${formatMedium(g.weightDate!)}.` });
-  } else {
-    now.push({ icon: "⚖️", text: "We don't know your weight yet — add it so your targets fit your body.", tone: "warn" });
-  }
+  /* ---------- 1. Now: numbers, not sentences ---------- */
+  const now: Stat[] = [];
+  now.push(
+    g.weight != null
+      ? {
+          label: "Weight",
+          value: `${g.weight} kg`,
+          sub: [g.bodyFat != null ? `${g.bodyFat}% body fat` : null, formatShort(g.weightDate!)].filter(Boolean).join(" · "),
+        }
+      : { label: "Weight", value: "Not set", sub: "Add it on Progress", warn: true },
+  );
   if (g.scan?.muscleChange != null && g.scan.fatChange != null) {
-    const bad = g.scan.muscleChange < 0 && g.scan.fatChange > 0;
     now.push({
-      icon: "🧬",
-      text: `Since your previous scan: muscle ${g.scan.muscleChange > 0 ? "+" : ""}${g.scan.muscleChange} kg, fat ${g.scan.fatChange > 0 ? "+" : ""}${g.scan.fatChange} kg.${bad ? " Goal: turn this around — keep muscle, lose fat." : ""}`,
-      tone: bad ? "warn" : "good",
+      label: "Since last scan",
+      value: `Muscle ${signed(g.scan.muscleChange)} kg`,
+      sub: `Fat ${signed(g.scan.fatChange)} kg`,
+      warn: g.scan.muscleChange < 0 && g.scan.fatChange > 0,
     });
   }
-  if (readiness) {
-    now.push({
-      icon: readiness.verdict === "push" ? "🟢" : readiness.verdict === "normal" ? "🔵" : "🟠",
-      text: `Recovery: ${readiness.headline.toLowerCase()} — ${readiness.advice.charAt(0).toLowerCase()}${readiness.advice.slice(1)}`,
-      tone: readiness.verdict === "easy" ? "warn" : "good",
-    });
-  }
-  now.push({
-    icon: "💪",
-    text:
-      weekActive >= WEEKLY_TARGET
-        ? `This week you've trained ${weekActive} days — weekly goal of ${WEEKLY_TARGET} done!`
-        : `This week you've trained ${weekActive} of ${WEEKLY_TARGET} days.`,
-    tone: weekActive >= WEEKLY_TARGET ? "good" : undefined,
-  });
+  now.push({ label: "Workouts this week", value: `${weekActive}`, sub: weekActive >= WEEKLY_TARGET ? `Goal of ${WEEKLY_TARGET} hit` : `Goal ${WEEKLY_TARGET}` });
   if (g.targets) {
     now.push({
-      icon: "🍽️",
-      text: `Today you've eaten ${Math.round(t?.calories ?? 0).toLocaleString("en-US")} of ${g.targets.calories.toLocaleString("en-US")} kcal${g.targets.protein ? ` and ${Math.round(t?.protein ?? 0)} of ${g.targets.protein} g protein` : ""}.`,
+      label: "Eaten today",
+      value: `${num(t?.calories ?? 0)} kcal`,
+      sub: `of ${num(g.targets.calories)}${g.targets.protein ? ` · ${Math.round(t?.protein ?? 0)}/${g.targets.protein} g protein` : ""}`,
     });
   }
 
-  /* ---------- 3. Do this today ---------- */
+  /* ---------- 3. Today's actions ---------- */
   const actions: Action[] = [];
   const meals = t?.count ?? 0;
-  const nextMeal = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 21 ? "dinner" : "snacks";
+  const nextMeal = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 21 ? "dinner" : "your next meal";
   actions.push({
     key: "log",
-    text: meals > 0 ? `Food logged today (${meals} meal${meals === 1 ? "" : "s"})` : `Snap your ${nextMeal}`,
-    why: "Logging is the habit that makes everything else work.",
+    text: meals > 0 ? `Food logged (${meals} meal${meals === 1 ? "" : "s"})` : `Log ${nextMeal}`,
     href: "/food",
     done: meals > 0,
-    hint: meals > 0 ? `Keep snapping each meal — ${nextMeal} next.` : undefined,
   });
   if (g.targets?.protein) {
     const left = Math.round(g.targets.protein - (t?.protein ?? 0));
     actions.push({
       key: "protein",
       text: left > 0 ? `Eat ${left} g more protein` : "Protein goal hit",
-      why: "Protein protects your muscle while you lose fat.",
       href: "/food",
       done: left <= 0,
     });
@@ -118,28 +108,19 @@ export function TodayGuide({ g }: { g: GuideInput }) {
     actions.push({
       key: "train",
       text: trainedToday
-        ? "Workout done today"
+        ? "Workout done"
         : easy
-          ? "Keep it light today: a walk or mobility session"
+          ? "Easy day: walk or stretch"
           : g.scan?.legAdvice
-            ? "Do a strength session — start with legs (squats, lunges, RDLs)"
-            : "Do a strength session",
-      why: easy ? "Your body is still recovering; light movement helps it bounce back." : `${WEEKLY_TARGET} sessions a week keeps you progressing.`,
+            ? "Train today, legs first"
+            : "Train today",
       href: easy ? "/insights" : "/log",
       done: trainedToday,
     });
   }
-  if (!weighedRecently) {
-    actions.push({ key: "weigh", text: "Weigh yourself", why: "A weekly weigh-in keeps your plan accurate.", href: "/stats", done: false });
-  }
+  if (!weighedRecently) actions.push({ key: "weigh", text: "Weigh in", href: "/stats", done: false });
   if (g.sleepDebtHours != null && g.sleepDebtHours >= 2) {
-    actions.push({
-      key: "sleep",
-      text: "Get to bed 30–60 min earlier tonight",
-      why: `You're ${g.sleepDebtHours} h short on sleep this week — sleep drives recovery and appetite.`,
-      href: "/insights",
-      done: false,
-    });
+    actions.push({ key: "sleep", text: `Sleep earlier tonight (${g.sleepDebtHours} h behind this week)`, href: "/insights", done: false });
   }
   const shown = actions.slice(0, 5);
   const doneCount = shown.filter((a) => a.done).length;
@@ -148,76 +129,84 @@ export function TodayGuide({ g }: { g: GuideInput }) {
     <div className="space-y-3">
       <Onboarding g={g} />
       <Card className="space-y-5">
-        <Step n={1} title="Where you are now">
-          <ul className="space-y-1.5">
-            {now.map((x, i) => (
-              <li key={i} className={cn("flex gap-2 text-sm", x.tone === "warn" ? "text-amber-200" : "text-zinc-300")}>
-                <span className="shrink-0">{x.icon}</span>
-                <span>{x.text}</span>
-              </li>
+        <Step n={1} title="Now">
+          <div className="grid grid-cols-2 gap-2">
+            {now.map((x) => (
+              <div key={x.label} className="rounded-2xl bg-white/[0.04] px-3 py-2.5">
+                <div className="text-[11px] text-zinc-400">{x.label}</div>
+                <div className={cn("mt-0.5 font-semibold tabular-nums", x.warn && "text-amber-200")}>{x.value}</div>
+                {x.sub && <div className={cn("text-xs tabular-nums", x.warn ? "text-amber-200/80" : "text-zinc-400")}>{x.sub}</div>}
+              </div>
             ))}
-          </ul>
+          </div>
         </Step>
 
-        <Step n={2} title="Your target">
+        <Step n={2} title="Target">
           {g.hasGoal && g.goalText ? (
-            <div className="space-y-1 text-sm text-zinc-300">
-              <p>
-                🎯 <b className="text-zinc-100">{g.goalText}</b>
-                {g.eta ? ` — about ${formatMedium(g.eta)}` : ""}
-                {g.weeklyRate && g.direction !== "maintain" ? ` (${g.direction === "lose" ? "−" : "+"}${g.weeklyRate} kg a week)` : ""}.
-              </p>
+            <div className="space-y-2">
+              <div>
+                <div className="font-semibold">{g.goalText}</div>
+                {(g.eta || (g.weeklyRate && g.direction !== "maintain")) && (
+                  <div className="text-xs text-zinc-400">
+                    {[
+                      g.eta ? `By ${formatMedium(g.eta)}` : null,
+                      g.weeklyRate && g.direction !== "maintain" ? `${g.weeklyRate} kg a week` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                )}
+              </div>
               {g.targets && (
-                <p>
-                  📋 Every day: <b className="text-zinc-100">{g.targets.calories.toLocaleString("en-US")} kcal</b>
-                  {g.targets.protein ? (
-                    <>
-                      , <b className="text-zinc-100">{g.targets.protein} g protein</b>
-                    </>
-                  ) : null}
-                  ; train <b className="text-zinc-100">{WEEKLY_TARGET}× a week</b>.
-                </p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <Mini label="Calories" value={num(g.targets.calories)} />
+                  <Mini label="Protein" value={g.targets.protein ? `${g.targets.protein} g` : "–"} />
+                  <Mini label="Workouts" value={`${WEEKLY_TARGET} a week`} />
+                </div>
               )}
             </div>
           ) : (
-            <Link href="/plan" className="text-sm text-amber-200 underline">
-              Set your goal (target weight or body fat) — it takes 1 minute →
+            <Link href="/plan" className="text-sm font-medium text-amber-200 underline">
+              Set a goal (takes a minute)
             </Link>
           )}
         </Step>
 
-        <Step n={3} title={`Do this today · ${doneCount}/${shown.length}`}>
-          <ul className="space-y-2">
+        <Step n={3} title={`Today · ${doneCount}/${shown.length} done`}>
+          <ul className="space-y-1.5">
             {shown.map((a) => (
               <li key={a.key}>
                 <Link
                   href={a.href}
                   className={cn(
-                    "press flex items-start gap-3 rounded-xl border px-3 py-2.5",
-                    a.done ? "border-emerald-500/30 bg-emerald-500/10" : "border-zinc-800 bg-zinc-950/40 hover:bg-zinc-800/40",
+                    "press flex items-center gap-3 rounded-xl border px-3 py-2.5",
+                    a.done ? "border-emerald-500/30 bg-emerald-500/10" : "border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06]",
                   )}
                 >
                   <span
                     className={cn(
-                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
                       a.done ? "border-emerald-400 bg-emerald-400 text-zinc-950" : "border-zinc-600",
                     )}
                   >
                     {a.done && <CheckIcon className="h-3.5 w-3.5" />}
                   </span>
-                  <span className="min-w-0">
-                    <span className={cn("block text-sm font-medium", a.done && "text-emerald-200 line-through decoration-emerald-400/50")}>
-                      {a.text}
-                    </span>
-                    {!a.done && <span className="block text-xs text-zinc-500">{a.why}</span>}
-                    {a.done && a.hint && <span className="block text-xs text-emerald-200/60">{a.hint}</span>}
-                  </span>
+                  <span className={cn("text-sm font-medium", a.done && "text-emerald-200")}>{a.text}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </Step>
       </Card>
+    </div>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white/[0.04] px-2 py-2">
+      <div className="text-[11px] text-zinc-400">{label}</div>
+      <div className="text-sm font-semibold tabular-nums">{value}</div>
     </div>
   );
 }
@@ -245,7 +234,7 @@ function Onboarding({ g }: { g: GuideInput }) {
   const steps = [
     { text: "Set your goal", href: "/plan", done: g.hasGoal },
     { text: "Add your weight (or an InBody scan)", href: "/stats", done: g.weight != null },
-    { text: "Snap your first meal", href: "/food", done: g.hasMeal },
+    { text: "Log your first meal", href: "/food", done: g.hasMeal },
     { text: "Log your first workout", href: "/log", done: g.hasWorkout },
     { text: "Connect Garmin (optional)", href: "/garmin", done: g.garminConnected },
     { text: "Add an InBody scan (optional)", href: "/stats", done: g.hasScan },
@@ -255,7 +244,7 @@ function Onboarding({ g }: { g: GuideInput }) {
   return (
     <Card className="space-y-3 border-sky-500/30 bg-sky-500/5">
       <div className="flex items-baseline justify-between">
-        <div className="font-semibold">👋 Getting started · {done}/{steps.length}</div>
+        <div className="font-semibold">Getting started · {done}/{steps.length}</div>
         <button
           className="text-xs text-zinc-500 underline"
           onClick={() => {

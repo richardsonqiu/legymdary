@@ -45,7 +45,7 @@ export default async function InsightsPage({
   return (
     <PageTransition className="space-y-6">
       {garminSyncing && <AutoRefresh />}
-      <PageHeader title="Insights" subtitle="Recovery, sleep, load and fuel — vs your own baseline" />
+      <PageHeader title="Insights" subtitle="Recovery, sleep and training, compared with your usual" />
 
       <div className="flex items-center justify-between gap-2">
         <Link

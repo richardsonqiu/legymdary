@@ -40,7 +40,7 @@ export function BodyStatForm({ latest }: { latest: BodyStat | null }) {
     });
   }
 
-  const ph = (v: number | null | undefined) => (v != null ? kg(v) : "—");
+  const ph = (v: number | null | undefined) => (v != null ? kg(v) : "–");
 
   return (
     <Card className="space-y-4">

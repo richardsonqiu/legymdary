@@ -121,7 +121,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
               </div>
             )}
             <div className="divide-y divide-zinc-800/70">
-              <Row label="Training load" value={a.load != null ? `${r(a.load)}` : null} hint="How hard this was on your body — feeds your load balance" />
+              <Row label="Training load" value={a.load != null ? `${r(a.load)}` : null} hint="How hard this was on your body" />
               <Row label="Main benefit" value={a.teLabel ? a.teLabel.replace(/_/g, " ").toLowerCase() : null} />
               <Row label="Body Battery used" value={a.bodyBatteryImpact != null ? `${r(a.bodyBatteryImpact)}` : null} />
               <Row
@@ -145,7 +145,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
                 <div key={z.n}>
                   <div className="flex items-baseline justify-between gap-2 text-xs">
                     <span className="text-zinc-300">
-                      Zone {z.n} · {z.name} <span className="text-zinc-600">— {z.hint}</span>
+                      Zone {z.n} · {z.name} <span className="text-zinc-500">· {z.hint}</span>
                     </span>
                     <span className="shrink-0 tabular-nums text-zinc-400">
                       {dur(sec)} · {pct}%
@@ -233,7 +233,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           <Row label="Stride length" value={a.strideCm != null ? `${r(a.strideCm)} cm` : null} />
           <Row label="Ground contact" value={a.groundContactMs != null ? `${r(a.groundContactMs)} ms` : null} hint="Shorter = springier running" />
           <Row label="Vertical bounce" value={a.verticalOscCm != null ? `${r(a.verticalOscCm, 1)} cm` : null} />
-          <Row label="VO2 max" value={a.vo2max != null ? `${r(a.vo2max)}` : null} hint="Your aerobic fitness estimate — higher is fitter" />
+          <Row label="VO2 max" value={a.vo2max != null ? `${r(a.vo2max)}` : null} hint="Aerobic fitness. Higher is fitter" />
           <Row label="Temperature" value={a.tempMin != null || a.tempMax != null ? `${r(a.tempMin) ?? "–"}–${r(a.tempMax) ?? "–"} °C` : null} />
           <Row label="Sweat loss (estimate)" value={a.sweatMl != null ? `${r(a.sweatMl)} ml` : null} hint="Roughly how much to drink back" />
         </Card>

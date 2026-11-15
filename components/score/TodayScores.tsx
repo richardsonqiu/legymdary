@@ -17,9 +17,9 @@ export type TodayScoresInput = {
 };
 
 const ADVICE: Record<Readiness["band"], string> = {
-  push: "A good day for a hard session or a PR attempt.",
-  normal: "Train as planned — keep the intensity steady.",
-  easy: "Go light today: a walk, mobility or rest. Sleep early.",
+  push: "Good day for a hard session.",
+  normal: "Train as planned.",
+  easy: "Go easy today and sleep early.",
 };
 
 /** Home's top section: a row of score rings and one big "how am I today" gauge. */
@@ -57,7 +57,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
           label="Steps"
           href={s.garminConnected ? "/insights" : "/garmin"}
         />
-        <ScoreRing value={weekPct} display={`${s.weekActive}/${s.weekTarget}`} label="Week" href="/history" />
+        <ScoreRing value={weekPct} display={`${s.weekActive}`} label="Workouts" href="/history" />
       </div>
 
       {/* Hero */}
@@ -82,14 +82,14 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
         </div>
         <div className="-mt-6 text-center">
           <div className="text-lg font-semibold">
-            {r ? r.label : s.kcalTarget ? `of ${s.kcalTarget.toLocaleString("en-US")} kcal today` : "Set a goal to get targets"}
+            {r ? r.label : s.kcalTarget ? `of ${s.kcalTarget.toLocaleString("en-US")} kcal today` : "Set a goal to get a target"}
           </div>
           <p className="mx-auto mt-1 max-w-[30ch] text-sm leading-snug text-zinc-300/90">
             {r
               ? ADVICE[r.band]
               : s.garminConnected
-                ? "Recovery appears once your watch has synced a night of sleep."
-                : "Connect Garmin to see your recovery score here every morning."}
+                ? "Shows after your watch syncs a night of sleep."
+                : "Connect Garmin to see your recovery here."}
           </p>
         </div>
         {top.length > 0 && (

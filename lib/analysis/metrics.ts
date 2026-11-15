@@ -170,14 +170,14 @@ export function readinessAt(rows: DayRow[], i: number): Readiness | null {
 
   const debt = sleepDebtHours(rows, i);
   if (debt != null) {
-    c.push({ key: "sleepBalance", label: "Sleep balance", score: curve(debt, [[0, 100], [2, 80], [5, 30], [8, 0]]), weight: 10, detail: `${round(debt, 1)} h owed (7 days)` });
+    c.push({ key: "sleepBalance", label: "Sleep balance", score: curve(debt, [[0, 100], [2, 80], [5, 30], [8, 0]]), weight: 10, detail: `${round(debt, 1)} h short this week` });
   }
 
   const lb = i > 0 ? loadBalance(rows, i - 1) : null;
   if (lb?.ratio != null) {
     const x = lb.ratio;
     const s = x < 0.6 ? 70 : x <= 1.3 ? 100 : x <= 1.5 ? lerp(x, 1.3, 100, 1.5, 40) : lerp(x, 1.5, 40, 1.8, 0);
-    c.push({ key: "loadBalance", label: "Load balance", score: s, weight: 10, detail: `acute:chronic ${x}` });
+    c.push({ key: "loadBalance", label: "Load balance", score: s, weight: 10, detail: `this week is ${x}× your usual load` });
   }
 
   const respB = baselineAt(rows, i, "sleepRespiration");
@@ -230,13 +230,13 @@ export function flagsAt(rows: DayRow[], i: number, ctx: { proteinTarget: number 
 
   // Same window as the card/readiness: training through yesterday (today is still in progress).
   const lb = i > 0 ? loadBalance(rows, i - 1) : null;
-  if (lb?.ratio != null && lb.ratio > 1.5) flags.push({ level: "warn", text: `Training load spike: acute:chronic ratio ${lb.ratio} (above 1.5).` });
+  if (lb?.ratio != null && lb.ratio > 1.5) flags.push({ level: "warn", text: `Training jumped to ${lb.ratio}× your usual load. Ease off for a few days.` });
 
   const r = rows[i];
   const respZ = zScore(r.sleepRespiration, baselineAt(rows, i, "sleepRespiration"));
   const rhrZ = zScore(r.sleepAvgHr ?? r.rhr, baselineAt(rows, i, r.sleepAvgHr != null ? "sleepAvgHr" : "rhr"));
   if (respZ != null && rhrZ != null && respZ > 1.5 && rhrZ > 1.5) {
-    flags.push({ level: "warn", text: "Breathing rate and resting HR are both well above usual — a common sign of illness or heavy fatigue." });
+    flags.push({ level: "warn", text: "Breathing rate and resting heart rate are both well above usual. That often means illness or heavy fatigue." });
   }
   if (r.sleepSpo2Low != null && r.sleepSpo2Low < 88) {
     flags.push({ level: "warn", text: `Lowest overnight SpO2 was ${r.sleepSpo2Low}%. If this repeats, consider checking with a doctor.` });
@@ -246,7 +246,7 @@ export function flagsAt(rows: DayRow[], i: number, ctx: { proteinTarget: number 
 
   const week = rows.slice(Math.max(0, i - 7), i);
   const logged = week.filter((d) => isFullyLogged({ date: d.date, calories: d.intakeKcal, count: d.mealCount })).length;
-  if (week.length >= 5 && logged < 4) flags.push({ level: "info", text: `Only ${logged} of the last ${week.length} days are fully logged — nutrition insights are less reliable.` });
+  if (week.length >= 5 && logged < 4) flags.push({ level: "info", text: `Only ${logged} of the last ${week.length} days have food logged, so food insights are less reliable.` });
   if (ctx.proteinTarget) {
     const short = week.filter((d) => d.mealCount > 0 && d.protein < ctx.proteinTarget! * 0.8).length;
     if (short >= 4) flags.push({ level: "info", text: `Protein was under 80% of target on ${short} of the last ${week.length} days.` });
@@ -385,7 +385,7 @@ export function personalPatterns(rows: DayRow[]): Pattern[] {
     const z = Math.atanh(clamp(rho, -0.999, 0.999)) * Math.sqrt(n - 3);
     const p = 2 * (1 - phi(Math.abs(z)));
     if (Math.abs(rho) >= 0.35 && p < 0.05) {
-      out.push({ text: `${rho > 0 ? c.pos : c.neg} (n=${n}, ρ=${round(rho, 2)})`, rho: round(rho, 2), n, p: round(p, 3) });
+      out.push({ text: `${rho > 0 ? c.pos : c.neg} (${n} days)`, rho: round(rho, 2), n, p: round(p, 3) });
     }
   }
   return out.sort((a, b) => Math.abs(b.rho) - Math.abs(a.rho)).slice(0, 4);

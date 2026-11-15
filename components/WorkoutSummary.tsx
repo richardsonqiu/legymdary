@@ -37,7 +37,7 @@ export function WorkoutSummary({
       <div className="grid grid-cols-3 gap-2">
         <MiniStat label="exercises" value={`${workout.exerciseCount}`} />
         <MiniStat label="sets" value={`${workout.totalSets}`} />
-        <MiniStat label="volume" value={`${kg(workout.totalVolume)}kg`} />
+        <MiniStat label="volume" value={`${kg(workout.totalVolume)} kg`} />
       </div>
 
       {showSets && workout.exercises.length > 0 && (

@@ -385,8 +385,7 @@ export function MealComposer({
             </Button>
             {aiEstimated && (
               <p className="mt-2 text-center text-[11px] text-zinc-600">
-                AI estimates can be off by 20% or more — adjust portions if you
-                know better.
+                Estimates can be off by 20% or more. Adjust the portions if you know better.
               </p>
             )}
           </div>

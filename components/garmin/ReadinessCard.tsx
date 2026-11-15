@@ -19,7 +19,7 @@ export function ReadinessCard({ byDate }: { byDate: Record<string, Readiness | n
   if (!r) {
     return (
       <Card className="text-sm text-zinc-400">
-        No recovery data for today yet — wear your watch to sleep, then{" "}
+        No recovery data for today yet. Wear your watch to sleep, then{" "}
         <Link href="/garmin" transitionTypes={["nav-forward"]} className="text-zinc-200 underline">sync</Link>.
       </Card>
     );

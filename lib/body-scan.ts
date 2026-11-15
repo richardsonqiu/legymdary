@@ -54,12 +54,12 @@ export function compareScans(prev: BodyScan, cur: BodyScan): ScanChange {
   let verdict: ScanChange["verdict"] = null;
   if (muscle != null && fat != null) {
     const mUp = muscle >= 0.3, mDown = muscle <= -0.3, fUp = fat >= 0.5, fDown = fat <= -0.5;
-    if (mUp && fDown) verdict = { text: "Recomposition — gained muscle and lost fat", tone: "good" };
+    if (mUp && fDown) verdict = { text: "Gained muscle and lost fat", tone: "good" };
     else if (mUp && !fUp) verdict = { text: "Gained muscle without adding fat", tone: "good" };
     else if (fDown && !mDown) verdict = { text: "Lost fat while keeping muscle", tone: "good" };
     else if (mUp && fUp) verdict = { text: "Gained muscle and fat (a bulk)", tone: "mixed" };
-    else if (fDown && mDown) verdict = { text: "Lost fat but also some muscle — raise protein and keep lifting heavy", tone: "mixed" };
-    else if (mDown && fUp) verdict = { text: "Lost muscle and gained fat — the change to reverse first", tone: "bad" };
+    else if (fDown && mDown) verdict = { text: "Lost fat and some muscle. Eat more protein and keep lifting", tone: "mixed" };
+    else if (mDown && fUp) verdict = { text: "Lost muscle and gained fat", tone: "bad" };
     else if (fUp) verdict = { text: "Gained fat with muscle steady", tone: "bad" };
     else if (mDown) verdict = { text: "Lost some muscle with fat steady", tone: "bad" };
     else verdict = { text: "Body composition roughly unchanged", tone: "mixed" };
@@ -94,10 +94,10 @@ export function segmentBalance(seg: SegValues | null): SegmentBalance | null {
   const lrA = seg.leftArm?.kg != null && seg.rightArm?.kg != null ? r(((seg.rightArm.kg - seg.leftArm.kg) / seg.leftArm.kg) * 100) : null;
   const lrL = seg.leftLeg?.kg != null && seg.rightLeg?.kg != null ? r(((seg.rightLeg.kg - seg.leftLeg.kg) / seg.leftLeg.kg) * 100) : null;
   const tips: string[] = [];
-  if (gap != null && gap >= 8) tips.push(`legs are ${gap} points behind arms (of ideal) — prioritise squats, lunges, RDLs and leg press`);
+  if (gap != null && gap >= 8) tips.push(`legs are ${gap} points behind arms, so train legs first (squats, lunges, leg press)`);
   if (legsPct != null && legsPct < 100) tips.push(`leg lean mass is below ideal (${r(legsPct)}%)`);
-  if (lrL != null && Math.abs(lrL) >= 3) tips.push(`${lrL > 0 ? "left" : "right"} leg is ${Math.abs(lrL)}% lighter — add single-leg work`);
-  if (lrA != null && Math.abs(lrA) >= 5) tips.push(`${lrA > 0 ? "left" : "right"} arm is ${Math.abs(lrA)}% lighter — add unilateral arm work`);
+  if (lrL != null && Math.abs(lrL) >= 3) tips.push(`${lrL > 0 ? "left" : "right"} leg is ${Math.abs(lrL)}% lighter, so add single-leg work`);
+  if (lrA != null && Math.abs(lrA) >= 5) tips.push(`${lrA > 0 ? "left" : "right"} arm is ${Math.abs(lrA)}% lighter, so add single-arm work`);
   return {
     armsPct: armsPct != null ? r(armsPct) : null,
     legsPct: legsPct != null ? r(legsPct) : null,
@@ -105,7 +105,7 @@ export function segmentBalance(seg: SegValues | null): SegmentBalance | null {
     upperLowerGap: gap,
     leftRightArms: lrA,
     leftRightLegs: lrL,
-    advice: tips.length ? tips.join("; ") : null,
+    advice: tips.length ? tips.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(". ") : null,
   };
 }
 

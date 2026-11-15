@@ -123,7 +123,7 @@ export async function syncGarminForUser(
   } catch (err) {
     const message =
       err instanceof GarminError && err.isAuth
-        ? "Garmin rejected your API key — it may have expired or been deleted. Create a new key and reconnect."
+        ? "Garmin rejected your API key. It may have expired or been deleted. Create a new key and reconnect."
         : `Couldn't reach Garmin: ${(err as Error).message}`;
     await db
       .update(garminConnections)

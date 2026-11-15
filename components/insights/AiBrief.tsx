@@ -70,12 +70,12 @@ export function AiBrief({
           )}
           <div className="grid gap-2">
             {[
-              ["🏋️ Training", r.training],
-              ["🍽️ Nutrition", r.nutrition],
-              ["😴 Recovery", r.recovery],
+              ["Training", r.training],
+              ["Food", r.nutrition],
+              ["Sleep", r.recovery],
             ].map(([k, v]) => (
               <div key={k} className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm">
-                <span className="mr-1 font-medium text-zinc-200">{k}:</span>
+                <span className="mr-1.5 font-medium text-zinc-200">{k}</span>
                 <span className="text-zinc-300">{v}</span>
               </div>
             ))}
@@ -87,9 +87,9 @@ export function AiBrief({
               ))}
             </ul>
           )}
-          {r.pattern && <p className="text-xs text-zinc-400">📈 {r.pattern}</p>}
+          {r.pattern && <p className="text-xs text-zinc-400">{r.pattern}</p>}
           <div className="flex items-center justify-between text-[11px] text-zinc-600">
-            <span>Written by {report!.model.replace("claude-", "").replace(/-/g, " ")}</span>
+            <span>Written by AI from your data</span>
             <button onClick={generate} disabled={pending} className="underline disabled:opacity-50">
               {pending ? "Rewriting…" : "Regenerate"}
             </button>
@@ -98,7 +98,7 @@ export function AiBrief({
       ) : (
         <div className="space-y-2 text-center">
           <p className="text-sm text-zinc-400">
-            Your coach&apos;s brief for this day — what stood out and what to do today.
+            What stood out and what to do today.
           </p>
           <Button className="w-full" onClick={generate} disabled={pending}>
             <SparkIcon className={cn("h-4 w-4", pending && "animate-spin")} />

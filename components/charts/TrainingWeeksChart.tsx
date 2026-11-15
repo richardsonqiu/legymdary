@@ -18,7 +18,7 @@ export function TrainingWeeksChart({ weeks, types }: { weeks: TrainingWeek[]; ty
   if (totalSessions === 0) {
     return (
       <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
-        Log a workout on the Log tab or connect Garmin — your weekly training shows up here.
+        Log a workout or connect Garmin to see your weekly training.
       </p>
     );
   }

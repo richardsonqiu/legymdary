@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "LeGYMdary — the Legendary Gym Diary",
+    default: "LeGYMdary: the Legendary Gym Diary",
     template: "%s · LeGYMdary",
   },
   description:

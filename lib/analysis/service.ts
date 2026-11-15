@@ -1,3 +1,4 @@
+import { userToday } from "@/lib/session";
 import { and, desc, eq, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { bodyScans, garminDaily, garminRaw, goals } from "@/db/schema";
@@ -23,7 +24,7 @@ import { compareScans, leanMass, parseSegments, segmentBalance } from "@/lib/bod
 import { latestBodyValues } from "@/lib/body-values";
 import { isFullyLogged } from "@/lib/energy";
 import { computePlan, planInputFrom } from "@/lib/nutrition";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr } from "@/lib/utils";
 
 /**
  * Server-only, session-free (usable from cron). Builds the analysis for one
@@ -156,7 +157,7 @@ export type Analysis = { date: string; card: DayCard; series: SeriesPoint[] };
 
 /** Latest day with Garmin sleep/HRV/daily data, else today. */
 export async function latestDataDate(userId: string): Promise<string> {
-  const cap = addDaysStr(todayStr(), 1);
+  const cap = addDaysStr((await userToday()), 1);
   const [[raw], [typed]] = await Promise.all([
     db
       .select({ date: garminRaw.date })
@@ -171,7 +172,7 @@ export async function latestDataDate(userId: string): Promise<string> {
       .orderBy(desc(garminDaily.date))
       .limit(1),
   ]);
-  return raw?.date ?? typed?.date ?? todayStr();
+  return raw?.date ?? typed?.date ?? (await userToday());
 }
 
 export async function buildAnalysis(userId: string, date: string): Promise<Analysis> {
@@ -316,18 +317,10 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       ...flagsAt(rows, i, { proteinTarget: plan.protein }),
       ...(() => {
         const out: Flag[] = [];
-        const [cur, prev] = scans;
+        const [cur] = scans;
         if (!cur) return out;
-        const ch = prev ? compareScans(prev, cur) : null;
-        if (ch?.verdict?.tone === "bad") {
-          out.push({ level: "warn", text: `Body scan (${cur.date}): ${ch.verdict.text.toLowerCase()} since the previous scan.` });
-        }
         if (cur.visceralFat != null && cur.visceralFat >= 10) {
           out.push({ level: "warn", text: `Visceral fat level ${cur.visceralFat} is in the high range (10+).` });
-        }
-        const bal = segmentBalance(parseSegments(cur.segmentalLean));
-        if (bal?.upperLowerGap != null && bal.upperLowerGap >= 8) {
-          out.push({ level: "info", text: `Legs are ${bal.upperLowerGap} points behind arms in lean mass — favour lower-body work.` });
         }
         return out;
       })(),

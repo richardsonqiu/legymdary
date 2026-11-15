@@ -220,7 +220,7 @@ export function FoodDiary({
               <b className="tabular-nums text-zinc-200">
                 {garminByDate[date]?.burned != null
                   ? `${Math.round(garminByDate[date]!.burned!).toLocaleString("en-US")} kcal`
-                  : "—"}
+                  : "–"}
               </b>
               {garminByDate[date]?.burned != null && (
                 <span className="text-zinc-500">
@@ -331,8 +331,8 @@ export function FoodDiary({
         {dayMeals.length === 0 ? (
           <EmptyState
             icon={<ForkIcon className="h-6 w-6" />}
-            title="Nothing logged"
-            description="Take a photo of what you eat and the AI will estimate the calories."
+            title="Nothing logged yet"
+            description="Snap a meal to start."
           />
         ) : (
           <div className="space-y-4">

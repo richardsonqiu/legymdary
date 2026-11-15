@@ -5,14 +5,14 @@ import { activityBonus } from "@/lib/energy";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
-import { requireUserId } from "@/lib/session";
+import { requireUserId, userToday } from "@/lib/session";
 import {
   getAiUsageSince,
   getGarminDaily,
   getMeals,
   getRecentMeals,
 } from "@/lib/queries";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Food" };
@@ -29,7 +29,7 @@ export default async function FoodPage({
     typeof sp.date === "string" && DATE_RE.test(sp.date) ? sp.date : null;
   // Without ?date= the client picks "today" in its own timezone, which is at
   // most a day away from the server's — so load a 3-day window around it.
-  const center = requested ?? todayStr();
+  const center = requested ?? (await userToday());
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const [meals, energy, recentMeals, aiSpend, garminDays, userId] = await Promise.all([
@@ -56,7 +56,7 @@ export default async function FoodPage({
       {garminSyncing && <AutoRefresh />}
       <PageHeader
         title="Food"
-        subtitle="Snap what you eat — AI estimates the calories"
+        subtitle="Take a photo and get the calories"
       />
       <FoodDiary
         meals={meals}

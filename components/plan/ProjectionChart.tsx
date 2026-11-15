@@ -36,7 +36,7 @@ export function ProjectionChart({
   if (weights.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
-        Log your weight on the Stats tab to see your projection.
+        Log your weight on the Progress tab to see your projection.
       </p>
     );
   }
