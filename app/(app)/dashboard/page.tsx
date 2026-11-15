@@ -2,7 +2,9 @@ import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
-import { StreakCard } from "@/components/StreakCard";
+import { StreaksCard } from "@/components/consistency/StreaksCard";
+import { TodayGuide, type GuideInput } from "@/components/guide/TodayGuide";
+import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
 import { TodayFoodCard } from "@/components/food/TodayFoodCard";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { ReadinessCard } from "@/components/garmin/ReadinessCard";
@@ -24,7 +26,8 @@ import {
   getLatestBodyStat,
   getPRsThisWeek,
   getWeeklyCheckin,
-  getWorkoutDates,
+  getBodyScans,
+  getConsistencyDays,
 } from "@/lib/queries";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
@@ -38,7 +41,7 @@ export const metadata = { title: "Dashboard" };
 export default async function DashboardPage() {
   const serverToday = todayStr();
   const [
-    workoutDates,
+    consistencyDays,
     active,
     lastFinished,
     latestStat,
@@ -47,8 +50,9 @@ export default async function DashboardPage() {
     foodTotals,
     energy,
     weekly,
+    scans,
   ] = await Promise.all([
-    getWorkoutDates(),
+    getConsistencyDays(addDaysStr(serverToday, -380), addDaysStr(serverToday, 1)),
     getActiveWorkout(),
     getLastFinishedWorkout(),
     getLatestBodyStat(),
@@ -57,8 +61,46 @@ export default async function DashboardPage() {
     getDailyTotals(addDaysStr(serverToday, -1), addDaysStr(serverToday, 1)),
     getEnergyContext(),
     getWeeklyCheckin(),
+    getBodyScans(),
   ]);
   const foodTargets = energy.targets;
+
+  // ---- Inputs for the plain-language "Today" guide ----
+  const { plan, body, goals } = energy;
+  const [scanCur, scanPrev] = [scans[scans.length - 1], scans[scans.length - 2]];
+  const scanChange = scanCur && scanPrev ? compareScans(scanPrev, scanCur) : null;
+  const legGap = scanCur ? segmentBalance(parseSegments(scanCur.segmentalLean))?.upperLowerGap : null;
+  const recentSleep = energy.garminDays.filter((d) => d.date >= addDaysStr(serverToday, -6) && d.sleepSeconds != null);
+  const sleepDebt =
+    recentSleep.length >= 3
+      ? Math.round(recentSleep.reduce((a, d) => a + Math.max(0, 450 - d.sleepSeconds! / 60), 0) / 6) / 10
+      : null;
+  const guide: GuideInput = {
+    weight: body.weight,
+    weightDate: body.weightDate,
+    bodyFat: body.bodyFat,
+    bodyFatSource: body.bodyFatSource,
+    scan: scanCur
+      ? { date: scanCur.date, muscleChange: scanChange?.muscle ?? null, fatChange: scanChange?.fat ?? null, legAdvice: (legGap ?? 0) >= 8 }
+      : null,
+    goalText:
+      plan.goalWeight != null
+        ? `${plan.direction === "lose" ? "Get down to" : plan.direction === "gain" ? "Build up to" : "Stay at"} ${Math.round(plan.goalWeight * 10) / 10} kg${goals?.targetBodyFat ? ` at ${goals.targetBodyFat}% body fat` : ""}`
+        : null,
+    eta: plan.weeksToGoal != null ? addDaysStr(body.weightDate ?? serverToday, Math.ceil(plan.weeksToGoal * 7)) : null,
+    weeklyRate: plan.direction === "maintain" ? null : Math.round(plan.weeklyRate * 10) / 10,
+    direction: plan.direction,
+    targets: foodTargets,
+    hasGoal: !!goals && (goals.targetWeight != null || goals.targetBodyFat != null || goals.calorieOverride != null),
+    totals: foodTotals,
+    consistency: consistencyDays,
+    readinessByDate: energy.readinessByDate,
+    sleepDebtHours: sleepDebt,
+    garminConnected: !!energy.garmin,
+    hasMeal: consistencyDays.some((d) => d.meals > 0),
+    hasWorkout: consistencyDays.some((d) => d.sets > 0 || d.garmin > 0),
+    hasScan: scans.length > 0,
+  };
   const garminSyncing = user?.id ? scheduleGarminSync(user.id, energy.garmin) : false;
   const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
   const energyRows = energy.intake.map((d) => ({
@@ -82,16 +124,16 @@ export default async function DashboardPage() {
         <AccountMenu name={user?.name} email={user?.email} />
       </header>
 
-      <StreakCard
-        workoutDates={workoutDates}
-        active={
-          active ? { name: active.name, count: active.exerciseCount } : null
-        }
+      <TodayGuide g={guide} />
+
+      <StreaksCard
+        days={consistencyDays}
+        active={active ? { name: active.name, count: active.exerciseCount } : null}
       />
 
       {/* Today's food */}
       <section>
-        <SectionTitle
+        <SectionTitle help="macros"
           action={
             <Link href="/plan" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
               Plan →
@@ -112,6 +154,7 @@ export default async function DashboardPage() {
         <>
           <section>
             <SectionTitle
+              help="readiness"
               action={
                 <Link href="/insights" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
                   Insights →
@@ -123,7 +166,7 @@ export default async function DashboardPage() {
             <ReadinessCard byDate={energy.readinessByDate} />
           </section>
           <section>
-            <SectionTitle>Energy balance</SectionTitle>
+            <SectionTitle help="energy">Energy balance</SectionTitle>
             <EnergyBalanceCard rows={energyRows} />
           </section>
         </>

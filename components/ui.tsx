@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Explain } from "@/components/Explain";
+import type { GlossaryKey } from "@/lib/glossary";
 import { cn } from "@/lib/utils";
 
 export function Card({
@@ -45,15 +47,19 @@ export function SectionTitle({
   children,
   className,
   action,
+  help,
 }: {
   children: ReactNode;
   className?: string;
   action?: ReactNode;
+  /** Plain-language explanation behind a "?" button. */
+  help?: GlossaryKey;
 }) {
   return (
-    <div className={cn("mb-2 flex items-center justify-between", className)}>
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+    <div className={cn("mb-2 flex items-start justify-between gap-2", className)}>
+      <h2 className="min-w-0 text-xs font-semibold uppercase tracking-wider text-zinc-500">
         {children}
+        {help && <Explain k={help} />}
       </h2>
       {action}
     </div>

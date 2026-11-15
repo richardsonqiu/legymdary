@@ -827,3 +827,53 @@ export const getBodyScans = cache(async function getBodyScans(): Promise<BodySca
   const userId = await requireUserId();
   return db.select().from(bodyScans).where(eq(bodyScans.userId, userId)).orderBy(asc(bodyScans.date));
 });
+
+export type ConsistencyDay = {
+  date: string;
+  sets: number; // working sets logged in the app
+  garmin: number; // Garmin activities
+  garminMin: number; // their total minutes
+  meals: number;
+  kcal: number;
+};
+
+/** Per-day exercise + food logging counts (grouped in SQL, tiny payload). */
+export const getConsistencyDays = cache(async function getConsistencyDays(
+  from: string,
+  to: string,
+): Promise<ConsistencyDay[]> {
+  const userId = await requireUserId();
+  const [setRows, actRows, mealRows] = await Promise.all([
+    db
+      .select({ date: workouts.date, n: sql<number>`count(${sets.id})` })
+      .from(sets)
+      .innerJoin(workoutExercises, eq(sets.workoutExerciseId, workoutExercises.id))
+      .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
+      .where(and(eq(workouts.userId, userId), eq(sets.isWarmup, false), between(workouts.date, from, to)))
+      .groupBy(workouts.date),
+    db
+      .select({
+        date: garminActivities.date,
+        n: sql<number>`count(*)`,
+        sec: sql<number>`coalesce(sum(${garminActivities.durationSec}), 0)`,
+      })
+      .from(garminActivities)
+      .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, from, to)))
+      .groupBy(garminActivities.date),
+    db
+      .select({ date: meals.date, n: sql<number>`count(*)`, kcal: sql<number>`coalesce(sum(${meals.calories}), 0)` })
+      .from(meals)
+      .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
+      .groupBy(meals.date),
+  ]);
+  const byDate = new Map<string, ConsistencyDay>();
+  const day = (d: string) => {
+    let v = byDate.get(d);
+    if (!v) byDate.set(d, (v = { date: d, sets: 0, garmin: 0, garminMin: 0, meals: 0, kcal: 0 }));
+    return v;
+  };
+  for (const r of setRows) day(r.date).sets = Number(r.n);
+  for (const r of actRows) Object.assign(day(r.date), { garmin: Number(r.n), garminMin: Math.round(Number(r.sec) / 60) });
+  for (const r of mealRows) Object.assign(day(r.date), { meals: Number(r.n), kcal: Math.round(Number(r.kcal)) });
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+});

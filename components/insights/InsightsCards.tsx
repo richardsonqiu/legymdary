@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Explain } from "@/components/Explain";
 import { Card } from "@/components/ui";
 import type { DayCard } from "@/lib/analysis/service";
 import { cn } from "@/lib/utils";
@@ -177,7 +179,13 @@ export function YesterdayCard({ card }: { card: DayCard }) {
         <ul className="space-y-1 text-xs text-zinc-400">
           {y.activities.map((a, i) => (
             <li key={i} className="flex justify-between gap-3">
-              <span className="truncate">{a.name}</span>
+              {a.id ? (
+                <Link href={`/activities/${a.id}`} className="truncate text-zinc-200 underline-offset-2 hover:underline">
+                  {a.name} ›
+                </Link>
+              ) : (
+                <span className="truncate">{a.name}</span>
+              )}
               <span className="shrink-0 tabular-nums text-zinc-500">
                 {a.min} min{a.load != null ? ` · load ${a.load}` : ""}{a.kcal != null ? ` · ${Math.round(a.kcal)} kcal` : ""}
               </span>
@@ -230,7 +238,10 @@ export function PatternsAndFlags({ card }: { card: DayCard }) {
       ))}
       {card.patterns.length > 0 && (
         <div>
-          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Your patterns</div>
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            Your patterns
+            <Explain k="patterns" />
+          </div>
           <ul className="space-y-1 text-sm text-zinc-300">
             {card.patterns.map((p) => (
               <li key={p.text}>• {p.text}</li>

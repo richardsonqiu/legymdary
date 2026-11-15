@@ -62,7 +62,7 @@ export default async function PlanPage() {
 
       {/* Targets */}
       <section>
-        <SectionTitle>Daily targets</SectionTitle>
+        <SectionTitle help="maintenance">Daily targets</SectionTitle>
         {plan.calorieTarget != null ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
