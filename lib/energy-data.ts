@@ -1,3 +1,4 @@
+import { userToday } from "@/lib/session";
 import { cache } from "react";
 import type { GarminDaily, Goals } from "@/db/schema";
 import {
@@ -26,7 +27,7 @@ import {
   type DayTotals,
   type GarminStatus,
 } from "@/lib/queries";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr } from "@/lib/utils";
 
 /**
  * Everything the dashboard / Food / Plan pages need about energy: the plan
@@ -50,7 +51,7 @@ export type EnergyContext = {
 };
 
 export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
-  const today = todayStr();
+  const today = (await userToday());
   const from = addDaysStr(today, -35);
   const to = addDaysStr(today, 1);
   const [garmin, goals, body, stats, intake, garminDays] = await Promise.all([

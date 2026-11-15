@@ -4,6 +4,7 @@ import type { z } from "zod";
 import { db } from "@/db";
 import { aiUsage } from "@/db/schema";
 import { estimateCostUsd } from "@/lib/food-ai";
+import { plainText } from "@/lib/utils";
 
 /**
  * Server-only. One structured Claude call with a primary → backup model
@@ -43,7 +44,7 @@ export async function structuredCall<S extends z.ZodType>(opts: {
   if (!c) return { ok: false, error: "AI isn't configured (ANTHROPIC_API_KEY is not set)." };
   const effort = opts.effort ?? "low";
   const models = opts.models.filter((m, i, a) => m && a.indexOf(m) === i);
-  let lastError = "The AI couldn't produce a result. Please try again.";
+  let lastError = "The AI couldn't read that. Please try again.";
 
   for (const model of models) {
     const fallback = SERVER_FALLBACK_MODELS.has(model);
@@ -87,7 +88,7 @@ export async function structuredCall<S extends z.ZodType>(opts: {
         lastError = "The AI response was incomplete.";
         continue;
       }
-      return { ok: true, data: res.parsed_output as z.infer<S>, model: served };
+      return { ok: true, data: plainText(res.parsed_output as z.infer<S>), model: served };
     } catch (err) {
       if (err instanceof Anthropic.AuthenticationError) {
         return { ok: false, error: "The server's Anthropic API key was rejected." };
@@ -96,10 +97,10 @@ export async function structuredCall<S extends z.ZodType>(opts: {
         return { ok: false, error: "This API key can't use the AI model." };
       }
       if (err instanceof Anthropic.RateLimitError) {
-        lastError = "The AI is busy right now — try again in a minute.";
+        lastError = "The AI is busy. Try again in a minute.";
       } else if (err instanceof Anthropic.APIError) {
         console.error(`[ai:${opts.feature}] ${model} API error ${err.status}:`, err.message);
-        lastError = "The AI service had a problem. Please try again.";
+        lastError = "The AI had a problem. Please try again.";
       } else {
         console.error(`[ai:${opts.feature}] ${model} failed:`, err);
         lastError = "Couldn't reach the AI service.";

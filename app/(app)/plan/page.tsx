@@ -1,18 +1,20 @@
+import { userToday } from "@/lib/session";
 import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { GoalsForm } from "@/components/plan/GoalsForm";
 import { ProjectionChart } from "@/components/plan/ProjectionChart";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
+import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { weightTrendPerWeek, type Plan } from "@/lib/nutrition";
 import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
-import { addDaysStr, daysBetween, formatMedium, kg, todayStr } from "@/lib/utils";
+import { addDaysStr, daysBetween, formatMedium, formatShort, kg } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Plan" };
 
 export default async function PlanPage() {
-  const today = todayStr();
+  const today = (await userToday());
   const [energy, stats, totals, scans] = await Promise.all([
     getEnergyContext(),
     getBodyStats(),
@@ -20,6 +22,16 @@ export default async function PlanPage() {
     getBodyScans(),
   ]);
   const latestScan = scans[scans.length - 1] ?? null;
+  const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
+  const energyRows = energy.intake.map((d) => ({
+    date: d.date,
+    eaten: d.calories,
+    meals: d.count,
+    burned: garminByDate.get(d.date)?.totalKcal ?? null,
+  }));
+  for (const g of energy.garminDays) {
+    if (!energy.intake.some((d) => d.date === g.date)) energyRows.push({ date: g.date, eaten: 0, meals: 0, burned: g.totalKcal });
+  }
   const { goals, body, plan, measured, garminMaint } = energy;
 
   const weights = stats
@@ -48,7 +60,7 @@ export default async function PlanPage() {
     <PageTransition className="space-y-7">
       <PageHeader
         title="Plan"
-        subtitle="Weight & body-fat goal → daily targets"
+        subtitle="Your goal and daily targets"
       />
 
       {/* Targets */}
@@ -72,7 +84,7 @@ export default async function PlanPage() {
                 label={directionLabel}
                 value={
                   plan.direction === "maintain"
-                    ? "—"
+                    ? "–"
                     : `${plan.direction === "lose" ? "−" : "+"}${kg(plan.weeklyRate)} kg`
                 }
                 sub={plan.direction === "maintain" ? "no weight goal set" : "per week"}
@@ -111,7 +123,7 @@ export default async function PlanPage() {
                 />
               )}
               {latestScan?.bmr != null && (
-                <Row label={`BMR · measured (InBody ${latestScan.date})`} value={`${Math.round(latestScan.bmr).toLocaleString("en-US")} kcal`} />
+                <Row label={`BMR · measured (InBody, ${formatShort(latestScan.date)})`} value={`${Math.round(latestScan.bmr).toLocaleString("en-US")} kcal`} />
               )}
               {plan.leanMass != null && <Row label="Lean mass" value={`${kg(plan.leanMass)} kg`} />}
               {body.weight != null && (
@@ -148,12 +160,18 @@ export default async function PlanPage() {
             <p className="mb-1 font-medium text-zinc-200">A few details needed</p>
             <p>To calculate your calorie target, add: {plan.missing.join(", ")}.</p>
             <p className="mt-2 text-xs text-zinc-500">
-              Tip: logging your body fat % on the Stats tab gives a more accurate,
-              lean-mass-based estimate.
+              Adding your body fat % on the Progress tab makes this more accurate.
             </p>
           </Card>
         )}
       </section>
+
+      {energy.garmin && (
+        <section>
+          <SectionTitle help="energy">Eaten vs burned</SectionTitle>
+          <EnergyBalanceCard rows={energyRows} />
+        </section>
+      )}
 
       {/* Progress check */}
       {(avgIntake != null || trend != null) && plan.calorieTarget != null && (
@@ -197,8 +215,8 @@ export default async function PlanPage() {
         <SectionTitle>Your goal</SectionTitle>
         <GoalsForm goals={goals} currentWeight={body.weight} />
         <p className="mt-2 text-center text-xs text-zinc-600">
-          Current weight and body fat come from your latest entries on the Stats tab.
-          Estimates only — not medical advice.
+          Current weight and body fat come from your latest entries on the Progress tab.
+          Estimates only, not medical advice.
         </p>
       </section>
     </PageTransition>
@@ -212,11 +230,11 @@ function trendVerdict(trend: number, direction: "lose" | "gain", rate: number) {
       ? "Weight isn't dropping yet. If this holds for 2+ weeks, trim ~150–200 kcal/day or check your logging."
       : "Weight isn't rising yet. If this holds for 2+ weeks, add ~150–200 kcal/day.";
   if (actual < rate * 0.6)
-    return "Slower than planned. Give it another week — if it persists, adjust by ~100–150 kcal/day.";
+    return "Slower than planned. Give it a week. If it continues, change your calories by 100 to 150 a day.";
   if (actual > rate * 1.5)
     return direction === "lose"
-      ? "Faster than planned — consider eating a bit more to protect muscle and training performance."
-      : "Faster than planned — some of that may be fat; consider a slightly smaller surplus.";
+      ? "Faster than planned. Eat a little more to protect your muscle."
+      : "Faster than planned. Some of it may be fat, so eat a little less.";
   return "Right on track. Keep it up.";
 }
 
@@ -230,7 +248,7 @@ function Notes({
   const notes: string[] = [];
   if (goals?.targetBodyFat != null && goals.targetWeight == null && plan.impliedWeightForBodyFat != null) {
     notes.push(
-      `To reach ${kg(goals.targetBodyFat)}% body fat while keeping your lean mass, you'd weigh about ${kg(plan.impliedWeightForBodyFat)} kg — the plan aims for that.`,
+      `To reach ${kg(goals.targetBodyFat)}% body fat while keeping your lean mass, you'd weigh about ${kg(plan.impliedWeightForBodyFat)} kg. The plan aims for that.`,
     );
   }
   if (
@@ -246,11 +264,11 @@ function Notes({
     );
   }
   if (goals?.targetBodyFat != null && plan.leanMass == null) {
-    notes.push("Log your body fat % on the Stats tab to connect your body-fat goal to a target weight.");
+    notes.push("Log your body fat % on the Progress tab to connect your body-fat goal to a target weight.");
   }
   if (plan.rateWasCapped) notes.push("Your pace was capped to a sustainable maximum to protect muscle.");
   if (plan.calorieFloorApplied)
-    notes.push("Your target was raised to a safe minimum — the goal will take a bit longer.");
+    notes.push("Your calories were raised to a safe minimum, so the goal takes a bit longer.");
   if (!notes.length) return null;
   return (
     <ul className="space-y-1.5 rounded-xl border border-zinc-800 bg-zinc-900/30 px-3 py-2.5 text-xs text-zinc-400">
@@ -305,19 +323,17 @@ function MaintenanceNote({
   if (source === "measured" && measured) {
     text = (
       <>
-        <b className="text-zinc-200">Measured from your data:</b> you averaged{" "}
-        {Math.round(measured.avgIntake).toLocaleString("en-US")} kcal over {measured.loggedDays}{" "}
-        fully-logged days while your weight moved {measured.trendKgPerWeek >= 0 ? "+" : ""}
-        {kg(measured.trendKgPerWeek)} kg/week ({measured.weighIns} weigh-ins). The target
-        self-corrects as you keep logging.
+        <b className="text-zinc-200">From your own data:</b>{" "}
+        {Math.round(measured.avgIntake).toLocaleString("en-US")} kcal a day over {measured.loggedDays} logged days,
+        with weight changing {measured.trendKgPerWeek >= 0 ? "+" : "−"}
+        {kg(Math.abs(measured.trendKgPerWeek))} kg a week. It updates as you log.
       </>
     );
   } else if (source === "garmin") {
     text = (
       <>
-        <b className="text-zinc-200">From Garmin:</b> your average daily burn over the last{" "}
-        {garminDays} days. Log meals fully for 10+ days with regular weigh-ins and this switches to
-        a value measured from your actual intake and weight trend.
+        <b className="text-zinc-200">From Garmin:</b> your average daily burn over {garminDays} days. Log
+        food for 10 days and weigh in regularly to get a number measured from your own results.
       </>
     );
   } else {
@@ -325,11 +341,11 @@ function MaintenanceNote({
       <>
         <b className="text-zinc-200">Formula estimate.</b>{" "}
         {garminConnected
-          ? "Once Garmin has 5+ days of data, your real burn replaces it."
+          ? "After 5 days of Garmin data, your real burn replaces it."
           : (
             <>
-              <Link href="/garmin" transitionTypes={["nav-forward"]} className="underline">Connect Garmin</Link> or log meals fully
-              for 10+ days with regular weigh-ins to replace it with your real number.
+              <Link href="/garmin" transitionTypes={["nav-forward"]} className="underline">Connect Garmin</Link>, or log food
+              for 10 days and weigh in regularly, to get your real number.
             </>
           )}
       </>

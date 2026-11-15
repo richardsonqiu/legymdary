@@ -84,7 +84,7 @@ export function StreaksCard({
           id={`weeks-${weekM}-${data.weekStartStreak}`}
           emoji="🏆"
           title={`${weekM} weeks in a row!`}
-          text={`You've trained ${WEEKLY_TARGET}+ days every week for ${weekM} weeks. That's how results are built.`}
+          text={`${WEEKLY_TARGET}+ workouts every week for ${weekM} weeks. Keep going.`}
         />
       )}
       {foodM && (
@@ -92,7 +92,7 @@ export function StreaksCard({
           id={`food-${foodM}-${data.foodStart}`}
           emoji="🥗"
           title={`${foodM}-day logging streak!`}
-          text={`You've logged your food ${foodM} days straight. Awareness is the first step to change.`}
+          text={`You logged food ${foodM} days straight.`}
         />
       )}
       <Card className="space-y-4">
@@ -105,7 +105,7 @@ export function StreaksCard({
             )}
           >
             {left === 0
-              ? `✓ ${ws.thisWeek} workouts — goal hit`
+              ? `✓ ${ws.thisWeek} workouts, goal hit`
               : `${ws.thisWeek} of ${WEEKLY_TARGET} workouts`}
           </div>
         </div>

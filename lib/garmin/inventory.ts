@@ -148,11 +148,11 @@ export function inventoryToMarkdown(inv: InventoryDataset[], meta: { generatedAt
     "",
     "| Dataset | Rows | From | To | Fields |",
     "|---|---:|---|---|---:|",
-    ...inv.map((d) => `| ${d.label} (\`${d.id}\`) | ${d.rows} | ${d.from ?? "—"} | ${d.to ?? "—"} | ${d.fields.length} |`),
+    ...inv.map((d) => `| ${d.label} (\`${d.id}\`) | ${d.rows} | ${d.from ?? "-"} | ${d.to ?? "-"} | ${d.fields.length} |`),
     "",
   ];
   for (const d of inv) {
-    lines.push(`## ${d.label} — \`${d.id}\``, "");
+    lines.push(`## ${d.label} (\`${d.id}\`)`, "");
     if (!d.rows) {
       lines.push("_No data on this account._", "");
       continue;

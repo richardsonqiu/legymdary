@@ -15,33 +15,33 @@ export const dynamic = "force-dynamic";
 const features = [
   {
     icon: DumbbellIcon,
-    title: "Fast workout logging",
-    desc: "Start a session, add exercises and log sets — reps, weight, warmups — in seconds.",
+    title: "Quick workout log",
+    desc: "Add exercises and log sets, reps and weight in seconds.",
   },
   {
     icon: TrophyIcon,
-    title: "Automatic PRs",
-    desc: "Personal records per exercise via estimated 1RM, with a badge the moment you hit one.",
+    title: "Food by photo",
+    desc: "Snap a meal and get calories, protein, carbs and fat, with the working shown.",
   },
   {
     icon: BarsIcon,
     title: "Progress charts",
-    desc: "Weight, volume and 1RM over 30 / 90 days or all time, plus weekly training volume.",
+    desc: "Weight, body fat, training time and personal records over time.",
   },
   {
     icon: CalendarIcon,
-    title: "History & streaks",
-    desc: "A month calendar and a year-long consistency heatmap with current and longest streaks.",
+    title: "Calendar and streaks",
+    desc: "See which days you trained and logged food, by week, month or year.",
   },
   {
     icon: ScaleIcon,
-    title: "Body stats",
-    desc: "Track weight, waist and body fat over time with clean trend lines.",
+    title: "Body scans",
+    desc: "Add an InBody scan from a screenshot and see muscle and fat by body part.",
   },
   {
     icon: SearchIcon,
-    title: "50+ exercise library",
-    desc: "Pre-loaded and tagged by muscle group and equipment. Add your own custom moves.",
+    title: "Garmin recovery",
+    desc: "Connect your watch for a daily readiness score from your sleep and heart rate.",
   },
 ];
 
@@ -73,8 +73,8 @@ export default function LandingPage() {
           Beat every record.
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-lg text-zinc-400">
-          Log workouts, watch your strength climb and never lose a PR — a fast,
-          private gym diary built for your phone.
+          Log workouts, food and recovery in one private diary built for your
+          phone.
         </p>
         <div className="mt-8 flex flex-col items-center gap-3">
           <LandingCta
@@ -118,7 +118,7 @@ export default function LandingPage() {
             Start your gym diary today
           </h2>
           <p className="mx-auto mt-2 max-w-md text-zinc-400">
-            Sign in with Google and log your first workout in under a minute.
+            Sign in and log your first workout in under a minute.
           </p>
           <div className="mt-6 flex justify-center">
             <LandingCta
@@ -131,7 +131,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="mx-auto max-w-5xl px-5 pb-10 text-center text-xs text-zinc-600">
-        LeGYMdary — the Legendary Gym Diary
+        LeGYMdary · the Legendary Gym Diary
       </footer>
     </div>
   );

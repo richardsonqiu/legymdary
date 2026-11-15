@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { DumbbellIcon, TrashIcon } from "@/components/icons";
 import {
   Button,
-  buttonClass,
   Card,
   Field,
   inputClass,
@@ -148,19 +146,11 @@ export function StartWorkout({
               : "Duplicate last workout"}
           </Button>
           <p className="text-center text-xs text-zinc-500">
-            Pre-fills the exercises from your previous session.
-            {templates.length === 0 &&
-              " Tip: tap “Save as template” during a workout to reuse a routine."}
+            Starts with the exercises from your last session.
           </p>
         </div>
       )}
 
-      <Link
-        href="/exercises"
-        className={buttonClass("ghost", "md", "w-full")}
-      >
-        Browse exercise library →
-      </Link>
     </div>
   );
 }

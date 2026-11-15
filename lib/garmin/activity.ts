@@ -38,11 +38,11 @@ export const ZONES = [
 export function trainingEffectWords(te: number | null) {
   if (te == null) return null;
   if (te < 1) return "No real training effect";
-  if (te < 2) return "Minor — light recovery work";
+  if (te < 2) return "Light, recovery work";
   if (te < 3) return "Maintaining your fitness";
   if (te < 4) return "Improving your fitness";
   if (te < 5) return "Highly improving your fitness";
-  return "Overreaching — needs extra recovery";
+  return "Very hard, needs extra recovery";
 }
 
 export type ActivityView = {

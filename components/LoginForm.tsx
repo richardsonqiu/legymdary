@@ -36,7 +36,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
           res.code === "rate_limited"
             ? "Too many sign-in attempts. Please wait 15 minutes and try again."
             : mode === "signup"
-              ? "Account created — please sign in."
+              ? "Account created. Please sign in."
               : "Invalid email or password.",
         );
         if (mode === "signup") setMode("signin");

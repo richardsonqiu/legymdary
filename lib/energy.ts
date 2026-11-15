@@ -162,7 +162,7 @@ export function readiness(r: ReadinessInput): Readiness | null {
     return {
       verdict: "push",
       headline: "Ready to push",
-      advice: "Well recovered — a good day for heavy sets or a PR attempt.",
+      advice: "Well recovered. Good day for heavy sets.",
       signals,
     };
   }
@@ -170,14 +170,14 @@ export function readiness(r: ReadinessInput): Readiness | null {
     return {
       verdict: "easy",
       headline: "Take it easy",
-      advice: "Recovery is low — keep intensity moderate, prioritise technique, sleep and food.",
+      advice: "Recovery is low. Keep it light, then eat and sleep well.",
       signals,
     };
   }
   return {
     verdict: "normal",
     headline: "Train as planned",
-    advice: "Recovery looks normal — stick to your planned session.",
+    advice: "Recovery is normal. Train as planned.",
     signals,
   };
 }

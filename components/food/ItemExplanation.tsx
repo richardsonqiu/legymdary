@@ -20,7 +20,7 @@ export function ItemExplanation({ item, className }: { item: MealItem; className
             <dd className={cn("min-w-0 text-zinc-400", k === "Maths" && "tabular-nums text-zinc-300")}>{v}</dd>
           </div>
         ))}
-      {item.edited && <p className="pt-0.5 text-amber-300/80">You edited the numbers — the reasoning above is the AI&apos;s original estimate.</p>}
+      {item.edited && <p className="pt-0.5 text-amber-300/80">You edited these numbers. The working above is from the original estimate.</p>}
     </dl>
   );
 }

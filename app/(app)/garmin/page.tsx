@@ -1,16 +1,17 @@
+import { userToday } from "@/lib/session";
 import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { GarminConnect } from "@/components/garmin/GarminConnect";
 import { PageHeader, SectionTitle } from "@/components/ui";
 import { getGarminActivities, getGarminStatus } from "@/lib/queries";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Garmin" };
 
 export default async function GarminPage() {
-  const today = todayStr();
+  const today = (await userToday());
   const [status, activities] = await Promise.all([
     getGarminStatus(),
     getGarminActivities(addDaysStr(today, -30), addDaysStr(today, 1)),

@@ -136,3 +136,11 @@ export function calcStreaks(
 
   return { current, longest };
 }
+
+/** AI text clean-up: no em/en-dash asides, whatever the model wrote. */
+export function plainText<T>(v: T): T {
+  if (typeof v === "string") return v.replace(/\s+[—–]\s+/g, ", ").replace(/—/g, ", ") as T;
+  if (Array.isArray(v)) return v.map(plainText) as T;
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plainText(x)])) as T;
+  return v;
+}

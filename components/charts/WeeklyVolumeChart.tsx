@@ -27,7 +27,7 @@ export function WeeklyVolumeChart({
   if (total === 0) {
     return (
       <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
-        Log some workouts to see your weekly training volume.
+        Log workouts to see your weekly sets.
       </p>
     );
   }

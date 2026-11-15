@@ -4,7 +4,7 @@ import { sceneFor, sceneStyle } from "@/lib/scenes";
 import { Explain } from "@/components/Explain";
 import { Card } from "@/components/ui";
 import type { DayCard } from "@/lib/analysis/service";
-import { cn, todayStr } from "@/lib/utils";
+import { cn, formatMedium, todayStr } from "@/lib/utils";
 
 /** Server-safe presentational cards for the Insights page. */
 
@@ -140,8 +140,8 @@ export function SleepRecoveryCard({ card }: { card: DayCard }) {
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
         {n.bedtime && <span>Bed {n.bedtime}{n.wake ? ` → ${n.wake}` : ""}</span>}
-        {card.sleepDebtHours != null && <span>Sleep debt {card.sleepDebtHours} h (7d)</span>}
-        {card.sleepConsistency && <span>Bedtime varies ±{Math.round(card.sleepConsistency.bedSd)} min</span>}
+        {card.sleepDebtHours != null && <span>{card.sleepDebtHours} h short on sleep this week</span>}
+        {card.sleepConsistency && <span>Bedtime varies by {Math.round(card.sleepConsistency.bedSd)} min</span>}
         {n.respiration != null && <span>Breathing {n.respiration}/min</span>}
         {n.spo2Low != null && <span>SpO2 low {n.spo2Low}%</span>}
         {n.bodyBatteryAtWake != null && <span>Body Battery at wake {n.bodyBatteryAtWake}</span>}
@@ -204,8 +204,8 @@ export function YesterdayCard({ card }: { card: DayCard }) {
       </div>
       {card.energy7d.avgNetKcal != null && (
         <p className="text-xs text-zinc-500">
-          Last {card.energy7d.fullyLoggedDays} fully-logged days: avg {card.energy7d.avgNetKcal > 0 ? "+" : ""}
-          {card.energy7d.avgNetKcal} kcal/day (≈ {card.energy7d.impliedKgPerWeek} kg/week).
+          Last {card.energy7d.fullyLoggedDays} logged days: {card.energy7d.avgNetKcal > 0 ? "+" : ""}
+          {card.energy7d.avgNetKcal} kcal a day, about {card.energy7d.impliedKgPerWeek} kg a week.
         </p>
       )}
     </Card>
@@ -253,7 +253,7 @@ export function BodyCompositionCard({ card }: { card: DayCard }) {
   return (
     <Card className="space-y-3">
       <div className="flex items-baseline justify-between text-xs text-zinc-500">
-        <span>Latest scan {b.date}</span>
+        <span>Latest scan {formatMedium(b.date)}</span>
         <span>{b.daysAgo === 0 ? "today" : `${b.daysAgo} days ago`}</span>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -261,8 +261,8 @@ export function BodyCompositionCard({ card }: { card: DayCard }) {
         <Metric label="Fat mass" value={b.fatMassKg != null ? `${b.fatMassKg} kg` : "–"} sub={sp ? sign(sp.fatKg, "kg") : null} tone={sp?.fatKg == null ? null : sp.fatKg <= 0 ? "good" : "bad"} />
         <Metric label="Body fat" value={b.bodyFatPct != null ? `${b.bodyFatPct}%` : "–"} sub={b.visceralFatLevel != null ? `visceral ${b.visceralFatLevel}` : null} />
       </div>
-      {sp?.verdict && <p className="text-sm text-zinc-300">{sp.verdict} (over {sp.days} days).</p>}
-      {b.segmental?.advice && <p className="text-xs text-amber-200/90">💡 {b.segmental.advice}</p>}
+      {sp?.verdict && <p className="text-sm text-zinc-300">{sp.verdict} over {sp.days} days.</p>}
+      {b.segmental?.advice && <p className="text-xs text-amber-200/90">{b.segmental.advice.charAt(0).toUpperCase() + b.segmental.advice.slice(1)}.</p>}
     </Card>
   );
 }

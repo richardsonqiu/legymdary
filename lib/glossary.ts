@@ -8,13 +8,13 @@ export const GLOSSARY = {
   sleep: "How long and how well you slept compared with what your body needs. Sleep debt is the sleep you're short over the last 7 nights.",
   strain: "How hard yesterday was on your body, 0–21. Most training days land between 8 and 16.",
   loadRatio:
-    "Your last week of training compared with your last month. 0.8–1.3 is the sweet spot; above 1.5 means you ramped up fast — more injury risk.",
+    "Your last week of training compared with your last month. 0.8–1.3 is the sweet spot; above 1.5 means you ramped up fast, which raises injury risk.",
   energy: "Calories eaten minus calories burned (from Garmin). Negative = you're in a deficit (losing), positive = surplus (gaining).",
-  patterns: "Links we found in your own history, like 'late dinners go with worse sleep'. They show what tends to happen together — not proof one causes the other.",
+  patterns: "Links we found in your own history, like 'late dinners go with worse sleep'. They show what tends to happen together, not what causes what.",
   maintenance:
     "The calories that would keep your weight the same. Eat below it to lose fat, above it to gain. We measure it from your food log and weight trend when we can.",
   bmr: "Basal metabolic rate: calories your body burns at complete rest just to stay alive. Your daily total is higher because you move.",
-  macros: "Protein, carbs and fat — the three nutrients with calories. Protein keeps your muscle, carbs fuel training, fat supports hormones.",
+  macros: "Protein, carbs and fat: the three nutrients with calories. Protein keeps your muscle, carbs fuel training, fat supports hormones.",
   leanMass: "Everything in your body that isn't fat: muscle, bone, organs and water. Keeping it while losing fat is the goal.",
   bodyComp:
     "From your InBody scan. Skeletal muscle = the muscle you train. Visceral fat = fat around your organs (under 10 is healthy). Waist-hip ratio = belly fat indicator (men under 0.90, women under 0.85).",

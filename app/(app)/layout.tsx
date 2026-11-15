@@ -1,5 +1,6 @@
 import { BottomNav } from "@/components/BottomNav";
 import { SubTabs } from "@/components/SubTabs";
+import { TimezoneSync } from "@/components/TimezoneSync";
 
 export default function AppLayout({
   children,
@@ -13,6 +14,7 @@ export default function AppLayout({
         {children}
       </main>
       <BottomNav />
+      <TimezoneSync />
     </div>
   );
 }

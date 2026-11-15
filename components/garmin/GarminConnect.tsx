@@ -158,7 +158,7 @@ export function GarminConnect({ status }: { status: GarminStatus | null }) {
           <div>
             <h2 className="font-semibold">{status ? "Replace your API key" : "Connect your Garmin"}</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              Garmin&apos;s free Personal API lets this app read your own data — calories
+              Garmin&apos;s free Personal API lets this app read your own data: calories
               burned, activities, sleep, HRV, Body Battery and scale weigh-ins.
             </p>
           </div>
@@ -171,7 +171,7 @@ export function GarminConnect({ status }: { status: GarminStatus | null }) {
               (sign in on the web).
             </li>
             <li>Select <b>Create Key</b>, accept the terms and pick an expiry (1 year is easiest).</li>
-            <li>Copy the key — Garmin shows it only once — and paste it below.</li>
+            <li>Copy the key (Garmin shows it only once) and paste it below.</li>
           </ol>
           <Field label="Personal API key">
             <input
@@ -189,7 +189,7 @@ export function GarminConnect({ status }: { status: GarminStatus | null }) {
           </Button>
           <p className="text-xs text-zinc-500">
             Your key is checked with Garmin, then stored encrypted. It&apos;s only used to read
-            your data — nothing is written to Garmin. Garmin emails you before it expires.
+            your data. Nothing is written to Garmin. Garmin emails you before it expires.
           </p>
         </Card>
       )}

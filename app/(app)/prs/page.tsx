@@ -55,7 +55,7 @@ export default async function PRsPage() {
                 <div className="mt-1 flex items-center gap-1.5">
                   <Tag>{p.muscleGroup}</Tag>
                   <span className="text-xs tabular-nums text-zinc-500">
-                    {kg(p.weight)}kg × {p.reps} · {formatMedium(p.date)}
+                    {kg(p.weight)} kg × {p.reps} · {formatMedium(p.date)}
                   </span>
                 </div>
               </div>

@@ -38,12 +38,11 @@ import {
   type Meal,
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
-import { requireUserId } from "@/lib/session";
+import { requireUserId, userToday } from "@/lib/session";
 import {
   addDaysStr,
   estimate1RM,
   startOfWeekStr,
-  todayStr,
 } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -449,7 +448,7 @@ export async function getWeeklyVolume(
   }
 
   const out: { week: string; sets: number }[] = [];
-  let cur = startOfWeekStr(todayStr());
+  let cur = startOfWeekStr((await userToday()));
   for (let i = 0; i < weeks; i++) {
     out.push({ week: cur, sets: byWeek.get(cur) ?? 0 });
     cur = addDaysStr(cur, -7);
@@ -475,7 +474,7 @@ export async function getTrainingOverview(weeks = 12): Promise<{
   types: ActivityTypeSummary[];
 }> {
   const userId = await requireUserId();
-  const today = todayStr();
+  const today = (await userToday());
   const from = addDaysStr(startOfWeekStr(today), -7 * (weeks - 1));
   const [gym, acts] = await Promise.all([
     db
@@ -659,7 +658,7 @@ export const getLatestBodyValues = cache(async function getLatestBodyValues(): P
 }> {
   const userId = await requireUserId();
   // Pad a day so users ahead of the server's timezone still get "today".
-  return latestBodyValues(userId, addDaysStr(todayStr(), 1));
+  return latestBodyValues(userId, addDaysStr((await userToday()), 1));
 });
 
 /** Most recent distinct meals (by name) for one-tap "eat again". */
@@ -785,11 +784,11 @@ export type WeeklyCheckin = {
 /** This week (Mon→today) vs the full previous week. */
 export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
   const userId = await requireUserId();
-  const weekStart = startOfWeekStr(todayStr());
+  const weekStart = startOfWeekStr((await userToday()));
   const lastStart = addDaysStr(weekStart, -7);
   const end = addDaysStr(weekStart, 6);
 
-  const today = todayStr();
+  const today = (await userToday());
   const [setRows, totals, weights, acts] = await Promise.all([
     db
       .select({
@@ -811,7 +810,7 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
         and(
           eq(bodyStats.userId, userId),
           isNotNull(bodyStats.weight),
-          gte(bodyStats.date, addDaysStr(todayStr(), -21)),
+          gte(bodyStats.date, addDaysStr((await userToday()), -21)),
         ),
       )
       .orderBy(asc(bodyStats.date)),

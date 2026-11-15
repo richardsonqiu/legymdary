@@ -52,9 +52,8 @@ export function BodyScans({ scans, targetBodyFat }: { scans: BodyScan[]; targetB
       {!latest ? (
         <Card className="space-y-3 text-sm text-zinc-400">
           <p>
-            Add your InBody (or similar) results — screenshots of the InBody app&apos;s <b>Detail</b> and{" "}
-            <b>History</b> screens work. Muscle, fat, visceral fat and segmental balance then feed your plan
-            and daily insights.
+            Add an InBody scan from screenshots of the app&apos;s <b>Detail</b> and <b>History</b> screens. Your
+            plan and insights then use your real muscle and fat numbers.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={() => setAdding("upload")}>
@@ -140,11 +139,11 @@ export function BodyScans({ scans, targetBodyFat }: { scans: BodyScan[]; targetB
               <BodyFigure lean={seg} fat={segFat} />
               {balanceLabels && (
                 <p className="text-xs text-zinc-500">
-                  Balance — upper: {balanceLabels.upper ?? "–"}, lower: {balanceLabels.lower ?? "–"}, upper-lower:{" "}
+                  Balance: upper {balanceLabels.upper ?? "–"}, lower {balanceLabels.lower ?? "–"}, upper vs lower{" "}
                   {balanceLabels.upperLower ?? "–"}
                 </p>
               )}
-              {balance?.advice && <p className="text-sm text-amber-200/90">💡 {balance.advice.charAt(0).toUpperCase() + balance.advice.slice(1)}.</p>}
+              {balance?.advice && <p className="text-sm text-amber-200/90">{balance.advice.charAt(0).toUpperCase() + balance.advice.slice(1)}.</p>}
             </Card>
           )}
 

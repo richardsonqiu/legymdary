@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { plainText } from "@/lib/utils";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { MealItem } from "@/lib/nutrition";
@@ -125,7 +126,8 @@ How to estimate:
 - If the user adds a description, trust it over what you infer from the image (e.g. brand, portion, "only ate half").
 - If the photo is a nutrition label or menu item, use the stated values.
 - If the image does not show food or drink, set is_food to false and return an empty items list.
-Be realistic rather than optimistic: people usually under-estimate, so do not round portions down.`;
+Be realistic rather than optimistic: people usually under-estimate, so do not round portions down.
+Write notes and assumptions in short plain phrases. No em dashes.`;
 
 let client: Anthropic | null = null;
 function getClient() {
@@ -197,7 +199,7 @@ async function attempt(
       return { kind: "retry", error: "The AI response was incomplete.", usage };
     }
 
-    const out = response.parsed_output;
+    const out = plainText(response.parsed_output);
     return {
       kind: "ok",
       usage,
@@ -230,7 +232,7 @@ async function attempt(
       return { kind: "fatal", error: "This API key can't use the AI model." };
     }
     if (err instanceof Anthropic.RateLimitError) {
-      return { kind: "retry", error: "The AI is busy right now — try again in a minute.", usage: null };
+      return { kind: "retry", error: "The AI is busy. Try again in a minute.", usage: null };
     }
     if (err instanceof Anthropic.BadRequestError) {
       console.error(`[meal-ai] ${model} bad request:`, err.message);
@@ -238,7 +240,7 @@ async function attempt(
     }
     if (err instanceof Anthropic.APIError) {
       console.error(`[meal-ai] ${model} API error ${err.status}:`, err.message);
-      return { kind: "retry", error: "The AI service had a problem. Please try again.", usage: null };
+      return { kind: "retry", error: "The AI had a problem. Please try again.", usage: null };
     }
     console.error(`[meal-ai] ${model} failed:`, err);
     return {

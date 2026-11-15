@@ -29,14 +29,14 @@ export function WeeklyCheckin({
 
   const tips: string[] = [];
   const sessions = t.workouts + t.activities;
-  if (sessions === 0 && l.workouts + l.activities > 0) tips.push("No sessions yet this week — even a short one keeps momentum.");
+  if (sessions === 0 && l.workouts + l.activities > 0) tips.push("No workouts yet this week.");
   if (proteinHits != null && t.daysLogged >= 2 && proteinHits < t.daysLogged / 2)
-    tips.push("Protein is lagging — add a lean protein to your next meal or a shake.");
+    tips.push("Protein is low. Add some to your next meal.");
   if (t.daysLogged === 0)
     tips.push(
       data.today
-        ? "Food targets are scored on finished days — today's meals count from tomorrow."
-        : "Log meals to see how your intake tracks against your plan.",
+        ? "Today's meals count from tomorrow."
+        : "Log meals to see how you track against your plan.",
     );
 
   return (
@@ -52,7 +52,7 @@ export function WeeklyCheckin({
         <Metric label="Sets" value={String(t.sets)} prev={l.sets} cur={t.sets} />
         <Metric
           label="Volume"
-          value={t.volume >= 10000 ? `${kg(t.volume / 1000)}t` : `${kg(t.volume)}kg`}
+          value={t.volume >= 10000 ? `${kg(t.volume / 1000)}t` : `${kg(t.volume)} kg`}
           prev={l.volume}
           cur={t.volume}
         />
@@ -69,7 +69,7 @@ export function WeeklyCheckin({
         />
         <Small
           label="Protein"
-          value={t.avgProtein != null ? `${Math.round(t.avgProtein)}g` : "–"}
+          value={t.avgProtein != null ? `${Math.round(t.avgProtein)} g` : "–"}
           sub={
             proteinHits != null && t.daysLogged
               ? `${proteinHits}/${t.daysLogged} days hit`
@@ -79,9 +79,9 @@ export function WeeklyCheckin({
         <Small
           label="Weight 7d"
           value={
-            weightDelta != null ? `${weightDelta > 0 ? "+" : ""}${kg(weightDelta)}kg` : "–"
+            weightDelta != null ? `${weightDelta > 0 ? "+" : ""}${kg(weightDelta)} kg` : "–"
           }
-          sub={data.weightNow != null ? `now ${kg(data.weightNow)}kg` : "log on Stats"}
+          sub={data.weightNow != null ? `now ${kg(data.weightNow)} kg` : "add on Progress"}
         />
       </div>
       {tips.length > 0 && (
@@ -124,7 +124,7 @@ function Metric({
         )}
       >
         {prev === 0 && cur === 0
-          ? "—"
+          ? "–"
           : diff === 0
             ? "same as last wk"
             : `${diff > 0 ? "▲" : "▼"} vs last wk`}

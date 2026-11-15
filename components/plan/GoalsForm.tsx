@@ -61,7 +61,7 @@ export function GoalsForm({
               onChange={(e) => setSex(e.target.value)}
               className={cn(inputClass, "px-2.5")}
             >
-              <option value="">—</option>
+              <option value="">Choose</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>

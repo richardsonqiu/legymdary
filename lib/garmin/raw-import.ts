@@ -164,14 +164,14 @@ export async function runGarminImport(
         return call(ds, run);
       }
       if (err instanceof GarminError && err.isAuth) {
-        throw new StopImport("Garmin rejected the API key — reconnect on the Garmin page.");
+        throw new StopImport("Garmin rejected the API key. Reconnect on the Garmin page.");
       }
       if (err instanceof GarminError && err.status === 429) {
         // Respect Retry-After (default 30 min, capped 6 h); resume automatically after.
         const waitSec = Math.min(6 * 3600, Math.max(60, err.retryAfterSec ?? 30 * 60));
         const until = new Date(Date.now() + waitSec * 1000);
         await db.update(garminConnections).set({ importPausedUntil: until }).where(eq(garminConnections.userId, userId));
-        throw new StopImport("Garmin rate limit reached — the import resumes automatically.");
+        throw new StopImport("Garmin asked us to slow down. The import resumes automatically.");
       }
       const status = err instanceof GarminError ? err.status : 0;
       const streak = progress.get(ds.id)!.emptyStreak + 1;

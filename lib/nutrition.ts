@@ -132,7 +132,7 @@ export function computePlan(i: PlanInput): Plan {
     bmr = 10 * w + 6.25 * i.heightCm - 5 * i.age + (i.sex === "male" ? 5 : -161);
     bmrMethod = "mifflin-st-jeor";
   } else {
-    if (w == null) missing.push("current weight (log it on the Stats tab)");
+    if (w == null) missing.push("current weight (log it on the Progress tab)");
     if (!i.sex) missing.push("sex");
     if (!i.age) missing.push("birth year");
     if (!i.heightCm) missing.push("height");

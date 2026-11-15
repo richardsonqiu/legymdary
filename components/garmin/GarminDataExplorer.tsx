@@ -124,7 +124,7 @@ export function GarminDataExplorer({
             : status.done
               ? "Refresh all data"
               : status.pausedUntil
-                ? "Paused — resumes automatically"
+                ? "Paused, resumes automatically"
                 : overall > 0
                   ? "Continue import now"
                   : "Import everything"}
@@ -138,22 +138,21 @@ export function GarminDataExplorer({
         {log && <p className="text-sm text-zinc-400">{log}</p>}
         {status.pausedUntil && (
           <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-            Garmin asked us to slow down. The import resumes automatically after{" "}
-            {new Date(status.pausedUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} —
-            in the background when you open the app, and in the daily sync. Your newest data is
-            already imported; older history fills in over time.
+            Garmin asked us to slow down. The import resumes by itself after{" "}
+            {new Date(status.pausedUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. Your
+            newest data is already in.
           </p>
         )}
         {!status.done && (
           <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
-            <div className="mb-1 font-medium text-zinc-200">How the import keeps going — you don&apos;t need to do anything</div>
+            <div className="mb-1 font-medium text-zinc-200">The import continues on its own</div>
             <ul className="list-disc space-y-0.5 pl-4">
-              <li>Whenever you open the app, it imports ~20 seconds more in the background (at most every 30 min).</li>
-              <li>A daily background job also continues it, even if you don&apos;t open the app.</li>
-              <li>If Garmin rate-limits us, it waits and picks up exactly where it stopped.</li>
-              <li>Your newest data always comes first; older history fills in over time.</li>
+              <li>Each time you open the app it imports a bit more (at most every 30 min).</li>
+              <li>It also runs once a day by itself.</li>
+              <li>If Garmin asks it to slow down, it waits and resumes where it stopped.</li>
+              <li>Newest data comes first. Older history fills in later.</li>
             </ul>
-            <div className="mt-1.5">Want it faster? Tap <b className="text-zinc-200">Continue import now</b> and keep this page open.</div>
+            <div className="mt-1.5">To speed it up, tap <b className="text-zinc-200">Continue import now</b> and keep this page open.</div>
           </div>
         )}
       </Card>
@@ -214,14 +213,14 @@ export function GarminDataExplorer({
         <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Download</h2>
         <Card className="space-y-2">
           <a href="/api/garmin/inventory" className="block rounded-lg px-1 py-1.5 text-sm hover:bg-zinc-800">
-            📋 Data inventory (Markdown) — every field, coverage and value ranges, personal identifiers
+            📋 Data inventory (Markdown): every field, coverage and value ranges, personal identifiers
             redacted. <b>Share this with Claude to design your analysis.</b>
           </a>
           <a href="/api/garmin/inventory?format=json" className="block rounded-lg px-1 py-1.5 text-sm hover:bg-zinc-800">
             📋 Data inventory (JSON)
           </a>
           <a href="/api/garmin/export" className="block rounded-lg px-1 py-1.5 text-sm hover:bg-zinc-800">
-            📦 Everything, raw (NDJSON) — one Garmin response per line, lossless. Contains your
+            📦 Everything, raw (NDJSON): one Garmin response per line. Contains your
             identifiers; keep it private.
           </a>
           <a href="/api/export?type=garmin" className="block rounded-lg px-1 py-1.5 text-sm hover:bg-zinc-800">

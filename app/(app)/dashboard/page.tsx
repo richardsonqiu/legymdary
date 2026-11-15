@@ -4,20 +4,17 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreaksCard } from "@/components/consistency/StreaksCard";
 import { TodayGuide, type GuideInput } from "@/components/guide/TodayGuide";
-import { TodayScores, type TodayScoresInput } from "@/components/score/TodayScores";
+import {
+  TodayScores,
+  type TodayScoresInput,
+} from "@/components/score/TodayScores";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
 import { activeDaysInWeek, WEEKLY_TARGET } from "@/lib/streaks";
 import { sceneFor, sceneStyle } from "@/lib/scenes";
 import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
-import { TodayFoodCard } from "@/components/food/TodayFoodCard";
-import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
-import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import {
   DumbbellIcon,
-  RulerIcon,
-  ScaleIcon,
-  SparkIcon,
   TrophyIcon,
   WatchIcon,
 } from "@/components/icons";
@@ -26,9 +23,7 @@ import {
   getActiveWorkout,
   getDailyTotals,
   getLastFinishedWorkout,
-  getLatestBodyStat,
   getPRsThisWeek,
-  getWeeklyCheckin,
   getBodyScans,
   getConsistencyDays,
   getLatestGarminActivity,
@@ -37,36 +32,39 @@ import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
-import { getSessionUser } from "@/lib/session";
-import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
+import { getSessionUser, userToday } from "@/lib/session";
+import {
+  addDaysStr,
+  formatShort,
+  kg,
+} from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const serverToday = todayStr();
+  const serverToday = (await userToday());
   const [
     consistencyDays,
     active,
     lastFinished,
-    latestStat,
     prsThisWeek,
     user,
     foodTotals,
     energy,
-    weekly,
     scans,
     latestActivity,
   ] = await Promise.all([
-    getConsistencyDays(addDaysStr(serverToday, -380), addDaysStr(serverToday, 1)),
+    getConsistencyDays(
+      addDaysStr(serverToday, -380),
+      addDaysStr(serverToday, 1),
+    ),
     getActiveWorkout(),
     getLastFinishedWorkout(),
-    getLatestBodyStat(),
     getPRsThisWeek(),
     getSessionUser(),
     getDailyTotals(addDaysStr(serverToday, -1), addDaysStr(serverToday, 1)),
     getEnergyContext(),
-    getWeeklyCheckin(),
     getBodyScans(),
     getLatestGarminActivity(),
   ]);
@@ -77,32 +75,53 @@ export default async function DashboardPage() {
   if (energy.garmin && user?.id) {
     const latest = await latestDataDate(user.id);
     // Only show recovery for last night (or the night before if today's sync hasn't landed yet).
-    if (latest >= addDaysStr(serverToday, -1)) card = (await buildAnalysis(user.id, latest)).card;
+    if (latest >= addDaysStr(serverToday, -1))
+      card = (await buildAnalysis(user.id, latest)).card;
   }
-  const todayGarmin = energy.garminDays.find((d) => d.date === serverToday) ?? null;
+  const todayGarmin =
+    energy.garminDays.find((d) => d.date === serverToday) ?? null;
   const todayFood = foodTotals.find((d) => d.date === serverToday);
   const scores: TodayScoresInput = {
     readiness: card?.readiness ?? null,
     sleepScore: card?.lastNight.sleepScore ?? null,
-    sleepHours: card?.lastNight.sleepHours != null ? Math.round(card.lastNight.sleepHours * 10) / 10 : null,
+    sleepHours:
+      card?.lastNight.sleepHours != null
+        ? Math.round(card.lastNight.sleepHours * 10) / 10
+        : null,
     eaten: Math.round(todayFood?.calories ?? 0),
     kcalTarget: foodTargets?.calories ?? null,
     steps: todayGarmin?.steps ?? null,
     stepGoal: 8000,
-    weekActive: activeDaysInWeek(new Map(consistencyDays.map((d) => [d.date, d])), serverToday),
+    weekActive: activeDaysInWeek(
+      new Map(consistencyDays.map((d) => [d.date, d])),
+      serverToday,
+    ),
     weekTarget: WEEKLY_TARGET,
     garminConnected: !!energy.garmin,
   };
 
   // ---- Inputs for the plain-language "Today" guide ----
   const { plan, body, goals } = energy;
-  const [scanCur, scanPrev] = [scans[scans.length - 1], scans[scans.length - 2]];
-  const scanChange = scanCur && scanPrev ? compareScans(scanPrev, scanCur) : null;
-  const legGap = scanCur ? segmentBalance(parseSegments(scanCur.segmentalLean))?.upperLowerGap : null;
-  const recentSleep = energy.garminDays.filter((d) => d.date >= addDaysStr(serverToday, -6) && d.sleepSeconds != null);
+  const [scanCur, scanPrev] = [
+    scans[scans.length - 1],
+    scans[scans.length - 2],
+  ];
+  const scanChange =
+    scanCur && scanPrev ? compareScans(scanPrev, scanCur) : null;
+  const legGap = scanCur
+    ? segmentBalance(parseSegments(scanCur.segmentalLean))?.upperLowerGap
+    : null;
+  const recentSleep = energy.garminDays.filter(
+    (d) => d.date >= addDaysStr(serverToday, -6) && d.sleepSeconds != null,
+  );
   const sleepDebt =
     recentSleep.length >= 3
-      ? Math.round(recentSleep.reduce((a, d) => a + Math.max(0, 450 - d.sleepSeconds! / 60), 0) / 6) / 10
+      ? Math.round(
+          recentSleep.reduce(
+            (a, d) => a + Math.max(0, 450 - d.sleepSeconds! / 60),
+            0,
+          ) / 6,
+        ) / 10
       : null;
   const guide: GuideInput = {
     weight: body.weight,
@@ -110,17 +129,35 @@ export default async function DashboardPage() {
     bodyFat: body.bodyFat,
     bodyFatSource: body.bodyFatSource,
     scan: scanCur
-      ? { date: scanCur.date, muscleChange: scanChange?.muscle ?? null, fatChange: scanChange?.fat ?? null, legAdvice: (legGap ?? 0) >= 8 }
+      ? {
+          date: scanCur.date,
+          muscleChange: scanChange?.muscle ?? null,
+          fatChange: scanChange?.fat ?? null,
+          legAdvice: (legGap ?? 0) >= 8,
+        }
       : null,
     goalText:
       plan.goalWeight != null
-        ? `${plan.direction === "lose" ? "Get down to" : plan.direction === "gain" ? "Build up to" : "Stay at"} ${Math.round(plan.goalWeight * 10) / 10} kg${goals?.targetBodyFat ? ` at ${goals.targetBodyFat}% body fat` : ""}`
+        ? `${Math.round(plan.goalWeight * 10) / 10} kg${goals?.targetBodyFat ? ` at ${goals.targetBodyFat}% body fat` : ""}`
         : null,
-    eta: plan.weeksToGoal != null ? addDaysStr(body.weightDate ?? serverToday, Math.ceil(plan.weeksToGoal * 7)) : null,
-    weeklyRate: plan.direction === "maintain" ? null : Math.round(plan.weeklyRate * 10) / 10,
+    eta:
+      plan.weeksToGoal != null
+        ? addDaysStr(
+            body.weightDate ?? serverToday,
+            Math.ceil(plan.weeksToGoal * 7),
+          )
+        : null,
+    weeklyRate:
+      plan.direction === "maintain"
+        ? null
+        : Math.round(plan.weeklyRate * 10) / 10,
     direction: plan.direction,
     targets: foodTargets,
-    hasGoal: !!goals && (goals.targetWeight != null || goals.targetBodyFat != null || goals.calorieOverride != null),
+    hasGoal:
+      !!goals &&
+      (goals.targetWeight != null ||
+        goals.targetBodyFat != null ||
+        goals.calorieOverride != null),
     totals: foodTotals,
     consistency: consistencyDays,
     readinessByDate: energy.readinessByDate,
@@ -130,19 +167,9 @@ export default async function DashboardPage() {
     hasWorkout: consistencyDays.some((d) => d.sets > 0 || d.garmin > 0),
     hasScan: scans.length > 0,
   };
-  const garminSyncing = user?.id ? scheduleGarminSync(user.id, energy.garmin) : false;
-  const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
-  const energyRows = energy.intake.map((d) => ({
-    date: d.date,
-    eaten: d.calories,
-    meals: d.count,
-    burned: garminByDate.get(d.date)?.totalKcal ?? null,
-  }));
-  for (const g of energy.garminDays) {
-    if (!energy.intake.some((d) => d.date === g.date)) {
-      energyRows.push({ date: g.date, eaten: 0, meals: 0, burned: g.totalKcal });
-    }
-  }
+  const garminSyncing = user?.id
+    ? scheduleGarminSync(user.id, energy.garmin)
+    : false;
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
@@ -165,61 +192,37 @@ export default async function DashboardPage() {
 
       <StreaksCard
         days={consistencyDays}
-        active={active ? { name: active.name, count: active.exerciseCount } : null}
+        active={
+          active ? { name: active.name, count: active.exerciseCount } : null
+        }
       />
 
-      {/* Today's food */}
-      <section>
-        <SectionTitle help="macros"
-          action={
-            <Link href="/plan" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
-              Plan →
-            </Link>
-          }
-        >
-          Today&apos;s food
-        </SectionTitle>
-        <TodayFoodCard
-          totals={foodTotals}
-          targets={foodTargets}
-          bonusByDate={energy.bonusByDate}
-        />
-      </section>
-
-      {/* Garmin */}
-      {energy.garmin ? (
-        <>
-          <section>
-            <SectionTitle help="energy">Energy balance</SectionTitle>
-            <EnergyBalanceCard rows={energyRows} />
-          </section>
-        </>
-      ) : (
+      {!energy.garmin && (
         <Link
-          href="/garmin" transitionTypes={["nav-forward"]}
+          href="/garmin"
+          transitionTypes={["nav-forward"]}
           className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900/50"
         >
           <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
           <span>
             <b>Connect Garmin</b>
             <span className="block text-xs text-zinc-500">
-              See calories in vs out, recovery and your real maintenance calories.
+              See calories in vs out, recovery and your real maintenance
+              calories.
             </span>
           </span>
         </Link>
       )}
 
-      {/* Weekly check-in */}
-      <section>
-        <SectionTitle>This week</SectionTitle>
-        <WeeklyCheckin data={weekly} targets={foodTargets} />
-      </section>
-
       {/* Last workout */}
       <section>
         <SectionTitle
           action={
-            <Link href="/history" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
+            <Link
+              href="/history"
+              transitionTypes={["nav-forward"]}
+              className="text-xs text-zinc-400"
+            >
               History →
             </Link>
           }
@@ -229,91 +232,46 @@ export default async function DashboardPage() {
         {latestActivity || lastFinished ? (
           <div className="space-y-2">
             {/* Newest first: a Garmin activity (tap for full stats) and/or the last gym session. */}
-            {latestActivity && (!lastFinished || latestActivity.date >= lastFinished.date) && (
-              <GarminActivityList activities={[latestActivity]} />
-            )}
+            {latestActivity &&
+              (!lastFinished || latestActivity.date >= lastFinished.date) && (
+                <GarminActivityList activities={[latestActivity]} />
+              )}
             {lastFinished && (
               <Card>
                 <WorkoutSummary workout={lastFinished} />
               </Card>
             )}
-            {latestActivity && lastFinished && latestActivity.date < lastFinished.date && (
-              <GarminActivityList activities={[latestActivity]} />
-            )}
+            {latestActivity &&
+              lastFinished &&
+              latestActivity.date < lastFinished.date && (
+                <GarminActivityList activities={[latestActivity]} />
+              )}
           </div>
         ) : (
           <EmptyState
             icon={<DumbbellIcon className="h-6 w-6" />}
             title="No workouts yet"
-            description="Log a gym session on the Log tab, or connect Garmin to bring in runs, rides and more."
-          />
-        )}
-      </section>
-
-      {/* Latest body stats */}
-      <section>
-        <SectionTitle
-          action={
-            <Link href="/stats" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
-              Update →
-            </Link>
-          }
-        >
-          Latest body stats
-        </SectionTitle>
-        {latestStat ? (
-          <div>
-            <div className="grid grid-cols-3 gap-3">
-              <BodyTile
-                icon={<ScaleIcon className="h-4 w-4" />}
-                label="Weight"
-                value={
-                  latestStat.weight != null ? `${kg(latestStat.weight)}` : "–"
-                }
-                unit="kg"
-              />
-              <BodyTile
-                icon={<RulerIcon className="h-4 w-4" />}
-                label="Waist"
-                value={
-                  latestStat.waist != null ? `${kg(latestStat.waist)}` : "–"
-                }
-                unit="cm"
-              />
-              <BodyTile
-                icon={<SparkIcon className="h-4 w-4" />}
-                label="Body fat"
-                value={
-                  latestStat.bodyFat != null ? `${kg(latestStat.bodyFat)}` : "–"
-                }
-                unit="%"
-              />
-            </div>
-            <p className="mt-1.5 text-xs text-zinc-600">
-              as of {formatMedium(latestStat.date)}
-            </p>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<ScaleIcon className="h-6 w-6" />}
-            title="No body stats yet"
-            description="Log your weight, waist and body fat on the Stats tab."
+            description="Log a gym session in Workout, or connect Garmin to bring in runs, rides and more."
           />
         )}
       </section>
 
       {/* PRs this week */}
-      <section>
-        <SectionTitle
-          action={
-            <Link href="/prs" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
-              All PRs →
-            </Link>
-          }
-        >
-          PRs hit this week
-        </SectionTitle>
-        {prsThisWeek.length > 0 ? (
+      {prsThisWeek.length > 0 && (
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/prs"
+                transitionTypes={["nav-forward"]}
+                className="text-xs text-zinc-400"
+              >
+                All PRs →
+              </Link>
+            }
+          >
+            PRs hit this week
+          </SectionTitle>
           <ul className="space-y-2">
             {prsThisWeek.map((p) => (
               <li
@@ -329,13 +287,13 @@ export default async function DashboardPage() {
                       {p.exerciseName}
                     </div>
                     <div className="text-xs tabular-nums text-zinc-500">
-                      {kg(p.weight)}kg × {p.reps} · {formatShort(p.date)}
+                      {kg(p.weight)} kg × {p.reps} · {formatShort(p.date)}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-semibold tabular-nums">
-                    {kg(p.e1rm)}kg
+                    {kg(p.e1rm)} kg
                   </div>
                   <div className="text-[10px] uppercase tracking-wide text-zinc-500">
                     est 1RM
@@ -344,41 +302,8 @@ export default async function DashboardPage() {
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-sm text-zinc-500">
-            No new PRs this week — go chase one. 💪
-          </p>
-        )}
-      </section>
+        </section>
+      )}
     </PageTransition>
-  );
-}
-
-function BodyTile({
-  icon,
-  label,
-  value,
-  unit,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  unit: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3">
-      <div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-zinc-500">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1 text-xl font-semibold tabular-nums">
-        {value}
-        {value !== "–" && (
-          <span className="ml-0.5 text-xs font-normal text-zinc-500">
-            {unit}
-          </span>
-        )}
-      </div>
-    </div>
   );
 }
