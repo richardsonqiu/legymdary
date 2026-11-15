@@ -1,6 +1,7 @@
 # Daily analysis plan — Garmin + food log + training
 
-Status: **draft v1**, written from Garmin's published Personal API spec and
+Status: **v1, implemented** (`lib/analysis/*`). Calibration v1.1 below; formulas still to be checked against real data.
+Original status: **draft v1**, written from Garmin's published Personal API spec and
 Oura/WHOOP/Garmin methodology research. Next step: confirm every input
 against the user's real **data inventory** (Garmin → All Garmin data →
 "Data inventory (Markdown)"), then lock formulas and prompts and build.
@@ -49,10 +50,10 @@ Computed once per morning, after the night syncs.
 
 | Contributor | Input | Scoring | Weight |
 |---|---|---|---:|
-| HRV | lastNightAvg vs 28-day baseline; Garmin `status` as a cross-check | 100 at z ≥ +0.5; falls to 0 at z = −2; mild penalty above +2.5 (unusual spike) | 30% |
-| Resting HR | sleep avg HR or restingValue vs baseline | 100 at z ≤ 0; 0 at z = +2.5 | 20% |
-| Sleep | sleep score (or duration ÷ need) | Linear: score 40 → 0, 85+ → 100 | 20% |
-| Sleep balance | 7-day sleep debt (Σ need − actual) | 0 h → 100, ≥ 5 h → 0 | 10% |
+| HRV | lastNightAvg vs 28-day baseline; Garmin `status` as a cross-check | z ≥ −0.25 → 100; −1 → 75; −2 → 30; −3 → 0; mild penalty above +2.5 (unusual spike) | 30% |
+| Resting HR | sleep avg HR or restingValue vs baseline | z ≤ +0.25 → 100; +1 → 75; +2 → 30; +3 → 0 | 20% |
+| Sleep | sleep score (or duration ÷ need) | Score 40 → 0, 60 → 55, 80+ → 100 (or 60% / 80% / 95% of need) | 20% |
+| Sleep balance | 7-day sleep debt (Σ need − actual) | 0 h → 100, 2 h → 80, 5 h → 30, 8 h → 0 | 10% |
 | Load balance | acute:chronic load ratio (§3.3) | 0.8–1.3 → 100; 1.5 → 40; ≥ 1.8 → 0; < 0.6 → 70 (detraining) | 10% |
 | Respiration / SpO2 | sleep respiration z; lowest SpO2 | Respiration z > +2 or SpO2 < 90 % → 0, else 100 | 10% |
 
@@ -73,7 +74,7 @@ Computed once per morning, after the night syncs.
 - **Daily strength load** = Σ working-set volume (kg × reps) from the app, scaled to the cardio-load range using your own history (z-scored). Garmin strength activities also add `totalSets`/`totalReps`.
 - **Strain (0–21):** log-scaled daily total, so going from 0 to 10 is easy and from 18 to 21 is hard:
   `21 × (1 − e^(−load / k))`, with k fitted so that your 90th-percentile day ≈ 16.
-- **Acute (7d EWMA) : chronic (28d EWMA) ratio.** Above 1.5 means a spike (injury/overreach risk); below 0.8 means detraining.
+- **Acute (7d EWMA) : chronic (28d EWMA) ratio.** Above 1.5 means a spike (injury/overreach risk); below 0.8 means detraining. It starts from the first day with training data, is seeded with that first week's average, and is shown only after 4 weeks, so a history that begins mid-window can't fake a spike.
 - **Intensity minutes:** weekly moderate + 2 × vigorous vs the 150-minute guideline.
 - **Fitness trend:** VO2 max (per activity), fitness age, aerobic/anaerobic training effect distribution over 4 weeks (like Training Load Focus).
 

@@ -291,6 +291,8 @@ export const garminConnections = sqliteTable("garmin_connections", {
     .default(false),
   /** How far back the full-detail importer goes (days). */
   historyDays: integer("history_days").notNull().default(90),
+  /** Set when Garmin rate-limits the importer; it resumes after this time. */
+  importPausedUntil: integer("import_paused_until", { mode: "timestamp_ms" }),
   connectedAt: integer("connected_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -415,6 +417,25 @@ export const garminDatasets = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (t) => [uniqueIndex("garmin_datasets_user_dataset_unique").on(t.userId, t.dataset)],
+);
+
+/** One AI-written daily report per user per day (generated once, cached). */
+export const dailyReports = sqliteTable(
+  "daily_reports",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    card: text("card").notNull(), // the computed day card (JSON) the report was written from
+    report: text("report").notNull(), // structured report (JSON)
+    model: text("model").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("daily_reports_user_date_unique").on(t.userId, t.date)],
 );
 
 export const workoutsRelations = relations(workouts, ({ many }) => ({

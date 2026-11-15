@@ -111,8 +111,8 @@ export default async function DashboardPage() {
           <section>
             <SectionTitle
               action={
-                <Link href="/garmin" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
-                  Garmin →
+                <Link href="/insights" transitionTypes={["nav-forward"]} className="text-xs text-zinc-400">
+                  Insights →
                 </Link>
               }
             >

@@ -112,9 +112,20 @@ export function GarminDataExplorer({
           </span>
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <Button size="lg" className="col-span-2" onClick={importAll} disabled={running || pending}>
+          <Button
+            size="lg"
+            className="col-span-2"
+            onClick={importAll}
+            disabled={running || pending || !!status.pausedUntil}
+          >
             <RefreshIcon className={cn("h-5 w-5", running && "animate-spin")} />
-            {running ? "Importing… keep this page open" : status.done ? "Refresh all data" : "Import everything"}
+            {running
+            ? "Importing… keep this page open"
+            : status.done
+              ? "Refresh all data"
+              : status.pausedUntil
+                ? "Paused — resumes automatically"
+                : "Import everything"}
           </Button>
           {running && (
             <Button variant="secondary" className="col-span-2" onClick={() => (stop.current = true)}>
@@ -123,6 +134,14 @@ export function GarminDataExplorer({
           )}
         </div>
         {log && <p className="text-sm text-zinc-400">{log}</p>}
+        {status.pausedUntil && (
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            Garmin asked us to slow down. The import resumes automatically after{" "}
+            {new Date(status.pausedUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} —
+            in the background when you open the app, and in the daily sync. Your newest data is
+            already imported; older history fills in over time.
+          </p>
+        )}
         <p className="text-xs text-zinc-600">
           Runs in ~40-second steps and resumes where it left off. A daily background job keeps it up
           to date afterwards.
@@ -156,7 +175,9 @@ export function GarminDataExplorer({
                       ) : (
                         <>
                           {d.rows.toLocaleString("en-US")} rows
-                          {d.backfilledTo && d.kind !== "snapshot" ? ` · from ${d.backfilledTo}` : ""}
+                          {d.firstDataDate && d.kind !== "snapshot"
+                            ? ` · ${d.firstDataDate} → ${d.lastDataDate}`
+                            : ""}
                         </>
                       )}
                     </span>

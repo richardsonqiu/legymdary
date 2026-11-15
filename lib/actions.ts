@@ -23,6 +23,7 @@ import {
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
 import { encryptSecret } from "@/lib/garmin/crypto";
+import { askAboutDay, generateDailyReport, type Report } from "@/lib/analysis/report";
 import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import {
@@ -46,6 +47,7 @@ function revalidateAll() {
     "/food",
     "/plan",
     "/garmin",
+    "/insights",
   ]) {
     revalidatePath(p);
   }
@@ -847,4 +849,32 @@ export async function retryGarminDataset(dataset: string): Promise<void> {
     .set({ status: "ok", emptyStreak: 0, lastError: null, backfilledTo: null, latestDate: null })
     .where(and(eq(garminDatasets.userId, userId), eq(garminDatasets.dataset, clip(dataset, 60))));
   revalidatePath("/garmin/data");
+}
+
+/* ------------------------------------------------------------------ */
+/* Insights: AI daily report + questions                               */
+/* ------------------------------------------------------------------ */
+
+export async function generateReportAction(
+  date: string,
+): Promise<{ ok: true; report: Report; model: string } | { ok: false; error: string }> {
+  const userId = await requireUserId();
+  const d = safeDate(date);
+  const limit = await rateLimit(`ai:report:${userId}`, 12, DAY);
+  if (!limit.ok) return { ok: false, error: "Daily report limit reached — try again tomorrow." };
+  const res = await generateDailyReport(userId, d);
+  revalidatePath("/insights");
+  return res;
+}
+
+export async function askAboutDayAction(
+  date: string,
+  question: string,
+): Promise<{ ok: true; answer: string } | { ok: false; error: string }> {
+  const userId = await requireUserId();
+  const q = clip(question, 500);
+  if (q.length < 3) return { ok: false, error: "Type a question first." };
+  const limit = await rateLimit(`ai:qa:${userId}`, 30, DAY);
+  if (!limit.ok) return { ok: false, error: "Question limit reached for today." };
+  return askAboutDay(userId, safeDate(date), q);
 }

@@ -15,6 +15,8 @@ export class GarminError extends Error {
     message: string,
     public status: number,
     public path: string,
+    /** Seconds Garmin asked us to wait (Retry-After), for 429s. */
+    public retryAfterSec: number | null = null,
   ) {
     super(message);
   }
@@ -83,7 +85,11 @@ async function get<T>(token: string, path: string, query?: Record<string, string
     cache: "no-store",
     signal: AbortSignal.timeout(30_000),
   });
-  if (!res.ok) throw new GarminError(`Garmin ${path} failed (${res.status}).`, res.status, path);
+  if (!res.ok) {
+    const ra = res.headers.get("retry-after");
+    const raSec = ra ? (/^\d+$/.test(ra) ? Number(ra) : Math.max(0, (Date.parse(ra) - Date.now()) / 1000)) : null;
+    throw new GarminError(`Garmin ${path} failed (${res.status}).`, res.status, path, raSec && Number.isFinite(raSec) ? raSec : null);
+  }
   if (res.status === 204) return null as T;
   const text = await res.text();
   return (text ? JSON.parse(text) : null) as T;
