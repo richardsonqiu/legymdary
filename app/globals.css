@@ -313,3 +313,31 @@ input[type="number"] {
     radial-gradient(70% 60% at 85% 20%, var(--sky-b, rgba(129, 140, 248, 0.35)), transparent 70%),
     linear-gradient(180deg, #1c2a4a 0%, #121b31 60%, #0d1424 100%);
 }
+
+/* --- Photo backdrops (dawn landscape) --- */
+/* Top of Home: the photo behind greeting, rings and hero, fading into navy. */
+.home-backdrop {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(10, 15, 28, 0.55) 0%,
+      rgba(10, 15, 28, 0.3) 30%,
+      rgba(10, 15, 28, 0.45) 60%,
+      rgba(10, 15, 28, 0.85) 82%,
+      #0a0f1c 100%
+    ),
+    url("/bg-dawn.webp") center 22% / cover no-repeat;
+}
+/* A card with the photo inside (used where there's no page backdrop). */
+.hero-photo {
+  background:
+    radial-gradient(70% 55% at 50% 45%, var(--sky-a, transparent), transparent 75%),
+    linear-gradient(180deg, rgba(10, 15, 28, 0.35) 0%, rgba(10, 15, 28, 0.45) 50%, rgba(10, 15, 28, 0.88) 100%),
+    url("/bg-dawn-hero.webp") center 35% / cover no-repeat;
+}
+/* Frosted glass over a photo. */
+.glass {
+  background: rgba(10, 15, 28, 0.38);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}

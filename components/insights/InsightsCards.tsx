@@ -31,7 +31,7 @@ export function ReadinessHero({ r }: { r: DayCard["readiness"] }) {
   return (
     <div className="space-y-3">
       <div
-        className="hero-sky relative overflow-hidden rounded-[28px] border border-white/10 px-5 pb-5 pt-5"
+        className="hero-photo relative overflow-hidden rounded-[28px] border border-white/10 px-5 pb-5 pt-5"
         style={{ ["--sky-a" as string]: a, ["--sky-b" as string]: b }}
       >
         <div className="relative mx-auto flex w-[220px] justify-center">

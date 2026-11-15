@@ -38,10 +38,10 @@ export function ScoreRing({
   const pct = value == null ? 0 : Math.max(0, Math.min(100, value));
   const tone = toneFor(value);
   return (
-    <Link href={href} className="press flex w-[68px] shrink-0 flex-col items-center gap-1.5">
-      <span className="relative block h-[64px] w-[64px]">
+    <Link href={href} className="press flex min-w-0 flex-col items-center gap-1.5">
+      <span className="relative block h-[60px] w-[60px]">
         <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
-          <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+          <circle cx="32" cy="32" r={r} fill="rgba(10,15,28,0.25)" stroke="rgba(255,255,255,0.14)" strokeWidth="4" />
           <circle
             cx="32"
             cy="32"
@@ -56,11 +56,11 @@ export function ScoreRing({
             style={{ ["--ring-c" as string]: `${c}` }}
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-[15px] font-semibold tabular-nums">
+        <span className="absolute inset-0 flex items-center justify-center text-[14px] font-semibold tabular-nums drop-shadow">
           {display ?? (value == null ? "–" : Math.round(value))}
         </span>
       </span>
-      <span className="flex items-center gap-0.5 text-[11px] text-zinc-400">
+      <span className="flex max-w-full items-center gap-0.5 truncate text-[11px] text-zinc-50/90 [text-shadow:0_1px_6px_rgba(0,0,0,0.5)]">
         {icon && <span className="text-[10px]">{icon}</span>}
         {label}
       </span>

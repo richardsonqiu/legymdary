@@ -145,7 +145,12 @@ export default async function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? null;
 
   return (
-    <PageTransition className="space-y-6">
+    <PageTransition className="relative isolate space-y-6">
+      {/* Dawn landscape behind the top of Home, fading into the page. */}
+      <div
+        aria-hidden
+        className="home-backdrop pointer-events-none absolute -inset-x-4 -top-[max(1.5rem,env(safe-area-inset-top))] -z-10 h-[680px]"
+      />
       {garminSyncing && <AutoRefresh />}
       <header className="flex items-start justify-between gap-3">
         <DashboardHeading firstName={firstName} />
