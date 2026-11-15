@@ -32,6 +32,21 @@ export default async function GarminPage() {
       />
       <GarminConnect status={status} />
       {status && (
+        <Link
+          href="/garmin/data"
+          transitionTypes={["nav-forward"]}
+          className="press flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm"
+        >
+          <span>
+            <b>All Garmin data</b>
+            <span className="block text-xs text-zinc-500">
+              Import everything, view raw data, download inventory &amp; exports
+            </span>
+          </span>
+          <span className="text-zinc-500">→</span>
+        </Link>
+      )}
+      {status && (
         <section>
           <SectionTitle>Recent activities</SectionTitle>
           <GarminActivityList activities={activities.slice(0, 15)} />

@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { lt } from "drizzle-orm";
 import { db } from "@/db";
 import { rateLimits } from "@/db/schema";
+import { runGarminImport } from "@/lib/garmin/raw-import";
 import { staleGarminUsers, syncGarminForUser } from "@/lib/garmin/sync";
 
 /** Constant-time comparison (hashing first equalises lengths). */
@@ -30,6 +31,12 @@ export async function GET(request: Request) {
     if (Date.now() - started > 50_000) break; // stay inside the function limit
     const r = await syncGarminForUser(userId, { days: 3 });
     results.push({ ok: r.ok, error: r.error });
+    // Keep the full raw store current too (small time slice per user).
+    if (r.ok && Date.now() - started < 40_000) {
+      await runGarminImport(userId, { budgetMs: 12_000 }).catch((err) =>
+        console.error("[garmin] cron raw import failed:", (err as Error).message),
+      );
+    }
   }
   return Response.json({
     candidates: users.length,
