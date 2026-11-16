@@ -40,9 +40,43 @@ export type MealItem = {
   assumptions?: string | null;
   /** The user changed the numbers after the AI estimate. */
   edited?: boolean;
+  /** Numbers for the full portion that was estimated. calories etc. = base × eaten. */
+  base?: Macros | null;
+  /** How much of that portion was actually eaten: 0.5 = half, 2 = double. Default 1. */
+  eaten?: number | null;
 };
 
 export type Macros = { calories: number; protein: number; carbs: number; fat: number };
+
+/** Quick choices for "how much did you eat?". */
+export const EATEN_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3] as const;
+
+export function eatenLabel(x: number): string {
+  const map: Record<string, string> = { "0.25": "¼", "0.5": "½", "0.75": "¾", "1.5": "1½" };
+  return `${map[String(x)] ?? String(Math.round(x * 100) / 100)}×`;
+}
+
+/** Full-portion numbers for an item (works for items saved before amounts existed). */
+export function baseOf(it: MealItem): Macros {
+  if (it.base) return it.base;
+  const e = it.eaten && it.eaten > 0 ? it.eaten : 1;
+  return { calories: it.calories / e, protein: it.protein / e, carbs: it.carbs / e, fat: it.fat / e };
+}
+
+/** The item as if `eaten` of its portion was eaten. */
+export function withEaten(it: MealItem, eaten: number): MealItem {
+  const e = Math.max(0, Math.min(10, eaten));
+  const b = baseOf(it);
+  return {
+    ...it,
+    base: b,
+    eaten: e,
+    calories: Math.round(b.calories * e),
+    protein: Math.round(b.protein * e),
+    carbs: Math.round(b.carbs * e),
+    fat: Math.round(b.fat * e),
+  };
+}
 
 export function sumMacros(rows: Macros[]): Macros {
   return rows.reduce(

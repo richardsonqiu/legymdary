@@ -461,6 +461,19 @@ export async function analyzeMeal(input: {
   return res.ok ? res.analysis : { error: res.error };
 }
 
+function cleanBase(v: unknown): MealItem["base"] {
+  if (!v || typeof v !== "object") return null;
+  const b = v as Record<string, unknown>;
+  const n = (x: unknown) => Math.max(0, Math.min(20000, Math.round((numOrNull(x) ?? 0) * 10) / 10));
+  return { calories: n(b.calories), protein: n(b.protein), carbs: n(b.carbs), fat: n(b.fat) };
+}
+
+function cleanEaten(v: unknown): number | null {
+  const n = numOrNull(v);
+  if (n == null || !Number.isFinite(n) || n === 1) return null;
+  return Math.max(0, Math.min(10, Math.round(n * 100) / 100));
+}
+
 function cleanItems(items: unknown): MealItem[] {
   if (!Array.isArray(items)) return [];
   return items.slice(0, 40).flatMap((raw) => {
@@ -486,6 +499,8 @@ function cleanItems(items: unknown): MealItem[] {
         calculation: t(it.calculation, 160),
         assumptions: t(it.assumptions, 200),
         edited: it.edited === true,
+        base: cleanBase(it.base),
+        eaten: cleanEaten(it.eaten),
       },
     ];
   });
