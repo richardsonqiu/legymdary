@@ -144,8 +144,67 @@ export function SleepRecoveryCard({ card }: { card: DayCard }) {
         {card.sleepConsistency && <span>Bedtime varies by {Math.round(card.sleepConsistency.bedSd)} min</span>}
         {n.respiration != null && <span>Breathing {n.respiration}/min</span>}
         {n.spo2Low != null && <span>SpO2 low {n.spo2Low}%</span>}
-        {n.bodyBatteryAtWake != null && <span>Body Battery at wake {n.bodyBatteryAtWake}</span>}
       </div>
+    </Card>
+  );
+}
+
+/** Body Battery: how well last night recharged you, and how the day drained it. */
+export function BodyBatteryCard({ card }: { card: DayCard }) {
+  const b = card.bodyBattery;
+  if (!b) return null;
+  const wake = b.wake;
+  const tone: "good" | "bad" | null = wake == null ? null : wake >= 70 ? "good" : wake < 40 ? "bad" : null;
+  const week = b.week.filter((v): v is number => v != null);
+  return (
+    <Card className="space-y-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-zinc-400">At wake</div>
+          <div className={cn("text-4xl font-semibold tabular-nums", tone === "good" && "text-teal-300", tone === "bad" && "text-amber-300")}>
+            {wake ?? "–"}
+            <span className="ml-1 text-base font-normal text-zinc-500">/ 100</span>
+          </div>
+        </div>
+        {b.usualWake != null && wake != null && (
+          <div className="text-right text-xs text-zinc-400">
+            Usual {b.usualWake}
+            <div className={cn("text-sm font-medium", wake >= b.usualWake ? "text-teal-300" : "text-amber-300")}>
+              {wake >= b.usualWake ? "+" : "−"}
+              {Math.abs(Math.round(wake - b.usualWake))} vs usual
+            </div>
+          </div>
+        )}
+      </div>
+      <RangeBar value={wake} />
+      <div className="grid grid-cols-3 gap-2">
+        <Metric label="Charged overnight" value={b.charged != null ? `+${b.charged}` : "–"} />
+        <Metric label="Drained yesterday" value={b.drainedYesterday != null ? `−${b.drainedYesterday}` : "–"} />
+        <Metric
+          label="Yesterday's range"
+          value={b.lowYesterday != null && b.highYesterday != null ? `${b.lowYesterday} to ${b.highYesterday}` : "–"}
+        />
+      </div>
+      {week.length >= 3 && (
+        <div>
+          <div className="mb-1 text-[11px] uppercase tracking-wide text-zinc-500">Wake level, last 7 days</div>
+          <div className="flex h-20 items-end gap-1.5">
+            {b.week.map((v, k) => (
+              <div key={k} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                <div
+                  className={cn(
+                    "w-full rounded-sm",
+                    v == null ? "bg-white/5" : v >= 70 ? "bg-teal-400/80" : v >= 40 ? "bg-sky-400/70" : "bg-amber-400/80",
+                  )}
+                  style={{ height: v == null ? "6%" : `${Math.max(8, v)}%` }}
+                  title={v == null ? "No data" : String(v)}
+                />
+                <span className="text-[9px] tabular-nums leading-none text-zinc-500">{v ?? ""}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

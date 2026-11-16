@@ -78,6 +78,17 @@ export type DayCard = {
     sleepStress: number | null;
     bodyBatteryAtWake: number | null;
   };
+  /** Garmin Body Battery (0 to 100): charged overnight, drained by the day. */
+  bodyBattery: {
+    wake: number | null;
+    usualWake: number | null;
+    charged: number | null;
+    drainedYesterday: number | null;
+    highYesterday: number | null;
+    lowYesterday: number | null;
+    /** Wake level for the last 7 mornings, oldest first. */
+    week: (number | null)[];
+  } | null;
   sleepDebtHours: number | null;
   sleepConsistency: { bedSd: number; wakeSd: number | null } | null;
   yesterday: {
@@ -148,6 +159,7 @@ export type SeriesPoint = {
   rhr: number | null;
   sleepHours: number | null;
   sleepScore: number | null;
+  battery: number | null;
   strain: number | null;
   eaten: number | null;
   burned: number | null;
@@ -230,6 +242,18 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       sleepStress: r1(today.sleepStress),
       bodyBatteryAtWake: today.bbWake,
     },
+    bodyBattery:
+      today.bbWake != null || today.bbCharged != null || y?.bbLow != null
+        ? {
+            wake: today.bbWake,
+            usualWake: r1(baselineAt(rows, i, "bbWake")?.mean),
+            charged: today.bbCharged,
+            drainedYesterday: y?.bbDrained ?? null,
+            highYesterday: y?.bbHigh ?? null,
+            lowYesterday: y?.bbLow ?? null,
+            week: rows.slice(Math.max(0, i - 6), i + 1).map((d) => d.bbWake),
+          }
+        : null,
     sleepDebtHours: r1(sleepDebtHours(rows, i), 1),
     sleepConsistency: sleepConsistency(rows, i),
     yesterday: {
@@ -342,6 +366,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       rhr: r1(r.sleepAvgHr ?? r.rhr),
       sleepHours: r1(r.sleepSec != null ? r.sleepSec / 3600 : null, 1),
       sleepScore: r.sleepScore,
+      battery: r.bbWake,
       strain: idx >= 0 && (r.cardioLoad != null || r.strengthSets > 0) ? strain(rows, idx) : null,
       eaten: r.mealCount ? Math.round(r.intakeKcal) : null,
       burned: r1(r.totalKcal),

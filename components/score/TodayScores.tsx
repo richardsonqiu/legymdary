@@ -11,8 +11,8 @@ export type TodayScoresInput = {
   kcalTarget: number | null;
   steps: number | null;
   stepGoal: number;
-  weekActive: number;
-  weekTarget: number;
+  /** Body Battery when you woke (0 to 100). */
+  battery: number | null;
   garminConnected: boolean;
 };
 
@@ -26,7 +26,6 @@ const ADVICE: Record<Readiness["band"], string> = {
 export function TodayScores({ s }: { s: TodayScoresInput }) {
   const fuelPct = s.kcalTarget ? (s.eaten / s.kcalTarget) * 100 : null;
   const stepsPct = s.steps != null ? (s.steps / s.stepGoal) * 100 : null;
-  const weekPct = (Math.min(s.weekActive, s.weekTarget) / s.weekTarget) * 100;
 
   const r = s.readiness;
   const heroValue = r ? r.score : fuelPct != null ? Math.min(100, Math.round(fuelPct)) : null;
@@ -57,7 +56,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
           label="Steps"
           href={s.garminConnected ? "/insights" : "/garmin"}
         />
-        <ScoreRing value={weekPct} display={`${s.weekActive}`} label="Workouts" href="/history" />
+        <ScoreRing value={s.battery} label="Battery" href="/insights" />
       </div>
 
       {/* Hero */}
