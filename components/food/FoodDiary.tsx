@@ -21,6 +21,7 @@ import type { Meal } from "@/db/schema";
 import { deleteMeal, relogMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
 import {
+  eatenLabel,
   MEAL_TYPES,
   mealTypeForHour,
   sumMacros,
@@ -419,6 +420,7 @@ function MealRow({
           <div className="truncate text-sm font-medium">{meal.name}</div>
           <div className="text-xs tabular-nums text-zinc-500">
             P {Math.round(meal.protein)} · C {Math.round(meal.carbs)} · F {Math.round(meal.fat)}
+            {items.some((i) => i.eaten != null && i.eaten !== 1) && <span className="ml-1.5 text-teal-300/80">· amount adjusted</span>}
             {meal.aiEstimated && <span className="ml-1.5 text-zinc-600">· AI est.</span>}
           </div>
         </div>
@@ -447,6 +449,11 @@ function MealRow({
                         <span className="min-w-0 text-zinc-300">
                           {it.name}
                           {it.portion && <span className="text-zinc-500"> · {it.portion}</span>}
+                          {it.eaten != null && it.eaten !== 1 && (
+                            <span className="ml-1.5 rounded-full bg-teal-300/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal-200">
+                              ate {eatenLabel(it.eaten)}
+                            </span>
+                          )}
                         </span>
                         <span className="shrink-0 tabular-nums text-zinc-400">{it.calories} kcal</span>
                       </div>
@@ -462,8 +469,8 @@ function MealRow({
           )}
           {meal.notes && <p className="mb-2 text-xs text-zinc-500">{meal.notes}</p>}
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" onClick={onEdit}>
-              <PencilIcon className="h-4 w-4" /> Edit
+            <Button size="sm" variant="secondary" onClick={onEdit}>
+              <PencilIcon className="h-4 w-4" /> How much did you eat?
             </Button>
             <Button size="sm" variant="danger" onClick={onDelete} disabled={disabled}>
               <TrashIcon className="h-4 w-4" /> Delete

@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { PlusIcon, SparkIcon, TrashIcon, XIcon } from "@/components/icons";
 import { ItemExplanation } from "@/components/food/ItemExplanation";
 import { Portal } from "@/components/Portal";
 import { Button, Field, inputClass } from "@/components/ui";
 import { analyzeMeal, saveMeal, updateMeal } from "@/lib/actions";
 import {
+  baseOf,
+  EATEN_STEPS,
+  eatenLabel,
   MEAL_TYPES,
   sumMacros,
+  withEaten,
   type MealItem,
   type MealType,
 } from "@/lib/nutrition";
@@ -62,7 +66,6 @@ export function MealComposer({
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
-  const autoRan = useRef(false);
 
   const canAnalyze = !!init.analysisImage && !init.id;
 
@@ -94,15 +97,6 @@ export function MealComposer({
     }
   }
 
-  // Analyse immediately when opened with a fresh photo.
-  useEffect(() => {
-    if (canAnalyze && !autoRan.current) {
-      autoRan.current = true;
-      void runAnalysis();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Lock background scroll while the sheet is open.
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -121,6 +115,13 @@ export function MealComposer({
       prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)),
     );
   }
+
+  /** Set how much of the whole meal was eaten (applies to every item). */
+  function setMealEaten(x: number) {
+    setItems((prev) => prev.map((it) => (it.name.trim() ? withEaten(it, x) : it)));
+  }
+  const eatenValues = validItems.map((i) => i.eaten ?? 1);
+  const mealEaten = eatenValues.length && eatenValues.every((v) => v === eatenValues[0]) ? eatenValues[0] : null;
 
   function save() {
     setSaveError(null);
@@ -181,25 +182,30 @@ export function MealComposer({
 
             {canAnalyze && (
               <div className="space-y-2">
-                <Field label="Details for the AI (optional)">
-                  <div className="flex gap-2">
-                    <input
-                      value={hint}
-                      onChange={(e) => setHint(e.target.value)}
-                      placeholder="e.g. large portion, ate half, no sugar"
-                      className={inputClass}
-                      maxLength={300}
-                    />
-                    <Button
-                      variant="secondary"
-                      className="h-12 shrink-0"
-                      onClick={runAnalysis}
-                      disabled={analyzing}
-                    >
-                      {status.kind === "idle" ? "Analyse" : "Re-analyse"}
-                    </Button>
-                  </div>
+                <Field label={status.kind === "idle" ? "Tell the AI about this meal (optional)" : "Add or change details"}>
+                  <textarea
+                    value={hint}
+                    onChange={(e) => setHint(e.target.value)}
+                    placeholder="What is it, where from, how it was made. e.g. kopi kosong, 2 slices kaya toast, shared with a friend"
+                    className={cn(inputClass, "h-auto min-h-[5.5rem] resize-none py-2.5 text-sm")}
+                    maxLength={400}
+                    rows={3}
+                  />
                 </Field>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  onClick={runAnalysis}
+                  disabled={analyzing}
+                >
+                  <SparkIcon className="h-4 w-4" />
+                  {analyzing ? "Estimating…" : status.kind === "idle" ? "Estimate calories" : "Estimate again"}
+                </Button>
+                {status.kind === "idle" && (
+                  <p className="text-center text-xs text-zinc-500">
+                    Or skip the AI and fill it in yourself below.
+                  </p>
+                )}
                 {status.kind === "error" && (
                   <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
                     {status.message}
@@ -208,7 +214,7 @@ export function MealComposer({
                 {status.kind === "done" && status.notFood && (
                   <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
                     This doesn&apos;t look like food. Add details and
-                    re-analyse, or enter it manually.
+                    estimate again, or enter it manually.
                   </p>
                 )}
                 {status.kind === "done" && !status.notFood && (
@@ -228,6 +234,22 @@ export function MealComposer({
                     <span className="text-zinc-400">{status.notes}</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {validItems.length > 0 && (
+              <div className="space-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-medium">How much did you eat?</span>
+                  {mealEaten != null && mealEaten !== 1 && (
+                    <span className="text-xs tabular-nums text-teal-300">{eatenLabel(mealEaten)} of what&apos;s shown</span>
+                  )}
+                </div>
+                <AmountChips value={mealEaten} onPick={setMealEaten} />
+                <p className="text-xs text-zinc-500">
+                  Change this after your meal too. Half the noodles is ½×, two cookies when the photo shows one is 2×.
+                  Use the buttons on an item below to change just that item.
+                </p>
               </div>
             )}
 
@@ -289,7 +311,7 @@ export function MealComposer({
                           patchItem(idx, { name: e.target.value })
                         }
                         placeholder="Food"
-                        className={cn(inputClass, "h-10 flex-1 text-sm")}
+                        className={cn(inputClass, "h-10 min-w-0 flex-1 basis-0 text-sm")}
                       />
                       <input
                         value={it.portion}
@@ -297,7 +319,7 @@ export function MealComposer({
                           patchItem(idx, { portion: e.target.value })
                         }
                         placeholder="Portion"
-                        className={cn(inputClass, "h-10 w-28 text-sm")}
+                        className={cn(inputClass, "h-10 w-28! min-w-0 flex-none text-sm")}
                       />
                       <button
                         onClick={() =>
@@ -330,8 +352,12 @@ export function MealComposer({
                               const n = Number(
                                 e.target.value.replace(/[^\d.]/g, ""),
                               );
+                              const val = Number.isFinite(n) ? n : 0;
+                              const amt = it.eaten && it.eaten > 0 ? it.eaten : 1;
                               patchItem(idx, {
-                                [k]: Number.isFinite(n) ? n : 0,
+                                [k]: val,
+                                // Keep the full-portion numbers in step so changing the amount later still works.
+                                base: { ...baseOf(it), [k]: val / amt },
                                 ...(it.reference ? { edited: true } : {}),
                               });
                             }}
@@ -343,6 +369,12 @@ export function MealComposer({
                         </label>
                       ))}
                     </div>
+                    {it.name.trim() && (
+                      <ItemAmount
+                        item={it}
+                        onChange={(x) => patchItem(idx, withEaten(it, x))}
+                      />
+                    )}
                     <ItemExplanation item={it} />
                   </li>
                 ))}
@@ -392,5 +424,68 @@ export function MealComposer({
         </div>
       </div>
     </Portal>
+  );
+}
+
+function AmountChips({ value, onPick, small }: { value: number | null; onPick: (x: number) => void; small?: boolean }) {
+  const custom = value != null && !(EATEN_STEPS as readonly number[]).includes(value);
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {EATEN_STEPS.map((x) => (
+        <button
+          key={x}
+          type="button"
+          onClick={() => onPick(x)}
+          aria-pressed={value === x}
+          className={cn(
+            "rounded-lg border font-medium tabular-nums transition-colors",
+            small ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
+            value === x
+              ? "border-teal-300 bg-teal-300 text-zinc-950"
+              : "border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08]",
+          )}
+        >
+          {eatenLabel(x)}
+        </button>
+      ))}
+      <label
+        className={cn(
+          "flex items-center gap-1 rounded-lg border px-2 tabular-nums",
+          small ? "text-xs" : "text-sm",
+          custom ? "border-teal-300 text-teal-200" : "border-white/10 text-zinc-400",
+        )}
+      >
+        <span>Other</span>
+        <input
+          inputMode="decimal"
+          aria-label="Other amount, in times the portion shown"
+          placeholder="1.2"
+          value={custom ? String(value) : ""}
+          onChange={(e) => {
+            const n = Number(e.target.value.replace(",", ".").replace(/[^\d.]/g, ""));
+            if (Number.isFinite(n) && n > 0) onPick(Math.min(10, n));
+          }}
+          className="w-10 bg-transparent py-1 text-center outline-none placeholder:text-zinc-600"
+        />
+      </label>
+    </div>
+  );
+}
+
+function ItemAmount({ item, onChange }: { item: MealItem; onChange: (x: number) => void }) {
+  const e = item.eaten ?? 1;
+  const b = baseOf(item);
+  return (
+    <div className="space-y-1.5 border-t border-white/[0.06] pt-2">
+      <div className="flex items-baseline justify-between text-xs">
+        <span className="text-zinc-400">Amount eaten</span>
+        {e !== 1 && (
+          <span className="tabular-nums text-zinc-400">
+            {Math.round(b.calories)} kcal × {eatenLabel(e)} = <b className="text-zinc-100">{item.calories} kcal</b>
+          </span>
+        )}
+      </div>
+      <AmountChips value={e} onPick={onChange} small />
+    </div>
   );
 }

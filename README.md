@@ -152,6 +152,12 @@ lib/            Queries (reads), actions (mutations), session helper, utils
 
 ## Food log & goal plan
 
+- **Photo plus context**: after you take a photo, add a few words ("kopi kosong, shared the toast")
+  before the estimate runs. Nothing is sent to the AI until you tap *Estimate calories*.
+- **How much did you eat?** Set ½×, 2× and so on for the whole meal or for one item (one cookie in the
+  photo but you ate two = 2× on that item). Change it after the meal too. The full-portion numbers are
+  kept, so you can switch from ½× to 2× without losing the original estimate.
+
 - **Food tab** — tap *Snap a meal* to take a photo (or pick one / enter it
   manually). The photo is downscaled in the browser (≤1024px) and sent to
   Claude Haiku 5.5, which returns the items it sees with estimated portions,
