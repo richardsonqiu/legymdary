@@ -51,6 +51,9 @@ export type DayRow = {
   bbHigh: number | null;
   bbLow: number | null;
   bbWake: number | null;
+  /** Body Battery gained overnight and spent during the day (Garmin's "charged" / "drained"). */
+  bbCharged: number | null;
+  bbDrained: number | null;
   steps: number | null;
   intensityMin: number | null;
   activeKcal: number | null;
@@ -188,6 +191,7 @@ const FIELDS: Record<string, string[]> = {
     "baseline.balancedLow",
     "baseline.balancedUpper",
   ],
+  body_battery_daily: ["charged", "drained"],
   user_summary: [
     "restingHeartRate",
     "averageStressLevel",
@@ -337,6 +341,7 @@ export async function extractDays(
     const sl = one("sleep_summary", d);
     const hv = one("hrv_daily", d);
     const us = one("user_summary", d);
+    const bb = one("body_battery_daily", d);
     const tg = typedBy.get(d);
     const acts = rawBy.get(`activities|${d}`) ?? [];
 
@@ -458,6 +463,8 @@ export async function extractDays(
         tg?.bodyBatteryLow ??
         null,
       bbWake: num(us, "bodyBatteryAtWakeTime"),
+      bbCharged: num(bb, "charged") ?? tg?.bodyBatteryCharged ?? null,
+      bbDrained: num(bb, "drained") ?? tg?.bodyBatteryDrained ?? null,
       steps:
         num(ds, "movement.steps.value") ??
         num(us, "totalSteps") ??

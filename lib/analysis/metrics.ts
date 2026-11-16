@@ -120,7 +120,7 @@ export function strain(rows: DayRow[], i: number) {
 /* ------------------------------------------------------------------ */
 
 export type Contributor = {
-  key: "hrv" | "rhr" | "sleep" | "sleepBalance" | "loadBalance" | "breathing";
+  key: "hrv" | "rhr" | "sleep" | "sleepBalance" | "loadBalance" | "breathing" | "battery";
   label: string;
   score: number; // 0–100
   weight: number;
@@ -166,6 +166,18 @@ export function readinessAt(rows: DayRow[], i: number): Readiness | null {
   } else if (r.sleepSec != null) {
     const perf = r.sleepSec / 60 / sleepNeedMin(r);
     c.push({ key: "sleep", label: "Sleep", score: curve(perf, [[0.6, 0], [0.8, 60], [0.95, 100]]), weight: 20, detail: `${round(r.sleepSec / 3600, 1)} h` });
+  }
+
+  // Body Battery at wake: how fully the night recharged you (Garmin's own 0 to 100 scale).
+  if (r.bbWake != null) {
+    const bbB = baselineAt(rows, i, "bbWake");
+    c.push({
+      key: "battery",
+      label: "Body Battery",
+      score: curve(r.bbWake, [[20, 0], [40, 45], [60, 80], [80, 100]]),
+      weight: 15,
+      detail: bbB ? `${r.bbWake} at wake vs ${round(bbB.mean)} usual` : `${r.bbWake} at wake`,
+    });
   }
 
   const debt = sleepDebtHours(rows, i);
@@ -240,6 +252,16 @@ export function flagsAt(rows: DayRow[], i: number, ctx: { proteinTarget: number 
   }
   if (r.sleepSpo2Low != null && r.sleepSpo2Low < 88) {
     flags.push({ level: "warn", text: `Lowest overnight SpO2 was ${r.sleepSpo2Low}%. If this repeats, consider checking with a doctor.` });
+  }
+  // Body Battery: low recharge, a poor return on a long sleep, or a fully drained day.
+  if (r.bbWake != null && r.bbWake < 35) {
+    flags.push({ level: "warn", text: `Body Battery was only ${r.bbWake} when you woke. You did not recharge much.` });
+  } else if (r.bbCharged != null && r.sleepSec != null && r.sleepSec >= 7 * 3600 && r.bbCharged < 30) {
+    flags.push({ level: "info", text: `You slept ${round(r.sleepSec / 3600, 1)} h but only gained ${r.bbCharged} Body Battery. Stress or late eating can limit recharge.` });
+  }
+  const prev = i > 0 ? rows[i - 1] : null;
+  if (prev?.bbLow != null && prev.bbLow <= 5) {
+    flags.push({ level: "info", text: `Body Battery ran down to ${prev.bbLow} yesterday. Go easier today.` });
   }
   const debt = sleepDebtHours(rows, i);
   if (debt != null && debt >= 5) flags.push({ level: "warn", text: `Sleep debt is ${round(debt, 1)} h over the last week.` });
@@ -329,6 +351,28 @@ const CANDIDATES: Candidate[] = [
     lag: 1,
     pos: "Harder training days go with higher HRV the next night",
     neg: "Harder training days go with lower HRV the next night",
+  },
+  {
+    // Body Battery at wake is dated the morning after the day it reflects.
+    x: (r) => r.highStressMin,
+    y: (r) => r.bbWake,
+    lag: 1,
+    pos: "More high-stress minutes go with a fuller Body Battery next morning",
+    neg: "More high-stress minutes go with a lower Body Battery next morning",
+  },
+  {
+    x: (r) => dailyLoad(r),
+    y: (r) => r.bbWake,
+    lag: 1,
+    pos: "Harder training days go with a fuller Body Battery next morning",
+    neg: "Harder training days go with a lower Body Battery next morning",
+  },
+  {
+    x: (r) => (r.mealCount ? (r.alcohol ? 1 : 0) : null),
+    y: (r) => r.bbWake,
+    lag: 1,
+    pos: "Days with alcohol go with a fuller Body Battery next morning",
+    neg: "Days with alcohol go with a lower Body Battery next morning",
   },
   {
     x: (r) => (r.mealCount ? r.protein : null),

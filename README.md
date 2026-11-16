@@ -256,6 +256,13 @@ Stats → **Body composition** stores InBody (or similar BIA) scans:
 
 ## Insights (daily analysis)
 
+**Body Battery** (Garmin's 0 to 100 energy meter) is part of the analysis: the level at wake is a readiness
+signal (weighted with HRV, resting heart rate and sleep, compared with your own usual), the Insights page has a
+Body Battery card (wake level, charged overnight, drained yesterday, last 7 mornings) and a trend line, the home
+screen has a Battery ring, the daily brief gets it, and it appears in warnings (low wake level, poor recharge
+after a long sleep, fully drained yesterday) and in your personal patterns (stress, training and alcohol vs the
+next morning's level).
+
 The **Insights** tab analyses each day against your own baseline (method:
 [`docs/analysis-plan.md`](docs/analysis-plan.md); code: `lib/analysis/`).
 

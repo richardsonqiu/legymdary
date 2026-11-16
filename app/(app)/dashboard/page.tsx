@@ -9,7 +9,6 @@ import {
   type TodayScoresInput,
 } from "@/components/score/TodayScores";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
-import { activeDaysInWeek, WEEKLY_TARGET } from "@/lib/streaks";
 import { sceneFor, sceneStyle } from "@/lib/scenes";
 import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
@@ -92,11 +91,7 @@ export default async function DashboardPage() {
     kcalTarget: foodTargets?.calories ?? null,
     steps: todayGarmin?.steps ?? null,
     stepGoal: 8000,
-    weekActive: activeDaysInWeek(
-      new Map(consistencyDays.map((d) => [d.date, d])),
-      serverToday,
-    ),
-    weekTarget: WEEKLY_TARGET,
+    battery: card?.bodyBattery?.wake ?? null,
     garminConnected: !!energy.garmin,
   };
 

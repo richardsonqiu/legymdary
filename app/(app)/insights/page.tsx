@@ -3,6 +3,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { GarminAttribution } from "@/components/garmin/GarminAttribution";
 import { AiBrief } from "@/components/insights/AiBrief";
 import {
+  BodyBatteryCard,
   BodyCompositionCard,
   PatternsAndFlags,
   ReadinessHero,
@@ -105,6 +106,13 @@ export default async function InsightsPage({
         <SectionTitle help="sleep">Last night</SectionTitle>
         <SleepRecoveryCard card={card} />
       </section>
+
+      {card.bodyBattery && (
+        <section>
+          <SectionTitle help="bodyBattery">Body Battery</SectionTitle>
+          <BodyBatteryCard card={card} />
+        </section>
+      )}
 
       <section>
         <SectionTitle help="strain">Yesterday</SectionTitle>

@@ -6,6 +6,8 @@ export const GLOSSARY = {
     "Heart-rate variability: tiny changes in time between heartbeats. Higher than your normal usually means well rested; lower can mean stress, poor sleep, illness or hard training.",
   restingHr: "Your heart rate at rest. A few beats above your normal often means fatigue, stress, alcohol or getting sick.",
   sleep: "How long and how well you slept compared with what your body needs. Sleep debt is the sleep you're short over the last 7 nights.",
+  bodyBattery:
+    "Garmin's 0 to 100 energy meter. Sleep and rest charge it, stress and activity drain it. Waking above 75 means a good recharge. Below 40 means you started the day low.",
   strain: "How hard yesterday was on your body, 0–21. Most training days land between 8 and 16.",
   loadRatio:
     "Your last week of training compared with your last month. 0.8–1.3 is the sweet spot; above 1.5 means you ramped up fast, which raises injury risk.",

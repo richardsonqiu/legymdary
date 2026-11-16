@@ -11,6 +11,7 @@ const METRICS = [
   { value: "hrv", label: "HRV", unit: " ms" },
   { value: "rhr", label: "RHR", unit: " bpm" },
   { value: "sleepHours", label: "Sleep", unit: " h" },
+  { value: "battery", label: "Battery", unit: "" },
   { value: "strain", label: "Strain", unit: "" },
 ] as const;
 type Key = (typeof METRICS)[number]["value"];
