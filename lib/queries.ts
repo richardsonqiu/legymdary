@@ -36,6 +36,7 @@ import {
   type GarminDaily,
   type Goals,
   type Meal,
+  skippedMeals,
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
 import { requireUserId, userToday } from "@/lib/session";
@@ -603,7 +604,28 @@ export type DayTotals = {
   carbs: number;
   fat: number;
   count: number;
+  /** Meals marked as skipped that day. */
+  skipped: number;
 };
+
+/** Meals the user marked as skipped, for a date range. */
+export async function getSkippedMeals(from: string, to: string): Promise<{ date: string; mealType: string }[]> {
+  const userId = await requireUserId();
+  return db
+    .select({ date: skippedMeals.date, mealType: skippedMeals.mealType })
+    .from(skippedMeals)
+    .where(and(eq(skippedMeals.userId, userId), between(skippedMeals.date, from, to)));
+}
+
+/** Which meal slots have food logged or are skipped on a day (light: no photos). */
+export async function getMealSlots(date: string): Promise<{ logged: string[]; skipped: string[] }> {
+  const userId = await requireUserId();
+  const [m, s] = await Promise.all([
+    db.select({ t: meals.mealType }).from(meals).where(and(eq(meals.userId, userId), eq(meals.date, date))),
+    db.select({ t: skippedMeals.mealType }).from(skippedMeals).where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, date))),
+  ]);
+  return { logged: [...new Set(m.map((x) => x.t))], skipped: s.map((x) => x.t) };
+}
 
 /** Per-day calorie/macro totals (no photos) — light enough for dashboards. */
 export async function getDailyTotals(
@@ -611,21 +633,31 @@ export async function getDailyTotals(
   to: string,
 ): Promise<DayTotals[]> {
   const userId = await requireUserId();
-  const rows = await db
-    .select({
-      date: meals.date,
-      calories: meals.calories,
-      protein: meals.protein,
-      carbs: meals.carbs,
-      fat: meals.fat,
-    })
-    .from(meals)
-    .where(and(eq(meals.userId, userId), between(meals.date, from, to)));
+  const [rows, skipRows] = await Promise.all([
+    db
+      .select({
+        date: meals.date,
+        calories: meals.calories,
+        protein: meals.protein,
+        carbs: meals.carbs,
+        fat: meals.fat,
+      })
+      .from(meals)
+      .where(and(eq(meals.userId, userId), between(meals.date, from, to))),
+    db
+      .select({ date: skippedMeals.date })
+      .from(skippedMeals)
+      .where(and(eq(skippedMeals.userId, userId), between(skippedMeals.date, from, to))),
+  ]);
   const byDate = new Map<string, DayTotals>();
+  const blank = (date: string): DayTotals => ({ date, calories: 0, protein: 0, carbs: 0, fat: 0, count: 0, skipped: 0 });
+  for (const s of skipRows) {
+    const d = byDate.get(s.date) ?? blank(s.date);
+    d.skipped += 1;
+    byDate.set(s.date, d);
+  }
   for (const r of rows) {
-    const d =
-      byDate.get(r.date) ??
-      { date: r.date, calories: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
+    const d = byDate.get(r.date) ?? blank(r.date);
     d.calories += r.calories;
     d.protein += r.protein;
     d.carbs += r.carbs;
@@ -931,6 +963,8 @@ export type ConsistencyDay = {
   garmin: number; // Garmin activities
   garminMin: number; // their total minutes
   meals: number;
+  /** Meals marked as skipped. */
+  skipped: number;
   kcal: number;
 };
 
@@ -940,7 +974,7 @@ export const getConsistencyDays = cache(async function getConsistencyDays(
   to: string,
 ): Promise<ConsistencyDay[]> {
   const userId = await requireUserId();
-  const [setRows, actRows, mealRows] = await Promise.all([
+  const [setRows, actRows, mealRows, skipRows] = await Promise.all([
     db
       .select({ date: workouts.date, n: sql<number>`count(${sets.id})` })
       .from(sets)
@@ -962,15 +996,21 @@ export const getConsistencyDays = cache(async function getConsistencyDays(
       .from(meals)
       .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
       .groupBy(meals.date),
+    db
+      .select({ date: skippedMeals.date, n: sql<number>`count(*)` })
+      .from(skippedMeals)
+      .where(and(eq(skippedMeals.userId, userId), between(skippedMeals.date, from, to)))
+      .groupBy(skippedMeals.date),
   ]);
   const byDate = new Map<string, ConsistencyDay>();
   const day = (d: string) => {
     let v = byDate.get(d);
-    if (!v) byDate.set(d, (v = { date: d, sets: 0, garmin: 0, garminMin: 0, meals: 0, kcal: 0 }));
+    if (!v) byDate.set(d, (v = { date: d, sets: 0, garmin: 0, garminMin: 0, meals: 0, skipped: 0, kcal: 0 }));
     return v;
   };
   for (const r of setRows) day(r.date).sets = Number(r.n);
   for (const r of actRows) Object.assign(day(r.date), { garmin: Number(r.n), garminMin: Math.round(Number(r.sec) / 60) });
   for (const r of mealRows) Object.assign(day(r.date), { meals: Number(r.n), kcal: Math.round(Number(r.kcal)) });
+  for (const r of skipRows) day(r.date).skipped = Number(r.n);
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 });

@@ -10,6 +10,44 @@
 export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
+/** Meals you can skip. A snack is optional anyway, so it has no skip. */
+export const SKIPPABLE_MEALS = ["breakfast", "lunch", "dinner"] as const;
+export type SkippableMeal = (typeof SKIPPABLE_MEALS)[number];
+
+/** How a day's calories are split across meal slots. */
+export const MEAL_SHARE: Record<MealType, number> = { breakfast: 0.25, lunch: 0.35, dinner: 0.3, snack: 0.1 };
+
+export type SlotBudget = {
+  type: MealType;
+  /** Calories this slot may use. A skipped slot's share moves to the others. */
+  budget: number;
+  eaten: number;
+  skipped: boolean;
+};
+
+/**
+ * Splits the day's calories over the meal slots. A skipped slot releases its
+ * share, and the other slots grow in proportion, so the budgets always add up
+ * to the day's target.
+ */
+export function mealBudgets(
+  target: number,
+  eatenByType: Partial<Record<MealType, number>>,
+  skipped: readonly MealType[],
+): { slots: SlotBudget[]; freed: number } {
+  const skip = new Set(skipped);
+  const active = MEAL_TYPES.filter((t) => !skip.has(t));
+  const activeShare = active.reduce((a, t) => a + MEAL_SHARE[t], 0);
+  const freed = MEAL_TYPES.filter((t) => skip.has(t)).reduce((a, t) => a + target * MEAL_SHARE[t], 0);
+  const slots = MEAL_TYPES.map((t) => ({
+    type: t,
+    skipped: skip.has(t),
+    eaten: Math.round(eatenByType[t] ?? 0),
+    budget: skip.has(t) || activeShare === 0 ? 0 : Math.round((target * MEAL_SHARE[t]) / activeShare),
+  }));
+  return { slots, freed: Math.round(freed) };
+}
+
 export const ACTIVITY_LEVELS = {
   sedentary: { label: "Sedentary", hint: "Desk job, little exercise", factor: 1.2 },
   light: { label: "Light", hint: "Training 1–3 days / week", factor: 1.375 },

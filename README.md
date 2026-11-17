@@ -152,6 +152,10 @@ lib/            Queries (reads), actions (mutations), session helper, utils
 
 ## Food log & goal plan
 
+- **Skip a meal**: tap *Skip breakfast* (or lunch, dinner) when you are not eating it. Its share of the day's
+  calories (25 / 35 / 30 / 10 % for breakfast, lunch, dinner, snack) moves to your other meals, so the Food page
+  shows a new budget for each remaining meal. A skipped meal counts as logged for streaks and for energy
+  analysis (it is a decision, not a gap), and logging food in that slot cancels the skip.
 - **Photo plus context**: after you take a photo, add a few words ("kopi kosong, shared the toast")
   before the estimate runs. Nothing is sent to the AI until you tap *Estimate calories*.
 - **How much did you eat?** Set ½×, 2× and so on for the whole meal or for one item (one cookie in the
@@ -255,6 +259,11 @@ Stats → **Body composition** stores InBody (or similar BIA) scans:
   Insights/the daily brief use the latest scan.
 
 ## Insights (daily analysis)
+
+**Morning sleep summary**: as soon as your watch syncs, Home shows last night (time asleep, % of your need,
+score, stage bar) and Insights has the full report: stages against typical ranges (deep 13 to 23 %, REM 20 to 25 %),
+efficiency, time awake, bedtime vs your usual, overnight HRV and heart rate, Garmin's own ratings of each part of
+the score, what helped and what hurt, one next step, and the last 7 nights. It is rule based, so it costs nothing.
 
 **Body Battery** (Garmin's 0 to 100 energy meter) is part of the analysis: the level at wake is a readiness
 signal (weighted with HRV, resting heart rate and sleep, compared with your own usual), the Insights page has a

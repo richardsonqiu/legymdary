@@ -5,7 +5,7 @@
 import { KCAL_PER_KG, weightTrendPerWeek, type MaintenanceSource } from "@/lib/nutrition";
 import { addDaysStr, daysBetween } from "@/lib/utils";
 
-export type IntakeDay = { date: string; calories: number; count: number };
+export type IntakeDay = { date: string; calories: number; count: number; /** Meals marked as skipped. */ skipped?: number };
 export type BurnDay = {
   date: string;
   totalKcal: number | null;
@@ -14,7 +14,8 @@ export type BurnDay = {
 export type WeighIn = { date: string; weight: number };
 
 /** A day counts as "fully logged" if it has ≥2 meals or ≥1,000 kcal. */
-export const isFullyLogged = (d: IntakeDay) => d.count >= 2 || d.calories >= 1000;
+/** A skipped meal is a decision, not a gap, so it counts as logged. */
+export const isFullyLogged = (d: IntakeDay) => d.count + (d.skipped ?? 0) >= 2 || d.calories >= 1000;
 
 export type MeasuredMaintenance = {
   kcal: number;

@@ -196,6 +196,27 @@ export const meals = sqliteTable(
 );
 
 /**
+ * A meal the user chose to skip (e.g. no breakfast). It frees that slot's share
+ * of the day's calories for the other meals, and counts as "logged" so a skipped
+ * meal is never mistaken for a forgotten one.
+ */
+export const skippedMeals = sqliteTable(
+  "skipped_meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    mealType: text("meal_type").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("skipped_meals_user_date_type_unique").on(t.userId, t.date, t.mealType)],
+);
+
+/**
  * One row per user: the profile needed for energy math plus weight / body-fat
  * goals. Everything is optional so the plan can be filled in gradually.
  */

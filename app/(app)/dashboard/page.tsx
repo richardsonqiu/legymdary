@@ -4,6 +4,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreaksCard } from "@/components/consistency/StreaksCard";
 import { TodayGuide, type GuideInput } from "@/components/guide/TodayGuide";
+import { SleepSummaryCard } from "@/components/insights/SleepSummaryCard";
 import {
   TodayScores,
   type TodayScoresInput,
@@ -26,6 +27,7 @@ import {
   getBodyScans,
   getConsistencyDays,
   getLatestGarminActivity,
+  getMealSlots,
 } from "@/lib/queries";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getEnergyContext } from "@/lib/energy-data";
@@ -53,6 +55,7 @@ export default async function DashboardPage() {
     energy,
     scans,
     latestActivity,
+    slots,
   ] = await Promise.all([
     getConsistencyDays(
       addDaysStr(serverToday, -380),
@@ -66,6 +69,7 @@ export default async function DashboardPage() {
     getEnergyContext(),
     getBodyScans(),
     getLatestGarminActivity(),
+    getMealSlots(serverToday),
   ]);
   const foodTargets = energy.targets;
 
@@ -158,6 +162,8 @@ export default async function DashboardPage() {
     readinessByDate: energy.readinessByDate,
     sleepDebtHours: sleepDebt,
     garminConnected: !!energy.garmin,
+    loggedSlots: slots.logged,
+    skippedSlots: slots.skipped,
     hasMeal: consistencyDays.some((d) => d.meals > 0),
     hasWorkout: consistencyDays.some((d) => d.sets > 0 || d.garmin > 0),
     hasScan: scans.length > 0,
@@ -182,6 +188,8 @@ export default async function DashboardPage() {
       </header>
 
       <TodayScores s={scores} />
+
+      {card?.sleep && <SleepSummaryCard s={card.sleep} compact />}
 
       <TodayGuide g={guide} />
 

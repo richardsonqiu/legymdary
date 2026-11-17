@@ -32,6 +32,9 @@ export type GuideInput = {
   readinessByDate: Record<string, Readiness | null>;
   sleepDebtHours: number | null;
   garminConnected: boolean;
+  /** Today's meal slots that have food, and the ones marked as skipped. */
+  loggedSlots: string[];
+  skippedSlots: string[];
   // onboarding
   hasMeal: boolean;
   hasWorkout: boolean;
@@ -80,19 +83,37 @@ export function TodayGuide({ g }: { g: GuideInput }) {
     now.push({
       label: "Eaten today",
       value: `${num(t?.calories ?? 0)} kcal`,
-      sub: `of ${num(g.targets.calories)}${g.targets.protein ? ` · ${Math.round(t?.protein ?? 0)}/${g.targets.protein} g protein` : ""}`,
+      sub: [
+        `of ${num(g.targets.calories)}`,
+        g.targets.protein ? `${Math.round(t?.protein ?? 0)}/${g.targets.protein} g protein` : null,
+        g.skippedSlots.length ? `skipped ${g.skippedSlots.join(", ")}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
     });
   }
 
   /* ---------- 3. Today's actions ---------- */
   const actions: Action[] = [];
   const meals = t?.count ?? 0;
-  const nextMeal = hour < 11 ? "breakfast" : hour < 16 ? "lunch" : hour < 21 ? "dinner" : "your next meal";
+  // The next main meal for this time of day, passing over meals you skipped or already logged.
+  const MAIN = ["breakfast", "lunch", "dinner"] as const;
+  const fromSlot = hour < 11 ? 0 : hour < 16 ? 1 : 2;
+  const nextMeal =
+    hour >= 21
+      ? "your next meal"
+      : (MAIN.slice(fromSlot).find((s) => !g.skippedSlots.includes(s) && !g.loggedSlots.includes(s)) ?? "your next meal");
+  const allSkipped = MAIN.every((s) => g.skippedSlots.includes(s));
   actions.push({
     key: "log",
-    text: meals > 0 ? `Food logged (${meals} meal${meals === 1 ? "" : "s"})` : `Log ${nextMeal}`,
+    text:
+      meals > 0
+        ? `Food logged (${meals} meal${meals === 1 ? "" : "s"})`
+        : allSkipped
+          ? "All meals skipped today"
+          : `Log ${nextMeal}`,
     href: "/food",
-    done: meals > 0,
+    done: meals > 0 || allSkipped,
   });
   if (g.targets?.protein) {
     const left = Math.round(g.targets.protein - (t?.protein ?? 0));

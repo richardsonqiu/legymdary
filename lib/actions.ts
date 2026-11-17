@@ -20,6 +20,7 @@ import {
   sets,
   workoutExercises,
   workouts,
+  skippedMeals,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
@@ -33,6 +34,7 @@ import {
   MEAL_TYPES,
   sumMacros,
   type MealItem,
+  SKIPPABLE_MEALS,
 } from "@/lib/nutrition";
 import { requireUserId, userToday } from "@/lib/session";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
@@ -561,6 +563,7 @@ export async function saveMeal(input: MealInput): Promise<{ id: number }> {
     .insert(meals)
     .values({ userId, ...vals, photo })
     .returning({ id: meals.id });
+  await clearSkip(userId, vals.date, vals.mealType);
   revalidateAll();
   return { id: row.id };
 }
@@ -572,6 +575,7 @@ export async function updateMeal(id: number, input: MealInput): Promise<void> {
     .update(meals)
     .set(vals)
     .where(and(eq(meals.id, id), eq(meals.userId, userId)));
+  await clearSkip(userId, vals.date, vals.mealType);
   revalidateAll();
 }
 
@@ -606,7 +610,41 @@ export async function relogMeal(input: {
     photo: src.photo,
     aiEstimated: src.aiEstimated,
   });
+  await clearSkip(userId, input.date, mealType);
   revalidateAll();
+}
+
+const SKIPPABLE = SKIPPABLE_MEALS as readonly string[];
+
+/** Marks a meal as skipped for a day (e.g. no breakfast). Its calories stay free for your other meals. */
+export async function skipMeal(input: { date: string; mealType: string }): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (!DATE_RE.test(input.date ?? "") || !SKIPPABLE.includes(input.mealType)) return { error: "That meal can't be skipped." };
+  const existing = await db
+    .select({ id: meals.id })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), eq(meals.date, input.date), eq(meals.mealType, input.mealType)))
+    .limit(1);
+  if (existing.length) return { error: "You already logged food for this meal." };
+  await db.insert(skippedMeals).values({ userId, date: input.date, mealType: input.mealType }).onConflictDoNothing();
+  revalidateAll();
+  return { ok: true };
+}
+
+export async function unskipMeal(input: { date: string; mealType: string }): Promise<void> {
+  const userId = await requireUserId();
+  if (!DATE_RE.test(input.date ?? "")) return;
+  await db
+    .delete(skippedMeals)
+    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, input.date), eq(skippedMeals.mealType, input.mealType)));
+  revalidateAll();
+}
+
+/** Logging food in a slot you had marked as skipped cancels the skip. */
+async function clearSkip(userId: string, date: string, mealType: string) {
+  await db
+    .delete(skippedMeals)
+    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, date), eq(skippedMeals.mealType, mealType)));
 }
 
 export async function deleteMeal(id: number): Promise<void> {

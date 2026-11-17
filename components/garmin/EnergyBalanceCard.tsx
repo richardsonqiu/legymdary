@@ -24,6 +24,7 @@ export type EnergyRow = {
   date: string;
   eaten: number;
   meals: number;
+  skipped?: number;
   burned: number | null;
 };
 
@@ -38,10 +39,10 @@ export function EnergyBalanceCard({ rows }: { rows: EnergyRow[] }) {
     const week = Array.from({ length: 7 }, (_, i) => {
       const date = addDaysStr(today, i - 7); // the 7 complete days before today
       const r = byDate.get(date);
-      return { date, eaten: r?.eaten ?? 0, meals: r?.meals ?? 0, burned: r?.burned ?? null };
+      return { date, eaten: r?.eaten ?? 0, meals: r?.meals ?? 0, skipped: r?.skipped ?? 0, burned: r?.burned ?? null };
     });
     const complete = week.filter(
-      (d) => d.burned != null && isFullyLogged({ date: d.date, calories: d.eaten, count: d.meals }),
+      (d) => d.burned != null && isFullyLogged({ date: d.date, calories: d.eaten, count: d.meals, skipped: d.skipped }),
     );
     const net = complete.reduce((a, d) => a + d.eaten - (d.burned ?? 0), 0);
     return { todayRow: byDate.get(today) ?? null, week, complete, net };

@@ -16,13 +16,15 @@ import {
   TargetIcon,
   TrashIcon,
 } from "@/components/icons";
-import { Button, Card, EmptyState, SectionTitle } from "@/components/ui";
+import { Button, Card, SectionTitle } from "@/components/ui";
 import type { Meal } from "@/db/schema";
-import { deleteMeal, relogMeal } from "@/lib/actions";
+import { deleteMeal, relogMeal, skipMeal, unskipMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
 import {
   eatenLabel,
   MEAL_TYPES,
+  mealBudgets,
+  SKIPPABLE_MEALS,
   mealTypeForHour,
   sumMacros,
   type DailyTargets,
@@ -53,6 +55,7 @@ export function FoodDiary({
   aiSpend,
   requestedDate,
   targets,
+  skipped,
   planMissing,
   garminByDate,
   macroSplitNote,
@@ -65,6 +68,8 @@ export function FoodDiary({
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
   targets: DailyTargets;
+  /** Meals marked as skipped (a window of days around the one shown). */
+  skipped: { date: string; mealType: string }[];
   planMissing: boolean;
   /** True when macro goals use a standard % split because no weight is logged. */
   macroSplitNote?: boolean;
@@ -84,6 +89,8 @@ export function FoodDiary({
   const [deleting, startDelete] = useTransition();
   const [relogging, startRelog] = useTransition();
   const [relogId, setRelogId] = useState<number | null>(null);
+  const [skipping, startSkip] = useTransition();
+  const [skipError, setSkipError] = useState<string | null>(null);
 
   if (!date) {
     return <div className="h-64 animate-pulse rounded-2xl border border-zinc-800 bg-zinc-900/50" />;
@@ -92,6 +99,28 @@ export function FoodDiary({
   const dayMeals = meals.filter((m) => m.date === date);
   const totals = sumMacros(dayMeals);
   const isToday = date === today;
+  const skippedTypes = skipped.filter((s) => s.date === date).map((s) => s.mealType as MealType);
+  const dayTarget = withBonus(targets, garminByDate?.[date]?.bonus);
+  const eatenByType = Object.fromEntries(
+    MEAL_TYPES.map((t) => [t, sumMacros(dayMeals.filter((m) => m.mealType === t)).calories]),
+  ) as Partial<Record<MealType, number>>;
+  const budgets = dayTarget ? mealBudgets(dayTarget.calories, eatenByType, skippedTypes) : null;
+
+  function onSkip(t: MealType) {
+    setSkipError(null);
+    startSkip(async () => {
+      const res = await skipMeal({ date: date!, mealType: t });
+      if ("error" in res) setSkipError(res.error);
+      navigator.vibrate?.(10);
+      router.refresh();
+    });
+  }
+  function onUnskip(t: MealType) {
+    startSkip(async () => {
+      await unskipMeal({ date: date!, mealType: t });
+      router.refresh();
+    });
+  }
 
   function defaultMealType(): MealType {
     return isToday ? mealTypeForHour(new Date().getHours()) : "snack";
@@ -329,24 +358,45 @@ export function FoodDiary({
       {/* Meals */}
       <section>
         <SectionTitle>Meals</SectionTitle>
-        {dayMeals.length === 0 ? (
-          <EmptyState
-            icon={<ForkIcon className="h-6 w-6" />}
-            title="Nothing logged yet"
-            description="Snap a meal to start."
-          />
-        ) : (
-          <div className="space-y-4">
-            {MEAL_TYPES.map((t) => {
-              const list = dayMeals.filter((m) => m.mealType === t);
-              if (!list.length) return null;
-              const kcal = Math.round(sumMacros(list).calories);
-              return (
-                <div key={t}>
-                  <div className="mb-1.5 flex justify-between text-xs">
-                    <span className="font-medium capitalize text-zinc-300">{t}</span>
-                    <span className="tabular-nums text-zinc-500">{kcal} kcal</span>
+        {skippedTypes.length > 0 && budgets && (
+          <p className="mb-3 rounded-xl border border-teal-300/20 bg-teal-300/[0.06] px-3 py-2.5 text-sm text-teal-100">
+            Skipped {skippedTypes.join(" and ")}. That frees <b>{budgets.freed.toLocaleString("en-US")} kcal</b> for
+            your other meals.
+          </p>
+        )}
+        {skipError && <p className="mb-2 text-sm text-amber-300">{skipError}</p>}
+        <div className="space-y-4">
+          {MEAL_TYPES.map((t) => {
+            const list = dayMeals.filter((m) => m.mealType === t);
+            const skippedHere = skippedTypes.includes(t);
+            const canSkip = (SKIPPABLE_MEALS as readonly string[]).includes(t);
+            if (!list.length && !skippedHere && !canSkip) return null;
+            const kcal = Math.round(sumMacros(list).calories);
+            const slot = budgets?.slots.find((x) => x.type === t);
+            const over = !!slot && slot.budget > 0 && kcal > slot.budget;
+            return (
+              <div key={t}>
+                <div className="mb-1.5 flex justify-between text-xs">
+                  <span className="font-medium capitalize text-zinc-300">{t}</span>
+                  <span className="tabular-nums text-zinc-500">
+                    {skippedHere ? (
+                      "Skipped"
+                    ) : (
+                      <>
+                        <span className={over ? "text-amber-300" : undefined}>{kcal} kcal</span>
+                        {slot && slot.budget > 0 && <> of about {slot.budget.toLocaleString("en-US")}</>}
+                      </>
+                    )}
+                  </span>
+                </div>
+                {skippedHere ? (
+                  <div className="flex items-center justify-between rounded-xl border border-dashed border-teal-300/30 bg-teal-300/[0.04] px-3 py-2.5 text-sm text-zinc-300">
+                    <span>Skipped, nothing to log</span>
+                    <Button size="sm" variant="ghost" onClick={() => onUnskip(t)} disabled={skipping}>
+                      Undo
+                    </Button>
                   </div>
+                ) : list.length > 0 ? (
                   <ul className="space-y-2">
                     {list.map((m) => (
                       <MealRow
@@ -358,11 +408,18 @@ export function FoodDiary({
                       />
                     ))}
                   </ul>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                ) : (
+                  <div className="flex items-center justify-between rounded-xl border border-dashed border-zinc-800 px-3 py-2.5 text-sm text-zinc-500">
+                    <span>Nothing yet</span>
+                    <Button size="sm" variant="secondary" onClick={() => onSkip(t)} disabled={skipping}>
+                      Skip {t}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       {aiSpend.calls > 0 && (

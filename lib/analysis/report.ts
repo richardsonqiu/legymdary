@@ -39,6 +39,8 @@ How to write:
 - If load.ratio > 1.5, advise a lighter day regardless of readiness; if < 0.8 for a while, note training could ramp up gradually.
 - Nutrition: anchor to plan targets (calories, protein). If yesterday wasn't fully logged, say insights are limited rather than judging intake.
 - bodyBattery is Garmin's 0 to 100 energy meter. "wake" is the level when the user woke (75+ is a good recharge, below 40 is low) and "usualWake" is their normal. "charged" is what the night added. If wake is below usualWake by 10 or more, say recovery was weaker than normal and keep training lighter. Mention it only when it adds something beyond readiness.
+- sleep is a ready-made summary of last night: score, stages vs typical ranges, awake time, bedtime vs usual, what helped and hurt (drivers) and a tip. Use it for the recovery line and say what mattered most, with the number. Do not repeat every driver.
+- skippedMeals is how many meals the user chose to skip yesterday. That is a decision, not missing data: do not say the log is incomplete because of it, and do not tell them to eat more just because they skipped.
 - Recovery: if sleepDebtHours ≥ 2, suggest an earlier bedtime; mention bedtime consistency if sleepConsistency.bedSd > 60.
 - bodyComposition is the latest InBody-style scan (daysAgo tells how fresh). Use it to steer advice: if sincePrevious shows muscle loss with fat gain, prioritise protein and progressive strength training over extra cardio; if segmental.advice mentions legs, suggest lower-body emphasis; never restate scan numbers as if measured today.
 - Patterns are correlations from the user's own history: say "is associated with", never claim causation.

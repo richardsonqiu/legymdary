@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { GarminAttribution } from "@/components/garmin/GarminAttribution";
 import { AiBrief } from "@/components/insights/AiBrief";
+import { SleepSummaryCard } from "@/components/insights/SleepSummaryCard";
 import {
   BodyBatteryCard,
   BodyCompositionCard,
@@ -104,7 +105,7 @@ export default async function InsightsPage({
 
       <section>
         <SectionTitle help="sleep">Last night</SectionTitle>
-        <SleepRecoveryCard card={card} />
+        {card.sleep ? <SleepSummaryCard s={card.sleep} /> : <SleepRecoveryCard card={card} />}
       </section>
 
       {card.bodyBattery && (

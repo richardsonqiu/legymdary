@@ -27,10 +27,11 @@ export default async function PlanPage() {
     date: d.date,
     eaten: d.calories,
     meals: d.count,
+    skipped: d.skipped,
     burned: garminByDate.get(d.date)?.totalKcal ?? null,
   }));
   for (const g of energy.garminDays) {
-    if (!energy.intake.some((d) => d.date === g.date)) energyRows.push({ date: g.date, eaten: 0, meals: 0, burned: g.totalKcal });
+    if (!energy.intake.some((d) => d.date === g.date)) energyRows.push({ date: g.date, eaten: 0, meals: 0, skipped: 0, burned: g.totalKcal });
   }
   const { goals, body, plan, measured, garminMaint } = energy;
 
