@@ -196,6 +196,53 @@ export const meals = sqliteTable(
 );
 
 /**
+ * "My menu": meals the user pinned or created to log again with one tap.
+ * Same shape as a meal, without a date.
+ */
+export const savedMeals = sqliteTable(
+  "saved_meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    calories: real("calories").notNull().default(0),
+    protein: real("protein").notNull().default(0),
+    carbs: real("carbs").notNull().default(0),
+    fat: real("fat").notNull().default(0),
+    items: text("items"),
+    photo: text("photo"),
+    aiEstimated: integer("ai_estimated", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("saved_meals_user_idx").on(t.userId)],
+);
+
+/**
+ * A meal the user chose to skip (e.g. no breakfast). It frees that slot's share
+ * of the day's calories for the other meals, and counts as "logged" so a skipped
+ * meal is never mistaken for a forgotten one.
+ */
+export const skippedMeals = sqliteTable(
+  "skipped_meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    mealType: text("meal_type").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("skipped_meals_user_date_type_unique").on(t.userId, t.date, t.mealType)],
+);
+
+/**
  * One row per user: the profile needed for energy math plus weight / body-fat
  * goals. Everything is optional so the plan can be filled in gradually.
  */
@@ -210,6 +257,7 @@ export const goals = sqliteTable("goals", {
   targetWeight: real("target_weight"),
   targetBodyFat: real("target_body_fat"),
   weeklyRate: real("weekly_rate"), // kg per week, absolute pace
+  targetDate: text("target_date"), // YYYY-MM-DD the user wants to reach the goal by
   calorieOverride: real("calorie_override"),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
@@ -515,6 +563,7 @@ export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type SetRow = typeof sets.$inferSelect;
 export type BodyStat = typeof bodyStats.$inferSelect;
 export type Meal = typeof meals.$inferSelect;
+export type SavedMeal = typeof savedMeals.$inferSelect;
 export type Goals = typeof goals.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type GarminDaily = typeof garminDaily.$inferSelect;

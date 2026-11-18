@@ -57,7 +57,7 @@ export function AccountMenu({
             href="/plan"
             className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
           >
-            Goal plan
+            Goal and plan
           </a>
           <div className="my-1 h-px bg-zinc-800" />
           <div className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">

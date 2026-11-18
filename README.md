@@ -22,9 +22,16 @@ your phone at the gym. Every account gets its own private diary.
 - **Look** — night-blue theme with soft gradient "sky" backgrounds, translucent
   cards, a row of score rings on Home (Readiness, Sleep, Food, Steps, Week) and a
   large readiness gauge with a plain-language verdict.
-- **Navigation** — 5 tabs, each with sub-tabs: **Home** · **Train** (Workout,
-  History, Exercises) · **Food** (Today, Plan & goals) · **Progress** (Body &
-  training, PRs) · **Insights** (Daily, Garmin).
+- **Navigation**: 5 tabs. **Home** · **Train** (Workout, History, Exercises) ·
+  **Food** · **Progress** (Body, Goal, PRs) · **Insights** (Daily, Garmin).
+- **Goal and pace**: set a target weight or body fat, then pick Relaxed,
+  Balanced or Aggressive (each shows daily calories and the arrival date) or a
+  date of your own. Arrival dates count from today using the pace your calories
+  really give; a stale weigh-in is flagged.
+- **My menu**: pin any logged meal, or create one, and log it again with one tap.
+- **Recaps**: week, month and year stories (Progress → Recaps, or the Home banner
+  early in a week or month): time moving, your top activity, longest session,
+  records, rhythm, food logging, go-to meal, sleep, steps and weight, with share.
 - **Consistency calendar** (Train → History) — Week, Month or GitHub-style Year
   grid. Each day is split: top half = exercise (green), bottom half = food
   logged (blue); filter Both / Exercise / Food.
@@ -152,6 +159,10 @@ lib/            Queries (reads), actions (mutations), session helper, utils
 
 ## Food log & goal plan
 
+- **Skip a meal**: tap *Skip breakfast* (or lunch, dinner) when you are not eating it. Its share of the day's
+  calories (25 / 35 / 30 / 10 % for breakfast, lunch, dinner, snack) moves to your other meals, so the Food page
+  shows a new budget for each remaining meal. A skipped meal counts as logged for streaks and for energy
+  analysis (it is a decision, not a gap), and logging food in that slot cancels the skip.
 - **Photo plus context**: after you take a photo, add a few words ("kopi kosong, shared the toast")
   before the estimate runs. Nothing is sent to the AI until you tap *Estimate calories*.
 - **How much did you eat?** Set ½×, 2× and so on for the whole meal or for one item (one cookie in the
@@ -255,6 +266,11 @@ Stats → **Body composition** stores InBody (or similar BIA) scans:
   Insights/the daily brief use the latest scan.
 
 ## Insights (daily analysis)
+
+**Morning sleep summary**: as soon as your watch syncs, Home shows last night (time asleep, % of your need,
+score, stage bar) and Insights has the full report: stages against typical ranges (deep 13 to 23 %, REM 20 to 25 %),
+efficiency, time awake, bedtime vs your usual, overnight HRV and heart rate, Garmin's own ratings of each part of
+the score, what helped and what hurt, one next step, and the last 7 nights. It is rule based, so it costs nothing.
 
 **Body Battery** (Garmin's 0 to 100 energy meter) is part of the analysis: the level at wake is a readiness
 signal (weighted with HRV, resting heart rate and sleep, compared with your own usual), the Insights page has a

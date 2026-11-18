@@ -24,7 +24,6 @@ export function GoalsForm({
   const [activity, setActivity] = useState<string>(goals?.activityLevel ?? "");
   const [targetWeight, setTargetWeight] = useState(str(goals?.targetWeight));
   const [targetBodyFat, setTargetBodyFat] = useState(str(goals?.targetBodyFat));
-  const [weeklyRate, setWeeklyRate] = useState(str(goals?.weeklyRate));
   const [calorieOverride, setCalorieOverride] = useState(str(goals?.calorieOverride));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -39,7 +38,6 @@ export function GoalsForm({
         activityLevel: activity || null,
         targetWeight: targetWeight || null,
         targetBodyFat: targetBodyFat || null,
-        weeklyRate: weeklyRate || null,
         calorieOverride: calorieOverride || null,
       });
       if ("error" in res) setMsg({ ok: false, text: res.error });
@@ -111,13 +109,16 @@ export function GoalsForm({
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Goals</p>
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-zinc-500">Goal</p>
+        <p className="mb-2 text-xs text-zinc-500">
+          Fill in one or both.{currentWeight != null ? ` You are ${currentWeight} kg now.` : ""}
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Target weight kg">
             <input
               value={targetWeight}
               inputMode="decimal"
-              placeholder={currentWeight != null ? String(currentWeight) : "70"}
+              placeholder="e.g. 60"
               onChange={(e) => setTargetWeight(e.target.value)}
               className={inputClass}
             />
@@ -126,21 +127,18 @@ export function GoalsForm({
             <input
               value={targetBodyFat}
               inputMode="decimal"
-              placeholder="15"
+              placeholder="e.g. 22"
               onChange={(e) => setTargetBodyFat(e.target.value)}
               className={inputClass}
             />
           </Field>
-          <Field label="Pace kg / week" hint="Blank = recommended">
-            <input
-              value={weeklyRate}
-              inputMode="decimal"
-              placeholder="auto"
-              onChange={(e) => setWeeklyRate(e.target.value)}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Custom kcal / day" hint="Overrides the calculation">
+        </div>
+      </div>
+
+      <details className="rounded-xl border border-white/[0.07] px-3 py-2">
+        <summary className="cursor-pointer text-sm text-zinc-400">Advanced: set your own calories</summary>
+        <div className="mt-3">
+          <Field label="Calories per day" hint="Replaces the calculated target. Leave blank to use the plan.">
             <input
               value={calorieOverride}
               inputMode="numeric"
@@ -150,10 +148,10 @@ export function GoalsForm({
             />
           </Field>
         </div>
-      </div>
+      </details>
 
       <Button size="lg" className="w-full" onClick={submit} disabled={pending}>
-        {pending ? "Saving…" : "Save plan"}
+        {pending ? "Saving…" : "Save"}
       </Button>
       {msg && (
         <p className={cn("text-center text-sm", msg.ok ? "text-emerald-300" : "text-amber-300")}>

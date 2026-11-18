@@ -8,7 +8,7 @@ export const FOOD_MILESTONES = [3, 7, 14, 21, 30, 50, 75, 100, 150, 200, 365];
 export const WEEK_MILESTONES = [2, 4, 8, 12, 16, 26, 52];
 
 export const isActiveDay = (d?: ConsistencyDay) => !!d && (d.sets > 0 || d.garminMin >= 15);
-export const isLoggedDay = (d?: ConsistencyDay) => !!d && d.meals > 0;
+export const isLoggedDay = (d?: ConsistencyDay) => !!d && (d.meals > 0 || d.skipped > 0);
 
 const ds = (d: Date) => format(d, "yyyy-MM-dd");
 const weekStart = (s: string) => ds(startOfWeek(parseISO(s), { weekStartsOn: 1 }));

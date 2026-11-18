@@ -7,10 +7,11 @@ import type { SeriesPoint } from "@/lib/analysis/service";
 import { formatMedium, formatShort } from "@/lib/utils";
 
 const METRICS = [
-  { value: "readiness", label: "Readiness", unit: "" },
+  { value: "readiness", label: "Ready", unit: "" },
   { value: "hrv", label: "HRV", unit: " ms" },
   { value: "rhr", label: "RHR", unit: " bpm" },
-  { value: "sleepHours", label: "Sleep", unit: " h" },
+  { value: "sleepScore", label: "Score", unit: "" },
+  { value: "sleepHours", label: "Hours", unit: " h" },
   { value: "battery", label: "Battery", unit: "" },
   { value: "strain", label: "Strain", unit: "" },
 ] as const;
@@ -27,7 +28,7 @@ export function TrendChart({ series }: { series: SeriesPoint[] }) {
         options={METRICS.map((m) => ({ label: m.label, value: m.value }))}
         value={metric}
         onChange={setMetric}
-        className="max-w-full overflow-x-auto"
+        className="max-w-full overflow-x-auto [scrollbar-width:none]"
       />
       {pts.length < 2 ? (
         <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">

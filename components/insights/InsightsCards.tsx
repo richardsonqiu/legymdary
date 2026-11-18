@@ -220,7 +220,7 @@ export function YesterdayCard({ card }: { card: DayCard }) {
         <Metric
           label="Load ratio"
           value={ratio != null ? String(ratio) : "–"}
-          sub={ratio == null ? "needs ~3 weeks" : ratio > 1.5 ? "spike" : ratio < 0.8 ? "low" : "balanced"}
+          sub={ratio == null ? "needs 3 weeks of data" : ratio > 1.5 ? "spike" : ratio < 0.8 ? "low" : "balanced"}
           tone={ratio == null ? null : ratio > 1.5 ? "bad" : ratio >= 0.8 && ratio <= 1.3 ? "good" : null}
         />
         <Metric label="Steps" value={y.steps != null ? y.steps.toLocaleString("en-US") : "–"} />

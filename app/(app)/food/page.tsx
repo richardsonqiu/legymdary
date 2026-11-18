@@ -11,6 +11,8 @@ import {
   getGarminDaily,
   getMeals,
   getRecentMeals,
+  getSkippedMeals,
+  getMenu,
 } from "@/lib/queries";
 import { addDaysStr } from "@/lib/utils";
 
@@ -32,13 +34,15 @@ export default async function FoodPage({
   const center = requested ?? (await userToday());
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const [meals, energy, recentMeals, aiSpend, garminDays, userId] = await Promise.all([
+  const [meals, energy, recentMeals, aiSpend, garminDays, userId, skipped, menu] = await Promise.all([
     getMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getEnergyContext(),
     getRecentMeals(8),
     getAiUsageSince(monthStart),
     getGarminDaily(addDaysStr(center, -1), addDaysStr(center, 1)),
     requireUserId(),
+    getSkippedMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
+    getMenu(),
   ]);
   const garminSyncing = scheduleGarminSync(userId, energy.garmin);
   const plan = energy.plan;
@@ -64,6 +68,8 @@ export default async function FoodPage({
         aiSpend={{ calls: aiSpend.calls, costUsd: aiSpend.costUsd }}
         requestedDate={requested}
         targets={energy.targets}
+        skipped={skipped}
+        menu={menu}
         garminByDate={energy.garmin ? garminByDate : null}
         planMissing={plan.calorieTarget == null}
         macroSplitNote={plan.macroBasis === "percent"}

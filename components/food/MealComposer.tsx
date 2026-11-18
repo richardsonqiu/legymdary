@@ -5,7 +5,7 @@ import { PlusIcon, SparkIcon, TrashIcon, XIcon } from "@/components/icons";
 import { ItemExplanation } from "@/components/food/ItemExplanation";
 import { Portal } from "@/components/Portal";
 import { Button, Field, inputClass } from "@/components/ui";
-import { analyzeMeal, saveMeal, updateMeal } from "@/lib/actions";
+import { analyzeMeal, saveMeal, saveMenuItem, updateMeal } from "@/lib/actions";
 import {
   baseOf,
   EATEN_STEPS,
@@ -31,6 +31,8 @@ export type ComposerInit = {
   /** Thumbnail for display + storage. */
   thumb?: string | null;
   aiEstimated?: boolean;
+  /** Save to My menu instead of logging a meal. */
+  toMenu?: boolean;
 };
 
 type Status =
@@ -135,12 +137,15 @@ export function MealComposer({
         aiEstimated,
       };
       try {
-        if (init.id) await updateMeal(init.id, payload);
+        if (init.toMenu) {
+          const res = await saveMenuItem({ ...payload, photo: init.thumb ?? null });
+          if ("error" in res) throw new Error(res.error);
+        } else if (init.id) await updateMeal(init.id, payload);
         else await saveMeal({ ...payload, photo: init.thumb ?? null });
         navigator.vibrate?.(12);
         onSaved();
-      } catch {
-        setSaveError("Couldn't save. Please try again.");
+      } catch (e) {
+        setSaveError(init.toMenu && e instanceof Error ? e.message : "Couldn't save. Please try again.");
       }
     });
   }
@@ -151,7 +156,7 @@ export function MealComposer({
         <div className="animate-sheet pb-safe flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-zinc-800 bg-zinc-950 sm:rounded-3xl">
           <div className="flex items-center justify-between border-b border-zinc-800/80 px-4 py-3">
             <h2 className="font-semibold">
-              {init.id ? "Edit meal" : "Log meal"}
+              {init.toMenu ? "New menu item" : init.id ? "Edit meal" : "Log meal"}
             </h2>
             <button
               onClick={onClose}
@@ -253,6 +258,7 @@ export function MealComposer({
               </div>
             )}
 
+            {!init.toMenu && (
             <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/50 p-1">
               {MEAL_TYPES.map((t) => (
                 <button
@@ -269,6 +275,7 @@ export function MealComposer({
                 </button>
               ))}
             </div>
+            )}
 
             <Field label="Meal name">
               <input
@@ -413,7 +420,7 @@ export function MealComposer({
             >
               {saving
                 ? "Saving…"
-                : `Save · ${Math.round(sumMacros(validItems).calories).toLocaleString("en-US")} kcal`}
+                : `${init.toMenu ? "Add to menu" : "Save"} · ${Math.round(sumMacros(validItems).calories).toLocaleString("en-US")} kcal`}
             </Button>
             {aiEstimated && (
               <p className="mt-2 text-center text-[11px] text-zinc-600">

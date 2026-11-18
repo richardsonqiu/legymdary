@@ -123,7 +123,7 @@ export function BodyScans({ scans, targetBodyFat }: { scans: BodyScan[]; targetB
               {latest.smi != null && <span>SMI {fmt(latest.smi)}</span>}
               {targetBodyFat != null && lm != null && (
                 <span className="text-zinc-300">
-                  {targetBodyFat}% body fat at ≈ {Math.round((lm / (1 - targetBodyFat / 100)) * 10) / 10} kg (keeping
+                  {targetBodyFat}% body fat at about {Math.round((lm / (1 - targetBodyFat / 100)) * 10) / 10} kg (keeping
                   lean mass)
                 </span>
               )}

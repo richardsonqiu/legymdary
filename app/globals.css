@@ -341,3 +341,28 @@ input[type="number"] {
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
   backdrop-filter: blur(14px) saturate(1.2);
 }
+
+/* --- Recap stories --- */
+.recap-serif {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  letter-spacing: -0.02em;
+}
+@keyframes recap-progress { from { width: 0%; } to { width: 100%; } }
+.recap-progress { animation: recap-progress linear forwards; }
+@keyframes recap-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.recap-in > * { animation: recap-in 520ms var(--ease-out-snappy) backwards; }
+.recap-in > *:nth-child(2) { animation-delay: 80ms; }
+.recap-in > *:nth-child(3) { animation-delay: 160ms; }
+.recap-in > *:nth-child(4) { animation-delay: 240ms; }
+.recap-in > *:nth-child(5) { animation-delay: 320ms; }
+.recap-in > *:nth-child(n + 6) { animation-delay: 400ms; }
+@keyframes recap-rise { from { transform: scaleY(0); } }
+.recap-rise { transform-origin: bottom; animation: recap-rise 700ms var(--ease-out-snappy) 250ms backwards; }
+@keyframes recap-grow { from { width: 0; } }
+.recap-grow { animation: recap-grow 800ms var(--ease-out-snappy) 250ms backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .recap-in > *, .recap-rise, .recap-grow { animation: none; }
+}

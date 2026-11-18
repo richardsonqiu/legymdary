@@ -18,6 +18,7 @@ import {
 import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { getEnergyContext } from "@/lib/energy-data";
 import { TrainingWeeksChart } from "@/components/charts/TrainingWeeksChart";
+import { RecapTiles } from "@/components/recap/RecapTiles";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Progress" };
@@ -39,6 +40,11 @@ export default async function StatsPage() {
   return (
     <PageTransition className="space-y-7">
       <PageHeader title="Progress" subtitle="Body and training over time" />
+
+      <section>
+        <SectionTitle>Recaps</SectionTitle>
+        <RecapTiles />
+      </section>
 
       <section>
         <SectionTitle>Log body stats</SectionTitle>

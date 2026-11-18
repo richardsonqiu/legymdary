@@ -267,7 +267,7 @@ export function flagsAt(rows: DayRow[], i: number, ctx: { proteinTarget: number 
   if (debt != null && debt >= 5) flags.push({ level: "warn", text: `Sleep debt is ${round(debt, 1)} h over the last week.` });
 
   const week = rows.slice(Math.max(0, i - 7), i);
-  const logged = week.filter((d) => isFullyLogged({ date: d.date, calories: d.intakeKcal, count: d.mealCount })).length;
+  const logged = week.filter((d) => isFullyLogged({ date: d.date, calories: d.intakeKcal, count: d.mealCount, skipped: d.skippedCount })).length;
   if (week.length >= 5 && logged < 4) flags.push({ level: "info", text: `Only ${logged} of the last ${week.length} days have food logged, so food insights are less reliable.` });
   if (ctx.proteinTarget) {
     const short = week.filter((d) => d.mealCount > 0 && d.protein < ctx.proteinTarget! * 0.8).length;

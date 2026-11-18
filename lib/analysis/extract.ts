@@ -8,6 +8,7 @@ import {
   sets,
   workoutExercises,
   workouts,
+  skippedMeals,
 } from "@/db/schema";
 import { addDaysStr } from "@/lib/utils";
 
@@ -25,6 +26,11 @@ export type DayRow = {
   // Sleep (Garmin dates a night by the morning you wake up)
   sleepSec: number | null;
   sleepScore: number | null;
+  /** Garmin's word for the score ("EXCELLENT", "GOOD", "FAIR", "POOR"), when provided. */
+  sleepQualifier: string | null;
+  /** Garmin's rating of each part of the score (duration, stress, deep, REM ...), when provided. */
+  sleepParts: { key: string; rating: string }[];
+  restlessMoments: number | null;
   deepSec: number | null;
   remSec: number | null;
   lightSec: number | null;
@@ -79,6 +85,8 @@ export type DayRow = {
   carbs: number;
   fat: number;
   mealCount: number;
+  /** Meals the user marked as skipped. */
+  skippedCount: number;
   lastMealMin: number | null; // local minutes from midnight
   alcohol: boolean;
   // Body
@@ -144,6 +152,16 @@ function offsetMinutes(local: unknown, gmt: unknown): number | null {
     : null;
 }
 
+const SLEEP_PARTS: [string, string][] = [
+  ["duration", "totalDuration"],
+  ["stress", "stress"],
+  ["wakeups", "awakeCount"],
+  ["deep", "deepPercentage"],
+  ["rem", "remPercentage"],
+  ["light", "lightPercentage"],
+  ["restfulness", "restlessness"],
+];
+
 /**
  * Only these fields are pulled from each stored Garmin payload. SQLite's
  * json_extract projects them in the database, so a 120-day analysis transfers
@@ -167,6 +185,16 @@ const FIELDS: Record<string, string[]> = {
     "sleepTimeSeconds",
     "sleepScores.overall.value",
     "sleepScores.overallScore.value",
+    "sleepScores.overall.qualifierKey",
+    "sleepScores.overallScore.qualifierKey",
+    "sleepScores.totalDuration.qualifierKey",
+    "sleepScores.stress.qualifierKey",
+    "sleepScores.awakeCount.qualifierKey",
+    "sleepScores.remPercentage.qualifierKey",
+    "sleepScores.deepPercentage.qualifierKey",
+    "sleepScores.lightPercentage.qualifierKey",
+    "sleepScores.restlessness.qualifierKey",
+    "restlessMomentsCount",
     "deepSleepSeconds",
     "remSleepSeconds",
     "lightSleepSeconds",
@@ -251,7 +279,7 @@ export async function extractDays(
       )
       .then((rows) => rows.map((r) => ({ ...r, dataset }))),
   );
-  const [raw, typed, mealRows, setRows, body] = await Promise.all([
+  const [raw, typed, mealRows, setRows, body, skipRows] = await Promise.all([
     Promise.all(rawQueries).then((r) => r.flat()),
     db
       .select()
@@ -297,6 +325,10 @@ export async function extractDays(
       .where(
         and(eq(bodyStats.userId, userId), between(bodyStats.date, from, to)),
       ),
+    db
+      .select({ date: skippedMeals.date })
+      .from(skippedMeals)
+      .where(and(eq(skippedMeals.userId, userId), between(skippedMeals.date, from, to))),
   ]);
 
   const rawBy = new Map<string, Json[]>(); // `${dataset}|${date}` → payloads
@@ -412,6 +444,12 @@ export async function extractDays(
         ) ??
         tg?.sleepScore ??
         null,
+      sleepQualifier: str(sl, "sleepScores.overall.qualifierKey", "sleepScores.overallScore.qualifierKey"),
+      sleepParts: SLEEP_PARTS.flatMap(([key, path]) => {
+        const rating = str(sl, `sleepScores.${path}.qualifierKey`);
+        return rating ? [{ key, rating }] : [];
+      }),
+      restlessMoments: num(sl, "restlessMomentsCount"),
       deepSec: num(sl, "deepSleepSeconds"),
       remSec: num(sl, "remSleepSeconds"),
       lightSec: num(sl, "lightSleepSeconds"),
@@ -495,6 +533,7 @@ export async function extractDays(
       carbs: dayMeals.reduce((a, m) => a + m.carbs, 0),
       fat: dayMeals.reduce((a, m) => a + m.fat, 0),
       mealCount: dayMeals.length,
+      skippedCount: skipRows.filter((s) => s.date === d).length,
       lastMealMin: lastMeal,
       alcohol: dayMeals.some((m) => ALCOHOL.test(`${m.name} ${m.items ?? ""}`)),
       weight: bs?.weight ?? null,

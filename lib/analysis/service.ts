@@ -1,3 +1,4 @@
+import { buildSleepSummary, type SleepSummary } from "@/lib/analysis/sleep";
 import { userToday } from "@/lib/session";
 import { and, desc, eq, lte } from "drizzle-orm";
 import { db } from "@/db";
@@ -78,6 +79,8 @@ export type DayCard = {
     sleepStress: number | null;
     bodyBatteryAtWake: number | null;
   };
+  /** Morning summary of last night's sleep (rules only, no AI). */
+  sleep: SleepSummary | null;
   /** Garmin Body Battery (0 to 100): charged overnight, drained by the day. */
   bodyBattery: {
     wake: number | null;
@@ -108,6 +111,8 @@ export type DayCard = {
     carbs: number;
     fat: number;
     meals: number;
+    /** Meals you chose to skip. They are not gaps in your log. */
+    skippedMeals: number;
     fullyLogged: boolean;
     lastMeal: string | null;
     alcohol: boolean;
@@ -205,7 +210,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
   const today = rows[i];
   const yIdx = i - 1;
   const y = rows[yIdx];
-  const plan = computePlan(planInputFrom(g ?? null, { weight: w?.weight ?? null, bodyFat: w?.bodyFat ?? null }));
+  const plan = computePlan(planInputFrom(g ?? null, { weight: w?.weight ?? null, bodyFat: w?.bodyFat ?? null }, undefined, null, date));
   // (weight = newest reading; body fat prefers recent manual/InBody values — see lib/body-values.ts)
 
   const hrvB = baselineAt(rows, i, "hrv");
@@ -215,7 +220,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
   const stagesKnown = sleepTotal && (today.deepSec != null || today.remSec != null);
 
   const week = rows.slice(Math.max(0, i - 7), i);
-  const logged = week.filter((d) => d.totalKcal != null && isFullyLogged({ date: d.date, calories: d.intakeKcal, count: d.mealCount }));
+  const logged = week.filter((d) => d.totalKcal != null && isFullyLogged({ date: d.date, calories: d.intakeKcal, count: d.mealCount, skipped: d.skippedCount }));
   const avgNet = logged.length ? mean(logged.map((d) => d.intakeKcal - (d.totalKcal ?? 0))) : null;
 
   const vo2 = [...rows].reverse().find((r) => r.vo2max != null)?.vo2max ?? null;
@@ -242,6 +247,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       sleepStress: r1(today.sleepStress),
       bodyBatteryAtWake: today.bbWake,
     },
+    sleep: buildSleepSummary(rows, i),
     bodyBattery:
       today.bbWake != null || today.bbCharged != null || y?.bbLow != null
         ? {
@@ -273,7 +279,8 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       carbs: Math.round(y?.carbs ?? 0),
       fat: Math.round(y?.fat ?? 0),
       meals: y?.mealCount ?? 0,
-      fullyLogged: !!y && isFullyLogged({ date: y.date, calories: y.intakeKcal, count: y.mealCount }),
+      skippedMeals: y?.skippedCount ?? 0,
+      fullyLogged: !!y && isFullyLogged({ date: y.date, calories: y.intakeKcal, count: y.mealCount, skipped: y.skippedCount }),
       lastMeal: hm(y?.lastMealMin ?? null),
       alcohol: !!y?.alcohol,
     },
@@ -287,7 +294,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
       })(),
       weight: trend(rows, i, "weight", 1),
       intakeKcal: trend(
-        rows.map((r) => ({ ...r, intakeKcal: isFullyLogged({ date: r.date, calories: r.intakeKcal, count: r.mealCount }) ? r.intakeKcal : (null as unknown as number) })),
+        rows.map((r) => ({ ...r, intakeKcal: isFullyLogged({ date: r.date, calories: r.intakeKcal, count: r.mealCount, skipped: r.skippedCount }) ? r.intakeKcal : (null as unknown as number) })),
         i,
         "intakeKcal",
       ),
@@ -351,7 +358,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
     ],
     coverage: {
       garminDays: rows.filter((r) => r.totalKcal != null).length,
-      loggedDays: rows.filter((r) => isFullyLogged({ date: r.date, calories: r.intakeKcal, count: r.mealCount })).length,
+      loggedDays: rows.filter((r) => isFullyLogged({ date: r.date, calories: r.intakeKcal, count: r.mealCount, skipped: r.skippedCount })).length,
       hrvDays: rows.filter((r) => r.hrv != null).length,
       sleepDays: rows.filter((r) => r.sleepSec != null).length,
     },

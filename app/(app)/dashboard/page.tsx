@@ -4,6 +4,8 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { DashboardHeading } from "@/components/DashboardHeading";
 import { StreaksCard } from "@/components/consistency/StreaksCard";
 import { TodayGuide, type GuideInput } from "@/components/guide/TodayGuide";
+import { SleepSummaryCard } from "@/components/insights/SleepSummaryCard";
+import { RecapBanner } from "@/components/recap/RecapTiles";
 import {
   TodayScores,
   type TodayScoresInput,
@@ -26,6 +28,7 @@ import {
   getBodyScans,
   getConsistencyDays,
   getLatestGarminActivity,
+  getMealSlots,
 } from "@/lib/queries";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getEnergyContext } from "@/lib/energy-data";
@@ -39,7 +42,7 @@ import {
 } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Dashboard" };
+export const metadata = { title: "Home" };
 
 export default async function DashboardPage() {
   const serverToday = (await userToday());
@@ -53,6 +56,7 @@ export default async function DashboardPage() {
     energy,
     scans,
     latestActivity,
+    slots,
   ] = await Promise.all([
     getConsistencyDays(
       addDaysStr(serverToday, -380),
@@ -66,6 +70,7 @@ export default async function DashboardPage() {
     getEnergyContext(),
     getBodyScans(),
     getLatestGarminActivity(),
+    getMealSlots(serverToday),
   ]);
   const foodTargets = energy.targets;
 
@@ -137,15 +142,12 @@ export default async function DashboardPage() {
         : null,
     eta:
       plan.weeksToGoal != null
-        ? addDaysStr(
-            body.weightDate ?? serverToday,
-            Math.ceil(plan.weeksToGoal * 7),
-          )
+        ? addDaysStr(serverToday, Math.ceil(plan.weeksToGoal * 7))
         : null,
     weeklyRate:
       plan.direction === "maintain"
         ? null
-        : Math.round(plan.weeklyRate * 10) / 10,
+        : Math.round(plan.effectiveWeeklyRate * 10) / 10,
     direction: plan.direction,
     targets: foodTargets,
     hasGoal:
@@ -158,6 +160,8 @@ export default async function DashboardPage() {
     readinessByDate: energy.readinessByDate,
     sleepDebtHours: sleepDebt,
     garminConnected: !!energy.garmin,
+    loggedSlots: slots.logged,
+    skippedSlots: slots.skipped,
     hasMeal: consistencyDays.some((d) => d.meals > 0),
     hasWorkout: consistencyDays.some((d) => d.sets > 0 || d.garmin > 0),
     hasScan: scans.length > 0,
@@ -182,6 +186,21 @@ export default async function DashboardPage() {
       </header>
 
       <TodayScores s={scores} />
+
+      <RecapBanner
+        today={serverToday}
+        hasWeek={consistencyDays.some(
+          (d) =>
+            d.date >= addDaysStr(serverToday, -7 - ((new Date(`${serverToday}T12:00:00`).getDay() + 6) % 7)) &&
+            d.date < addDaysStr(serverToday, -((new Date(`${serverToday}T12:00:00`).getDay() + 6) % 7)) &&
+            (d.sets > 0 || d.garmin > 0 || d.meals > 0 || d.skipped > 0),
+        )}
+        hasMonth={consistencyDays.some(
+          (d) => d.date.slice(0, 7) === addDaysStr(`${serverToday.slice(0, 7)}-01`, -1).slice(0, 7) && (d.sets > 0 || d.garmin > 0 || d.meals > 0),
+        )}
+      />
+
+      {card?.sleep && <SleepSummaryCard s={card.sleep} compact />}
 
       <TodayGuide g={guide} />
 

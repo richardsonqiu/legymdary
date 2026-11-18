@@ -20,6 +20,8 @@ import {
   sets,
   workoutExercises,
   workouts,
+  skippedMeals,
+  savedMeals,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
@@ -33,10 +35,11 @@ import {
   MEAL_TYPES,
   sumMacros,
   type MealItem,
+  SKIPPABLE_MEALS,
 } from "@/lib/nutrition";
 import { requireUserId, userToday } from "@/lib/session";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
-import { estimate1RM, todayStr } from "@/lib/utils";
+import { addDaysStr, estimate1RM, todayStr } from "@/lib/utils";
 
 function revalidateAll() {
   for (const p of [
@@ -561,6 +564,7 @@ export async function saveMeal(input: MealInput): Promise<{ id: number }> {
     .insert(meals)
     .values({ userId, ...vals, photo })
     .returning({ id: meals.id });
+  await clearSkip(userId, vals.date, vals.mealType);
   revalidateAll();
   return { id: row.id };
 }
@@ -572,6 +576,7 @@ export async function updateMeal(id: number, input: MealInput): Promise<void> {
     .update(meals)
     .set(vals)
     .where(and(eq(meals.id, id), eq(meals.userId, userId)));
+  await clearSkip(userId, vals.date, vals.mealType);
   revalidateAll();
 }
 
@@ -606,6 +611,138 @@ export async function relogMeal(input: {
     photo: src.photo,
     aiEstimated: src.aiEstimated,
   });
+  await clearSkip(userId, input.date, mealType);
+  revalidateAll();
+}
+
+const SKIPPABLE = SKIPPABLE_MEALS as readonly string[];
+
+/** Marks a meal as skipped for a day (e.g. no breakfast). Its calories stay free for your other meals. */
+export async function skipMeal(input: { date: string; mealType: string }): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (!DATE_RE.test(input.date ?? "") || !SKIPPABLE.includes(input.mealType)) return { error: "That meal can't be skipped." };
+  const existing = await db
+    .select({ id: meals.id })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), eq(meals.date, input.date), eq(meals.mealType, input.mealType)))
+    .limit(1);
+  if (existing.length) return { error: "You already logged food for this meal." };
+  await db.insert(skippedMeals).values({ userId, date: input.date, mealType: input.mealType }).onConflictDoNothing();
+  revalidateAll();
+  return { ok: true };
+}
+
+export async function unskipMeal(input: { date: string; mealType: string }): Promise<void> {
+  const userId = await requireUserId();
+  if (!DATE_RE.test(input.date ?? "")) return;
+  await db
+    .delete(skippedMeals)
+    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, input.date), eq(skippedMeals.mealType, input.mealType)));
+  revalidateAll();
+}
+
+/** Logging food in a slot you had marked as skipped cancels the skip. */
+async function clearSkip(userId: string, date: string, mealType: string) {
+  await db
+    .delete(skippedMeals)
+    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, date), eq(skippedMeals.mealType, mealType)));
+}
+
+/* ---------------- My menu (pinned meals) ---------------- */
+
+const MENU_LIMIT = 40;
+
+async function menuIsFull(userId: string) {
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(savedMeals)
+    .where(eq(savedMeals.userId, userId));
+  return Number(n) >= MENU_LIMIT;
+}
+
+/** Pins a logged meal to My menu (skips it if the same meal is already there). */
+export async function pinMeal(mealId: number): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const [src] = await db
+    .select()
+    .from(meals)
+    .where(and(eq(meals.id, mealId), eq(meals.userId, userId)))
+    .limit(1);
+  if (!src) return { error: "Meal not found." };
+  const [dupe] = await db
+    .select({ id: savedMeals.id })
+    .from(savedMeals)
+    .where(and(eq(savedMeals.userId, userId), eq(savedMeals.name, src.name), eq(savedMeals.calories, src.calories)))
+    .limit(1);
+  if (dupe) return { ok: true };
+  if (await menuIsFull(userId)) return { error: `My menu holds up to ${MENU_LIMIT} items. Remove one first.` };
+  await db.insert(savedMeals).values({
+    userId,
+    name: src.name,
+    calories: src.calories,
+    protein: src.protein,
+    carbs: src.carbs,
+    fat: src.fat,
+    items: src.items,
+    photo: src.photo,
+    aiEstimated: src.aiEstimated,
+  });
+  revalidateAll();
+  return { ok: true };
+}
+
+/** Creates a My menu item from scratch (name, items and numbers). */
+export async function saveMenuItem(input: Omit<MealInput, "date" | "mealType"> & { photo?: string | null }): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const vals = mealValues({ ...input, date: "2000-01-01", mealType: "snack" });
+  if (await menuIsFull(userId)) return { error: `My menu holds up to ${MENU_LIMIT} items. Remove one first.` };
+  const photo = input.photo && IMAGE_DATA_URL_RE.test(input.photo) && input.photo.length <= 300_000 ? input.photo : null;
+  await db.insert(savedMeals).values({
+    userId,
+    name: vals.name,
+    calories: vals.calories,
+    protein: vals.protein,
+    carbs: vals.carbs,
+    fat: vals.fat,
+    items: vals.items,
+    photo,
+    aiEstimated: vals.aiEstimated,
+  });
+  revalidateAll();
+  return { ok: true };
+}
+
+export async function removeMenuItem(id: number): Promise<void> {
+  const userId = await requireUserId();
+  await db.delete(savedMeals).where(and(eq(savedMeals.id, id), eq(savedMeals.userId, userId)));
+  revalidateAll();
+}
+
+/** Logs a My menu item as a meal on a day. No AI call. */
+export async function logMenuItem(input: { id: number; date: string; mealType: string }): Promise<void> {
+  const userId = await requireUserId();
+  if (!DATE_RE.test(input.date ?? "")) throw new Error("Invalid date.");
+  const [src] = await db
+    .select()
+    .from(savedMeals)
+    .where(and(eq(savedMeals.id, input.id), eq(savedMeals.userId, userId)))
+    .limit(1);
+  if (!src) throw new Error("Menu item not found.");
+  const mealType = (MEAL_TYPES as readonly string[]).includes(input.mealType) ? input.mealType : "snack";
+  await db.insert(meals).values({
+    userId,
+    date: input.date,
+    mealType,
+    name: src.name,
+    calories: src.calories,
+    protein: src.protein,
+    carbs: src.carbs,
+    fat: src.fat,
+    items: src.items,
+    photo: src.photo,
+    aiEstimated: src.aiEstimated,
+  });
+  await clearSkip(userId, input.date, mealType);
   revalidateAll();
 }
 
@@ -662,7 +799,8 @@ export async function saveGoals(input: {
     activityLevel,
     targetWeight,
     targetBodyFat,
-    weeklyRate,
+    // Pace and goal date are set by the pace chooser; only change them when sent.
+    ...("weeklyRate" in input ? { weeklyRate } : {}),
     calorieOverride,
     updatedAt: new Date(),
   };
@@ -670,6 +808,35 @@ export async function saveGoals(input: {
     .insert(goals)
     .values({ userId, ...vals })
     .onConflictDoUpdate({ target: goals.userId, set: vals });
+  revalidateAll();
+  return { ok: true };
+}
+
+/**
+ * Sets how fast to reach the goal: either a weekly pace (one of the suggested
+ * options) or a date to reach it by. Setting one clears the other.
+ */
+export async function setGoalPace(
+  input: { weeklyRate: number } | { targetDate: string },
+): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  // Choosing a pace or date means "use the plan", so it also clears custom calories.
+  let vals: { weeklyRate: number | null; targetDate: string | null; calorieOverride: null };
+  if ("targetDate" in input) {
+    const today = await userToday();
+    if (!DATE_RE.test(input.targetDate ?? "")) return { error: "Pick a date." };
+    if (input.targetDate <= today) return { error: "Pick a date in the future." };
+    if (input.targetDate > addDaysStr(today, 3 * 365)) return { error: "Pick a date within 3 years." };
+    vals = { weeklyRate: null, targetDate: input.targetDate, calorieOverride: null };
+  } else {
+    const r = numOrNull(input.weeklyRate);
+    if (r == null || r <= 0 || r > 2) return { error: "That pace looks off." };
+    vals = { weeklyRate: Math.round(r * 100) / 100, targetDate: null, calorieOverride: null };
+  }
+  await db
+    .insert(goals)
+    .values({ userId, ...vals, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: goals.userId, set: { ...vals, updatedAt: new Date() } });
   revalidateAll();
   return { ok: true };
 }
