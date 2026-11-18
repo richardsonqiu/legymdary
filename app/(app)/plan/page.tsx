@@ -6,12 +6,13 @@ import { ProjectionChart } from "@/components/plan/ProjectionChart";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
-import { weightTrendPerWeek, type Plan } from "@/lib/nutrition";
+import { paceOptions, weightTrendPerWeek, type Plan } from "@/lib/nutrition";
+import { PaceChooser } from "@/components/plan/PaceChooser";
 import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
 import { addDaysStr, daysBetween, formatMedium, formatShort, kg } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Plan" };
+export const metadata = { title: "Goal" };
 
 export default async function PlanPage() {
   const today = (await userToday());
@@ -51,8 +52,11 @@ export default async function PlanPage() {
 
   const eta =
     plan.weeksToGoal != null
-      ? addDaysStr(body.weightDate ?? today, Math.ceil(plan.weeksToGoal * 7))
+      ? addDaysStr(today, Math.ceil(plan.weeksToGoal * 7))
       : null;
+
+  const paces = paceOptions(energy.planInput);
+  const staleDays = body.weightDate ? daysBetween(body.weightDate, today) : null;
 
   const directionLabel =
     plan.direction === "lose" ? "Fat loss" : plan.direction === "gain" ? "Lean gain" : "Maintain";
@@ -60,9 +64,19 @@ export default async function PlanPage() {
   return (
     <PageTransition className="space-y-7">
       <PageHeader
-        title="Plan"
-        subtitle="Your goal and daily targets"
+        title="Goal"
+        subtitle="Where you are heading, and what to eat each day"
       />
+
+      {staleDays != null && staleDays > 21 && (
+        <Link
+          href="/stats"
+          className="-mt-3 block rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"
+        >
+          Your weight is from {formatMedium(body.weightDate!)}, {staleDays} days ago. Weigh in or add a new scan so the plan
+          starts from today&apos;s numbers →
+        </Link>
+      )}
 
       {/* Targets */}
       <section>
@@ -86,7 +100,7 @@ export default async function PlanPage() {
                 value={
                   plan.direction === "maintain"
                     ? "–"
-                    : `${plan.direction === "lose" ? "−" : "+"}${kg(plan.weeklyRate)} kg`
+                    : `${plan.direction === "lose" ? "−" : "+"}${kg(plan.effectiveWeeklyRate)} kg`
                 }
                 sub={plan.direction === "maintain" ? "no weight goal set" : "per week"}
               />
@@ -167,6 +181,21 @@ export default async function PlanPage() {
         )}
       </section>
 
+      {plan.direction !== "maintain" && paces.length > 0 && (
+        <section>
+          <SectionTitle>When do you want to get there?</SectionTitle>
+          <PaceChooser
+            options={paces}
+            direction={plan.direction}
+            currentRate={goals?.targetDate || plan.usingOverride ? null : plan.weeklyRate}
+            currentDate={plan.targetDate}
+            dateTooSoon={plan.dateTooSoon}
+            today={today}
+            overrideActive={plan.usingOverride}
+          />
+        </section>
+      )}
+
       {energy.garmin && (
         <section>
           <SectionTitle help="energy">Eaten vs burned</SectionTitle>
@@ -193,7 +222,7 @@ export default async function PlanPage() {
             )}
             {trend != null && plan.direction !== "maintain" && (
               <p className="pt-1 text-xs text-zinc-500">
-                {trendVerdict(trend, plan.direction, plan.weeklyRate)}
+                {trendVerdict(trend, plan.direction, plan.effectiveWeeklyRate)}
               </p>
             )}
           </Card>
@@ -206,14 +235,20 @@ export default async function PlanPage() {
           <ProjectionChart
             weights={weights}
             goalWeight={plan.goalWeight}
-            weeklyRate={plan.weeklyRate}
+            weeklyRate={
+              plan.weeksToGoal && plan.goalWeight != null && body.weight != null
+                ? Math.abs(plan.goalWeight - body.weight) / plan.weeksToGoal
+                : 0
+            }
             direction={plan.direction}
+            today={today}
+            current={body.weight}
           />
         </Card>
       </section>
 
       <section>
-        <SectionTitle>Your goal</SectionTitle>
+        <SectionTitle>Your goal and details</SectionTitle>
         <GoalsForm goals={goals} currentWeight={body.weight} />
         <p className="mt-2 text-center text-xs text-zinc-600">
           Current weight and body fat come from your latest entries on the Progress tab.
@@ -228,8 +263,8 @@ function trendVerdict(trend: number, direction: "lose" | "gain", rate: number) {
   const actual = direction === "lose" ? -trend : trend;
   if (actual <= 0)
     return direction === "lose"
-      ? "Weight isn't dropping yet. If this holds for 2+ weeks, trim ~150–200 kcal/day or check your logging."
-      : "Weight isn't rising yet. If this holds for 2+ weeks, add ~150–200 kcal/day.";
+      ? "Weight isn't dropping yet. If that lasts 2 weeks, eat 150 to 200 kcal less a day, or check your logging."
+      : "Weight isn't rising yet. If that lasts 2 weeks, eat 150 to 200 kcal more a day.";
   if (actual < rate * 0.6)
     return "Slower than planned. Give it a week. If it continues, change your calories by 100 to 150 a day.";
   if (actual > rate * 1.5)
@@ -267,6 +302,7 @@ function Notes({
   if (goals?.targetBodyFat != null && plan.leanMass == null) {
     notes.push("Log your body fat % on the Progress tab to connect your body-fat goal to a target weight.");
   }
+  if (plan.targetDatePassed) notes.push("Your goal date has passed. Pick a new pace or date below.");
   if (plan.rateWasCapped) notes.push("Your pace was capped to a sustainable maximum to protect muscle.");
   if (plan.calorieFloorApplied)
     notes.push("Your calories were raised to a safe minimum, so the goal takes a bit longer.");

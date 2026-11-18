@@ -152,6 +152,10 @@ export type PlanInput = {
    * Garmin burn). When set, it replaces the formula estimate.
    */
   maintenance?: { kcal: number; source: MaintenanceSource } | null;
+  /** Date the user wants to reach the goal by (YYYY-MM-DD). Sets the pace when given. */
+  targetDate?: string | null;
+  /** Today (YYYY-MM-DD), for the goal date and arrival maths. */
+  today?: string | null;
 };
 
 export type MaintenanceSource = "measured" | "garmin" | "formula";
@@ -184,7 +188,16 @@ export type Plan = {
   carbs: number | null; // g
   /** "bodyweight": protein/fat per kg; "percent": 25/30/45 % split (no weight logged). */
   macroBasis: "bodyweight" | "percent" | null;
+  /** Weeks to the goal at the pace the calories actually give (after the safety floor or a custom target). */
   weeksToGoal: number | null;
+  /** kg per week the calories actually give (after the safety floor or a custom target). */
+  effectiveWeeklyRate: number;
+  /** The goal date in use, if any. */
+  targetDate: string | null;
+  /** The goal date needs a faster pace than is safe, so the plan uses the safe maximum. */
+  dateTooSoon: boolean;
+  /** The goal date has passed, so it is ignored. */
+  targetDatePassed: boolean;
 };
 
 const round = (n: number, step = 1) => Math.round(n / step) * step;
@@ -244,16 +257,26 @@ export function computePlan(i: PlanInput): Plan {
     else if (goalWeight > w + 0.25) direction = "gain";
   }
 
-  // --- Pace: default 0.5% bw/week to lose, 0.25% to gain; cap 1% / 0.5% ---
+  // --- Pace: from the goal date if set, else chosen pace, else 0.5% bw/week to lose, 0.25% to gain; cap 1% / 0.5% ---
   let weeklyRate = 0;
   let rateWasCapped = false;
-  if (w != null && direction !== "maintain") {
+  let dateTooSoon = false;
+  let targetDatePassed = false;
+  const dateWeeks =
+    i.targetDate && i.today ? (Date.parse(i.targetDate) - Date.parse(i.today)) / (7 * 86_400_000) : null;
+  if (dateWeeks != null && dateWeeks <= 0) targetDatePassed = true;
+  if (w != null && direction !== "maintain" && goalWeight != null) {
     const def = direction === "lose" ? w * 0.005 : w * 0.0025;
     const cap = direction === "lose" ? w * 0.01 : w * 0.005;
-    weeklyRate = i.weeklyRate && i.weeklyRate > 0 ? i.weeklyRate : def;
+    if (dateWeeks != null && dateWeeks > 0) {
+      weeklyRate = Math.abs(goalWeight - w) / dateWeeks;
+      if (weeklyRate > cap) dateTooSoon = true;
+    } else {
+      weeklyRate = i.weeklyRate && i.weeklyRate > 0 ? i.weeklyRate : def;
+    }
     if (weeklyRate > cap) {
       weeklyRate = cap;
-      rateWasCapped = true;
+      rateWasCapped = !dateTooSoon;
     }
   }
   let dailyDelta = ((direction === "lose" ? -1 : 1) * weeklyRate * KCAL_PER_KG) / 7;
@@ -299,9 +322,17 @@ export function computePlan(i: PlanInput): Plan {
     carbs = round(carbs, 5);
   }
 
+  // Arrival uses the pace the calories really give: the safety floor or a custom
+  // target can make it slower (or point the other way).
+  let effectiveRate = weeklyRate;
+  if (tdee != null && calorieTarget != null && direction !== "maintain") {
+    const delta = calorieTarget - tdee;
+    const right = direction === "lose" ? delta < 0 : delta > 0;
+    effectiveRate = right ? (Math.abs(delta) * 7) / KCAL_PER_KG : 0;
+  }
   const weeksToGoal =
-    w != null && goalWeight != null && weeklyRate > 0
-      ? Math.abs(goalWeight - w) / weeklyRate
+    w != null && goalWeight != null && effectiveRate > 0.01
+      ? Math.abs(goalWeight - w) / effectiveRate
       : null;
 
   return {
@@ -327,7 +358,64 @@ export function computePlan(i: PlanInput): Plan {
     carbs,
     macroBasis,
     weeksToGoal,
+    effectiveWeeklyRate: Math.round(effectiveRate * 100) / 100,
+    targetDate: i.targetDate && !targetDatePassed ? i.targetDate : null,
+    dateTooSoon,
+    targetDatePassed,
   };
+}
+
+export type PaceKey = "relaxed" | "balanced" | "aggressive";
+export type PaceOption = {
+  key: PaceKey;
+  label: string;
+  /** kg per week requested (saved when picked) */
+  weeklyRate: number;
+  /** kg per week you actually get after the calorie safety floor */
+  effectiveRate: number;
+  calories: number | null;
+  /** Date the goal is reached at this pace. */
+  eta: string | null;
+  weeks: number | null;
+  note: string;
+};
+
+/** Three ready-made paces for the current goal, each with its calories and arrival date. */
+export function paceOptions(input: PlanInput): PaceOption[] {
+  const base = computePlan({ ...input, targetDate: null, weeklyRate: null });
+  const w = input.weight;
+  if (w == null || base.direction === "maintain" || base.goalWeight == null) return [];
+  const pct: Record<PaceKey, number> =
+    base.direction === "lose"
+      ? { relaxed: 0.0025, balanced: 0.005, aggressive: 0.0085 }
+      : { relaxed: 0.001, balanced: 0.0025, aggressive: 0.004 };
+  const notes: Record<PaceKey, string> =
+    base.direction === "lose"
+      ? {
+          relaxed: "Easy to stick to. Best for keeping muscle and energy.",
+          balanced: "The usual recommendation. Steady and sustainable.",
+          aggressive: "Fastest safe pace. Expect more hunger; keep protein high.",
+        }
+      : {
+          relaxed: "Slow gain, the least fat added.",
+          balanced: "The usual recommendation for lean gain.",
+          aggressive: "Faster gain; some of it will be fat.",
+        };
+  const label: Record<PaceKey, string> = { relaxed: "Relaxed", balanced: "Balanced", aggressive: "Aggressive" };
+  return (["relaxed", "balanced", "aggressive"] as PaceKey[]).map((key) => {
+    const rate = Math.round(w * pct[key] * 100) / 100;
+    const p = computePlan({ ...input, targetDate: null, weeklyRate: rate, calorieOverride: null });
+    const weeks = p.weeksToGoal;
+    const eta =
+      weeks != null && input.today
+        ? new Date(Date.parse(input.today) + Math.ceil(weeks * 7) * 86_400_000).toISOString().slice(0, 10)
+        : null;
+    const effectiveRate = weeks ? Math.round((Math.abs(base.goalWeight! - w) / weeks) * 100) / 100 : rate;
+    const note = p.calorieFloorApplied
+      ? `${notes[key]} Calories stop at a safe minimum, so this is as fast as it goes.`
+      : notes[key];
+    return { key, label: label[key], weeklyRate: rate, effectiveRate, calories: p.calorieTarget, eta, weeks, note };
+  });
 }
 
 /** Least-squares slope (kg per day) of weight over the given points. */
@@ -359,10 +447,12 @@ export function planInputFrom(
     targetBodyFat: number | null;
     weeklyRate: number | null;
     calorieOverride: number | null;
+    targetDate?: string | null;
   } | null,
   body: { weight: number | null; bodyFat: number | null },
   year: number = new Date().getFullYear(),
   maintenance: PlanInput["maintenance"] = null,
+  today: string | null = null,
 ): PlanInput {
   return {
     maintenance,
@@ -379,6 +469,8 @@ export function planInputFrom(
     targetBodyFat: g?.targetBodyFat ?? null,
     weeklyRate: g?.weeklyRate ?? null,
     calorieOverride: g?.calorieOverride ?? null,
+    targetDate: g?.targetDate ?? null,
+    today,
   };
 }
 

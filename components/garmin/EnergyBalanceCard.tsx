@@ -113,8 +113,8 @@ export function EnergyBalanceCard({ rows }: { rows: EnergyRow[] }) {
             {fmt(avgNet)} kcal/day
           </b>{" "}
           {Math.abs((avgNet * 7) / KCAL_PER_KG) < 0.05
-            ? "≈ maintenance."
-            : `≈ ${avgNet > 0 ? "+" : "−"}${kg(Math.abs((avgNet * 7) / KCAL_PER_KG))} kg/week.`}
+            ? "about maintenance."
+            : `about ${avgNet > 0 ? "+" : "−"}${kg(Math.abs((avgNet * 7) / KCAL_PER_KG))} kg/week.`}
         </p>
       ) : (
         <p className="text-xs text-zinc-500">

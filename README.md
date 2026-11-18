@@ -22,9 +22,16 @@ your phone at the gym. Every account gets its own private diary.
 - **Look** — night-blue theme with soft gradient "sky" backgrounds, translucent
   cards, a row of score rings on Home (Readiness, Sleep, Food, Steps, Week) and a
   large readiness gauge with a plain-language verdict.
-- **Navigation** — 5 tabs, each with sub-tabs: **Home** · **Train** (Workout,
-  History, Exercises) · **Food** (Today, Plan & goals) · **Progress** (Body &
-  training, PRs) · **Insights** (Daily, Garmin).
+- **Navigation**: 5 tabs. **Home** · **Train** (Workout, History, Exercises) ·
+  **Food** · **Progress** (Body, Goal, PRs) · **Insights** (Daily, Garmin).
+- **Goal and pace**: set a target weight or body fat, then pick Relaxed,
+  Balanced or Aggressive (each shows daily calories and the arrival date) or a
+  date of your own. Arrival dates count from today using the pace your calories
+  really give; a stale weigh-in is flagged.
+- **My menu**: pin any logged meal, or create one, and log it again with one tap.
+- **Recaps**: week, month and year stories (Progress → Recaps, or the Home banner
+  early in a week or month): time moving, your top activity, longest session,
+  records, rhythm, food logging, go-to meal, sleep, steps and weight, with share.
 - **Consistency calendar** (Train → History) — Week, Month or GitHub-style Year
   grid. Each day is split: top half = exercise (green), bottom half = food
   logged (blue); filter Both / Exercise / Food.

@@ -27,12 +27,20 @@ export function ProjectionChart({
   goalWeight,
   weeklyRate,
   direction,
+  today,
+  current,
 }: {
   weights: { date: string; weight: number }[];
   goalWeight: number | null;
+  /** The pace the calories actually give, kg per week. */
   weeklyRate: number;
   direction: "lose" | "gain" | "maintain";
+  /** The projection starts today, not at an old weigh-in. */
+  today: string;
+  /** Latest known weight, used when no weigh-in falls in the chart window. */
+  current: number | null;
 }) {
+  if (weights.length === 0 && current != null) weights = [{ date: today, weight: current }];
   if (weights.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-10 text-center text-sm text-zinc-500">
@@ -40,11 +48,14 @@ export function ProjectionChart({
       </p>
     );
   }
-  const last = weights[weights.length - 1];
+  const latest = weights[weights.length - 1];
   const data: { date: string; actual?: number; projected?: number }[] = weights.map((w) => ({
     date: w.date,
     actual: w.weight,
   }));
+  // Project forward from today: an old weigh-in is carried flat to today first.
+  const last = latest.date < today ? { date: today, weight: latest.weight } : latest;
+  if (last !== latest) data.push({ date: today });
   data[data.length - 1].projected = last.weight;
 
   if (goalWeight != null && weeklyRate > 0 && direction !== "maintain") {

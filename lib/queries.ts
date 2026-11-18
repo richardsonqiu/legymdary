@@ -37,6 +37,8 @@ import {
   type Goals,
   type Meal,
   skippedMeals,
+  savedMeals,
+  type SavedMeal,
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
 import { requireUserId, userToday } from "@/lib/session";
@@ -366,7 +368,7 @@ export async function getAllPRs(): Promise<PRRow[]> {
 
 export async function getPRsThisWeek(): Promise<PRRow[]> {
   const prs = await getAllPRs();
-  const weekStart = startOfWeekStr();
+  const weekStart = startOfWeekStr(await userToday());
   return prs.filter((p) => p.date >= weekStart);
 }
 
@@ -607,6 +609,21 @@ export type DayTotals = {
   /** Meals marked as skipped that day. */
   skipped: number;
 };
+
+/** Meal names and calories for a range (no photos): for recaps. */
+export async function getMealNames(from: string, to: string): Promise<{ date: string; name: string; calories: number }[]> {
+  const userId = await requireUserId();
+  return db
+    .select({ date: meals.date, name: meals.name, calories: meals.calories })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), between(meals.date, from, to)));
+}
+
+/** "My menu": pinned and custom meals, newest first. */
+export async function getMenu(): Promise<SavedMeal[]> {
+  const userId = await requireUserId();
+  return db.select().from(savedMeals).where(eq(savedMeals.userId, userId)).orderBy(desc(savedMeals.createdAt));
+}
 
 /** Meals the user marked as skipped, for a date range. */
 export async function getSkippedMeals(from: string, to: string): Promise<{ date: string; mealType: string }[]> {

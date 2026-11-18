@@ -210,7 +210,7 @@ export async function buildAnalysis(userId: string, date: string): Promise<Analy
   const today = rows[i];
   const yIdx = i - 1;
   const y = rows[yIdx];
-  const plan = computePlan(planInputFrom(g ?? null, { weight: w?.weight ?? null, bodyFat: w?.bodyFat ?? null }));
+  const plan = computePlan(planInputFrom(g ?? null, { weight: w?.weight ?? null, bodyFat: w?.bodyFat ?? null }, undefined, null, date));
   // (weight = newest reading; body fat prefers recent manual/InBody values — see lib/body-values.ts)
 
   const hrvB = baselineAt(rows, i, "hrv");

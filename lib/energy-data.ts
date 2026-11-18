@@ -15,8 +15,7 @@ import {
   planInputFrom,
   targetsFromPlan,
   type DailyTargets,
-  type Plan,
-} from "@/lib/nutrition";
+  type Plan, type PlanInput } from "@/lib/nutrition";
 import {
   getBodyStats,
   getDailyTotals,
@@ -48,6 +47,8 @@ export type EnergyContext = {
   /** Calories added to the target per date when activity adjustment is on. */
   bonusByDate: Record<string, number>;
   readinessByDate: Record<string, Readiness | null>;
+  /** The inputs behind `plan`, for "what if" variations such as pace options. */
+  planInput: PlanInput;
 };
 
 export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
@@ -72,7 +73,8 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
     today,
   );
   const maintenance = chooseMaintenance(measured, garminMaint);
-  const plan = computePlan(planInputFrom(goals, body, undefined, maintenance));
+  const planInput = planInputFrom(goals, body, undefined, maintenance, today);
+  const plan = computePlan(planInput);
   const targets = targetsFromPlan(plan);
 
   const bonusByDate: Record<string, number> = {};
@@ -104,6 +106,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
     goals,
     body,
     plan,
+    planInput,
     targets,
     measured,
     garminMaint,

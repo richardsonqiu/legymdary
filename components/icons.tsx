@@ -209,3 +209,18 @@ export const RefreshIcon = (p: IconProps) => (
     <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4" />
   </Base>
 );
+
+export const PinIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M9 4h6l-1 6 3 3v1H7v-1l3-3-1-6Z" />
+    <path d="M12 14v6" />
+  </Base>
+);
+
+export const ShareIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 3v12" />
+    <path d="m7 8 5-5 5 5" />
+    <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+  </Base>
+);

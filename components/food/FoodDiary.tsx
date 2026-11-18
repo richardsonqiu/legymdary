@@ -13,12 +13,15 @@ import {
   ForkIcon,
   ImageIcon,
   PencilIcon,
+  PinIcon,
+  PlusIcon,
+  XIcon,
   TargetIcon,
   TrashIcon,
 } from "@/components/icons";
 import { Button, Card, SectionTitle } from "@/components/ui";
-import type { Meal } from "@/db/schema";
-import { deleteMeal, relogMeal, skipMeal, unskipMeal } from "@/lib/actions";
+import type { Meal, SavedMeal } from "@/db/schema";
+import { deleteMeal, logMenuItem, pinMeal, relogMeal, removeMenuItem, skipMeal, unskipMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
 import {
   eatenLabel,
@@ -56,6 +59,7 @@ export function FoodDiary({
   requestedDate,
   targets,
   skipped,
+  menu,
   planMissing,
   garminByDate,
   macroSplitNote,
@@ -70,6 +74,8 @@ export function FoodDiary({
   targets: DailyTargets;
   /** Meals marked as skipped (a window of days around the one shown). */
   skipped: { date: string; mealType: string }[];
+  /** "My menu": pinned and custom meals. */
+  menu: SavedMeal[];
   planMissing: boolean;
   /** True when macro goals use a standard % split because no weight is logged. */
   macroSplitNote?: boolean;
@@ -90,6 +96,9 @@ export function FoodDiary({
   const [relogging, startRelog] = useTransition();
   const [relogId, setRelogId] = useState<number | null>(null);
   const [skipping, startSkip] = useTransition();
+  const [menuEdit, setMenuEdit] = useState(false);
+  const [menuBusy, startMenu] = useTransition();
+  const [menuLogId, setMenuLogId] = useState<number | null>(null);
   const [skipError, setSkipError] = useState<string | null>(null);
 
   if (!date) {
@@ -105,6 +114,31 @@ export function FoodDiary({
     MEAL_TYPES.map((t) => [t, sumMacros(dayMeals.filter((m) => m.mealType === t)).calories]),
   ) as Partial<Record<MealType, number>>;
   const budgets = dayTarget ? mealBudgets(dayTarget.calories, eatenByType, skippedTypes) : null;
+
+  function logFromMenu(item: SavedMeal) {
+    setMenuLogId(item.id);
+    startMenu(async () => {
+      await logMenuItem({ id: item.id, date: date!, mealType: defaultMealType() });
+      navigator.vibrate?.(12);
+      router.refresh();
+    });
+  }
+  function removeFromMenu(item: SavedMeal) {
+    startMenu(async () => {
+      await removeMenuItem(item.id);
+      router.refresh();
+    });
+  }
+  function newMenuItem() {
+    setComposer({
+      date: date!,
+      mealType: "snack",
+      name: "",
+      items: [{ name: "", portion: "", calories: 0, protein: 0, carbs: 0, fat: 0 }],
+      notes: "",
+      toMenu: true,
+    });
+  }
 
   function onSkip(t: MealType) {
     setSkipError(null);
@@ -271,8 +305,8 @@ export function FoodDiary({
             href="/stats"
             className="mt-3 block text-[11px] leading-snug text-zinc-500 underline-offset-2 hover:underline"
           >
-            Macro goals use a standard 25/45/30 % split of your calories. Log your weight on Stats to
-            get protein matched to your body (≈ 1.8–2 g per kg) →
+            Macro goals use a standard split of your calories. Add your weight on Progress so protein
+            matches your body (about 1.8 to 2 g per kg) →
           </Link>
         )}
         {planMissing && (
@@ -281,7 +315,7 @@ export function FoodDiary({
             className="mt-4 flex items-center gap-2 rounded-xl border border-dashed border-zinc-700 px-3 py-2.5 text-sm text-zinc-300"
           >
             <TargetIcon className="h-4 w-4 shrink-0 text-zinc-500" />
-            Set your weight &amp; body-fat goal to get a daily calorie target →
+            Set a goal to get your daily calories →
           </Link>
         )}
       </Card>
@@ -323,7 +357,69 @@ export function FoodDiary({
         {photoError && <p className="text-center text-sm text-amber-300">{photoError}</p>}
       </section>
 
-      {/* Eat again — instant re-log, no AI cost */}
+      {/* My menu: meals you pinned or created, one tap to log */}
+      <section>
+        <SectionTitle
+          action={
+            menu.length > 0 ? (
+              <button className="text-xs text-zinc-400" onClick={() => setMenuEdit((v) => !v)}>
+                {menuEdit ? "Done" : "Edit"}
+              </button>
+            ) : null
+          }
+        >
+          My menu
+        </SectionTitle>
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+          <button
+            onClick={newMenuItem}
+            className="press flex w-28 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/15 p-2 text-xs text-zinc-300"
+          >
+            <PlusIcon className="h-4 w-4" />
+            New item
+          </button>
+          {menu.map((m) => (
+            <div key={m.id} className="relative shrink-0">
+              <button
+                onClick={() => (menuEdit ? null : logFromMenu(m))}
+                disabled={menuBusy}
+                className="press flex w-36 items-center gap-2 rounded-xl border border-teal-300/20 bg-teal-300/[0.04] p-2 text-left hover:bg-teal-300/[0.08] disabled:opacity-60"
+              >
+                {m.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.photo} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-800/70 text-zinc-500">
+                    <PinIcon className="h-4 w-4" />
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-medium">{m.name}</span>
+                  <span className="block text-[11px] tabular-nums text-zinc-500">
+                    {menuBusy && menuLogId === m.id ? "Adding…" : `+ ${Math.round(m.calories)} kcal`}
+                  </span>
+                </span>
+              </button>
+              {menuEdit && (
+                <button
+                  onClick={() => removeFromMenu(m)}
+                  aria-label={`Remove ${m.name} from My menu`}
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-zinc-950"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {menu.length === 0 && (
+          <p className="mt-2 text-xs text-zinc-500">
+            Pin meals you eat often, then log them with one tap. Open any meal below and tap Pin, or add a new one.
+          </p>
+        )}
+      </section>
+
+      {/* Eat again: instant re-log, no AI cost */}
       {recentMeals.length > 0 && (
         <section>
           <SectionTitle>Eat again</SectionTitle>
@@ -405,6 +501,7 @@ export function FoodDiary({
                         onEdit={() => openEdit(m)}
                         onDelete={() => onDelete(m)}
                         disabled={deleting}
+                        pinned={menu.some((x) => x.name === m.name && x.calories === m.calories)}
                       />
                     ))}
                   </ul>
@@ -425,7 +522,7 @@ export function FoodDiary({
       {aiSpend.calls > 0 && (
         <p className="text-center text-[11px] text-zinc-600">
           AI this month: {aiSpend.calls} photo{" "}
-          {aiSpend.calls === 1 ? "analysis" : "analyses"} · ≈ $
+          {aiSpend.calls === 1 ? "analysis" : "analyses"} · about $
           {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
         </p>
       )}
@@ -450,13 +547,18 @@ function MealRow({
   onEdit,
   onDelete,
   disabled,
+  pinned,
 }: {
   meal: Meal;
   onEdit: () => void;
   onDelete: () => void;
   disabled: boolean;
+  pinned: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const [pinning, startPin] = useTransition();
+  const [pinMsg, setPinMsg] = useState<string | null>(null);
   const items = parseItems(meal.items);
   return (
     <li className="animate-item-in overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
@@ -525,14 +627,29 @@ function MealRow({
             </div>
           )}
           {meal.notes && <p className="mb-2 text-xs text-zinc-500">{meal.notes}</p>}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="secondary" onClick={onEdit}>
               <PencilIcon className="h-4 w-4" /> How much did you eat?
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={pinned || pinning}
+              onClick={() =>
+                startPin(async () => {
+                  const res = await pinMeal(meal.id);
+                  setPinMsg("error" in res ? res.error : null);
+                  router.refresh();
+                })
+              }
+            >
+              <PinIcon className="h-4 w-4" /> {pinned ? "In My menu" : pinning ? "Pinning…" : "Pin"}
             </Button>
             <Button size="sm" variant="danger" onClick={onDelete} disabled={disabled}>
               <TrashIcon className="h-4 w-4" /> Delete
             </Button>
           </div>
+          {pinMsg && <p className="mt-1 text-right text-xs text-amber-300">{pinMsg}</p>}
         </div>
       )}
     </li>
