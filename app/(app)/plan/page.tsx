@@ -119,7 +119,7 @@ export default async function PlanPage() {
                     plan.maintenanceSource === "measured"
                       ? "Maintenance · measured"
                       : plan.maintenanceSource === "garmin"
-                        ? "Maintenance · your average burn (Garmin)"
+                        ? "Maintenance · your average burn (watch)"
                         : "Maintenance · formula"
                   }
                   value={`${plan.tdee.toLocaleString("en-US")} kcal`}
@@ -167,7 +167,7 @@ export default async function PlanPage() {
               source={plan.maintenanceSource}
               measured={measured}
               garminDays={garminMaint?.days ?? null}
-              garminConnected={!!energy.garmin}
+              garminConnected={energy.wearable}
             />
           </div>
         ) : (
@@ -196,7 +196,7 @@ export default async function PlanPage() {
         </section>
       )}
 
-      {energy.garmin && (
+      {energy.wearable && (
         <section>
           <SectionTitle help="energy">Eaten vs burned</SectionTitle>
           <EnergyBalanceCard rows={energyRows} />
@@ -369,7 +369,7 @@ function MaintenanceNote({
   } else if (source === "garmin") {
     text = (
       <>
-        <b className="text-zinc-200">From Garmin:</b> your average daily burn over {garminDays} days. Log
+        <b className="text-zinc-200">From your watch:</b> your average daily burn over {garminDays} days. Log
         food for 10 days and weigh in regularly to get a number measured from your own results.
       </>
     );
@@ -378,10 +378,11 @@ function MaintenanceNote({
       <>
         <b className="text-zinc-200">Formula estimate.</b>{" "}
         {garminConnected
-          ? "After 5 days of Garmin data, your real burn replaces it."
+          ? "After 5 days of watch data, your real burn replaces it."
           : (
             <>
-              <Link href="/garmin" transitionTypes={["nav-forward"]} className="underline">Connect Garmin</Link>, or log food
+              <Link href="/garmin" transitionTypes={["nav-forward"]} className="underline">Connect Garmin</Link>,{" "}
+              <Link href="/apple-health" transitionTypes={["nav-forward"]} className="underline">import Apple Health</Link>, or log food
               for 10 days and weigh in regularly, to get your real number.
             </>
           )}

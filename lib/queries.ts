@@ -16,6 +16,7 @@ import {
 import { db } from "@/db";
 import {
   aiUsage,
+  appleHealthImports,
   bodyScans,
   bodyStats,
   exercises,
@@ -934,6 +935,19 @@ export const getGarminStatus = cache(async function getGarminStatus(): Promise<G
     })
     .from(garminConnections)
     .where(eq(garminConnections.userId, userId))
+    .limit(1);
+  return row ?? null;
+});
+
+export type AppleHealthStatus = typeof appleHealthImports.$inferSelect;
+
+/** The latest Apple Health upload, or null. Cached per request. */
+export const getAppleHealthStatus = cache(async function getAppleHealthStatus(): Promise<AppleHealthStatus | null> {
+  const userId = await requireUserId();
+  const [row] = await db
+    .select()
+    .from(appleHealthImports)
+    .where(eq(appleHealthImports.userId, userId))
     .limit(1);
   return row ?? null;
 });

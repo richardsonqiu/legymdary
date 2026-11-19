@@ -45,10 +45,11 @@ export const NAV: NavGroup[] = [
     key: "insights",
     label: "Insights",
     href: "/insights",
-    match: ["/insights", "/garmin"],
+    match: ["/insights", "/garmin", "/apple-health"],
     tabs: [
       { href: "/insights", label: "Daily" },
       { href: "/garmin", label: "Garmin" },
+      { href: "/apple-health", label: "Apple Health" },
     ],
   },
 ];

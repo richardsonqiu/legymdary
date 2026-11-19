@@ -20,9 +20,11 @@ import {
   getBodyStats,
   getDailyTotals,
   getGarminDaily,
+  getAppleHealthStatus,
   getGarminStatus,
   getGoals,
   getLatestBodyValues,
+  type AppleHealthStatus,
   type DayTotals,
   type GarminStatus,
 } from "@/lib/queries";
@@ -36,6 +38,10 @@ import { addDaysStr } from "@/lib/utils";
  */
 export type EnergyContext = {
   garmin: GarminStatus | null;
+  /** Latest Apple Health upload (watch data without Garmin). */
+  appleHealth: AppleHealthStatus | null;
+  /** Any watch data source: a Garmin connection or an Apple Health upload. */
+  wearable: boolean;
   goals: Goals | null;
   body: Awaited<ReturnType<typeof getLatestBodyValues>>;
   plan: Plan;
@@ -55,8 +61,9 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   const today = (await userToday());
   const from = addDaysStr(today, -35);
   const to = addDaysStr(today, 1);
-  const [garmin, goals, body, stats, intake, garminDays] = await Promise.all([
+  const [garmin, appleHealth, goals, body, stats, intake, garminDays] = await Promise.all([
     getGarminStatus(),
+    getAppleHealthStatus(),
     getGoals(),
     getLatestBodyValues(),
     getBodyStats(),
@@ -103,6 +110,8 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
 
   return {
     garmin,
+    appleHealth,
+    wearable: !!garmin || !!appleHealth,
     goals,
     body,
     plan,

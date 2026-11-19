@@ -18,8 +18,8 @@ import { getStoredReport } from "@/lib/analysis/report";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
-import { getGarminStatus } from "@/lib/queries";
-import { requireUserId } from "@/lib/session";
+import { getAppleHealthStatus, getGarminStatus } from "@/lib/queries";
+import { requireUserId, userToday } from "@/lib/session";
 import { addDaysStr, formatPretty } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,11 @@ export default async function InsightsPage({
 }) {
   const userId = await requireUserId();
   const sp = await searchParams;
-  const [garmin, latest] = await Promise.all([getGarminStatus(), latestDataDate(userId)]);
+  const [garmin, apple, latest] = await Promise.all([
+    getGarminStatus(),
+    getAppleHealthStatus(),
+    latestDataDate(userId),
+  ]);
   const date = typeof sp.date === "string" && DATE_RE.test(sp.date) ? sp.date : latest;
 
   const [{ card, series }, stored] = await Promise.all([
@@ -78,13 +82,25 @@ export default async function InsightsPage({
         )}
       </div>
 
-      {!garmin && (
+      {!garmin && !apple && (
+        <div className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300">
+          <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
+          <span>
+            <Link href="/garmin" className="underline">Connect Garmin</Link> or{" "}
+            <Link href="/apple-health" className="underline">import Apple Health</Link> to unlock readiness, sleep
+            and recovery insights.
+          </span>
+        </div>
+      )}
+      {!garmin && apple && isLatest && apple.lastDate && apple.lastDate < addDaysStr(await userToday(), -1) && (
         <Link
-          href="/garmin"
+          href="/apple-health"
           className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300"
         >
           <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
-          Connect Garmin to unlock readiness, sleep and recovery insights.
+          <span>
+            Apple Health data runs to {formatPretty(apple.lastDate)}. Upload a new export to bring it up to date.
+          </span>
         </Link>
       )}
 
@@ -146,7 +162,7 @@ export default async function InsightsPage({
       <p className="text-center text-[11px] text-zinc-600">
         Based on {card.coverage.sleepDays} nights of sleep, {card.coverage.hrvDays} of HRV and{" "}
         {card.coverage.loggedDays} fully-logged food days in the last 4 months.{" "}
-        <Link href="/garmin/data" className="underline">
+        <Link href={garmin ? "/garmin/data" : "/apple-health"} className="underline">
           Data coverage
         </Link>
       </p>

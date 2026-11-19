@@ -12,7 +12,7 @@ function dur(sec: number | null) {
   return h ? `${h}h ${m}m` : `${m}m`;
 }
 
-/** Recent Garmin activities (runs, rides, walks, strength…). */
+/** Recent watch activities from Garmin or Apple Health (runs, rides, walks, strength…). */
 export function GarminActivityList({
   activities,
 }: {
@@ -21,7 +21,7 @@ export function GarminActivityList({
   if (!activities.length) {
     return (
       <Card className="text-sm text-zinc-500">
-        No Garmin activities in the last 30 days.
+        No activities in the last 30 days.
       </Card>
     );
   }
@@ -63,7 +63,7 @@ export function GarminActivityList({
           </li>
         ))}
       </ul>
-      <GarminAttribution />
+      {activities.some((a) => !a.activityId.startsWith("apple-")) && <GarminAttribution />}
     </div>
   );
 }

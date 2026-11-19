@@ -246,6 +246,36 @@ The analysis design built on top of this lives in
 The Personal API is intended for personal use, not commercial apps serving
 many users — see Garmin's FAQ before opening this app to the public.
 
+## Apple Health (Apple Watch, no Garmin)
+
+People with an Apple Watch upload their Health export instead of connecting
+Garmin: **Insights → Apple Health** (`/apple-health`).
+
+- **Getting the file.** iPhone Health app → profile picture → *Export All Health
+  Data* → save `export.zip` → pick it on the page (the zip or an unzipped
+  `export.xml` both work).
+- **Parsed in the browser.** Exports are often 1 GB+, far over Vercel's request
+  limit, so `lib/apple-health/read-file.ts` streams `export.xml` straight out of
+  the zip (central directory + `DecompressionStream`) and
+  `lib/apple-health/parse.ts` reduces it to daily rows, nights, workouts and
+  weigh-ins (about 1 s per 200 MB). Only that summary is uploaded, in batches
+  of 300, through server actions. Raw samples, routes and clinical records
+  never leave the device.
+- **Where it goes.** The same tables Garmin fills, so Home, Insights, Food,
+  Plan, History and Recaps work unchanged: `garmin_daily` (source `apple`),
+  `garmin_raw` sleep summaries and activities in Garmin's field names (keys
+  `apple-…`), `garmin_activities` (ids `apple-YYYYMMDD-HHMMSS`) and
+  `body_stats` (source `apple`). `apple_health_imports` records the last upload.
+- **Merging.** Per day the largest single-source total is used (iPhone and
+  Watch both count steps), and Apple's Activity rings win for active calories
+  and exercise minutes. Nights are dated by the morning you wake; Core/Deep/REM
+  map to light/deep/REM.
+- **Precedence.** Garmin data, manual weigh-ins and InBody scans always win;
+  re-uploading is idempotent. *Remove Apple Health data* deletes only what an
+  upload added, and disconnecting Garmin no longer deletes Apple data.
+- **Not available from Apple:** Body Battery, stress and a sleep score. HRV is
+  SDNN, so it is compared only with your own baseline.
+
 ## Body composition (InBody)
 
 Stats → **Body composition** stores InBody (or similar BIA) scans:
