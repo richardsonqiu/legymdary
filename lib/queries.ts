@@ -719,7 +719,7 @@ export async function getRecentMeals(limit = 6): Promise<Meal[]> {
       .from(meals)
       .where(eq(meals.userId, userId))
       .orderBy(desc(meals.createdAt))
-      .limit(60)
+      .limit(Math.max(60, limit * 10))
   ).map(withPhotoUrl);
   const seen = new Set<string>();
   const out: Meal[] = [];

@@ -37,7 +37,7 @@ export default async function FoodPage({
   const [meals, energy, recentMeals, aiSpend, garminDays, userId, skipped, menu] = await Promise.all([
     getMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getEnergyContext(),
-    getRecentMeals(8),
+    getRecentMeals(40),
     getAiUsageSince(monthStart),
     getGarminDaily(addDaysStr(center, -1), addDaysStr(center, 1)),
     requireUserId(),

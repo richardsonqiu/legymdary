@@ -119,7 +119,7 @@ export default async function PlanPage() {
                     plan.maintenanceSource === "measured"
                       ? "Maintenance · measured"
                       : plan.maintenanceSource === "garmin"
-                        ? "Maintenance · Garmin avg"
+                        ? "Maintenance · your average burn (Garmin)"
                         : "Maintenance · formula"
                   }
                   value={`${plan.tdee.toLocaleString("en-US")} kcal`}
