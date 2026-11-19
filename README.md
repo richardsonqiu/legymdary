@@ -174,8 +174,8 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   Claude Haiku 5.5, which returns the items it sees with estimated portions,
   calories and macros. If Haiku refuses or fails, the request is retried once
   on Claude Sonnet 5.5. You can edit every item before saving. A small
-  thumbnail is stored with the meal. **Eat again** re-logs a recent meal in
-  one tap with no AI call.
+  thumbnail is stored with the meal. **Eat again** re-logs a recent meal after a
+  quick confirmation, with no AI call.
 - **AI cost** — every call's tokens and estimated cost are stored (`ai_usage`)
   and logged as `[meal-ai] model=… in=… out=… cost=$…`; the Food tab shows
   this month's total. Rough cost: ~$0.0005 per photo on Haiku 5.5, ~$0.01 on
