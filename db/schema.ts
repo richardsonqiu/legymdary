@@ -372,6 +372,8 @@ export const garminDaily = sqliteTable(
     hrvLastNight: integer("hrv_last_night"),
     hrvWeeklyAvg: integer("hrv_weekly_avg"),
     hrvStatus: text("hrv_status"),
+    /** "garmin" (Personal API sync) or "apple" (Apple Health export upload). */
+    source: text("source").notNull().default("garmin"),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -505,6 +507,27 @@ export const bodyScans = sqliteTable(
   },
   (t) => [uniqueIndex("body_scans_user_date_unique").on(t.userId, t.date)],
 );
+
+/**
+ * The latest Apple Health export a user uploaded. The export itself is parsed
+ * in the browser; its daily rows, nights and workouts are stored in the same
+ * tables as Garmin's (garmin_daily source "apple", garmin_activities and
+ * garmin_raw keys starting "apple-", body_stats source "apple").
+ */
+export const appleHealthImports = sqliteTable("apple_health_imports", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  firstDate: text("first_date"),
+  lastDate: text("last_date"),
+  days: integer("days").notNull().default(0),
+  nights: integer("nights").notNull().default(0),
+  workouts: integer("workouts").notNull().default(0),
+  weighIns: integer("weigh_ins").notNull().default(0),
+  importedAt: integer("imported_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
 
 /** One AI-written daily report per user per day (generated once, cached). */
 export const dailyReports = sqliteTable(

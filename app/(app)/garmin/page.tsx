@@ -23,6 +23,21 @@ export default async function GarminPage() {
         subtitle="Calories burned, recovery and activities"
       />
       <GarminConnect status={status} />
+      {!status && (
+        <Link
+          href="/apple-health"
+          transitionTypes={["nav-forward"]}
+          className="press flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm"
+        >
+          <span>
+            <b>Using an Apple Watch instead?</b>
+            <span className="block text-xs text-zinc-500">
+              Upload your Apple Health export to get the same sleep, recovery and activity insights
+            </span>
+          </span>
+          <span className="text-zinc-500">→</span>
+        </Link>
+      )}
       {status && (
         <Link
           href="/garmin/data"

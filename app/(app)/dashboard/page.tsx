@@ -76,7 +76,7 @@ export default async function DashboardPage() {
 
   // ---- Score rings + readiness hero (recovery needs Garmin) ----
   let card: Awaited<ReturnType<typeof buildAnalysis>>["card"] | null = null;
-  if (energy.garmin && user?.id) {
+  if (energy.wearable && user?.id) {
     const latest = await latestDataDate(user.id);
     // Only show recovery for last night (or the night before if today's sync hasn't landed yet).
     if (latest >= addDaysStr(serverToday, -1))
@@ -98,6 +98,7 @@ export default async function DashboardPage() {
     stepGoal: 8000,
     battery: card?.bodyBattery?.wake ?? null,
     garminConnected: !!energy.garmin,
+    appleHealth: !energy.garmin && !!energy.appleHealth,
   };
 
   // ---- Inputs for the plain-language "Today" guide ----
@@ -159,7 +160,7 @@ export default async function DashboardPage() {
     consistency: consistencyDays,
     readinessByDate: energy.readinessByDate,
     sleepDebtHours: sleepDebt,
-    garminConnected: !!energy.garmin,
+    garminConnected: energy.wearable,
     loggedSlots: slots.logged,
     skippedSlots: slots.skipped,
     hasMeal: consistencyDays.some((d) => d.meals > 0),
@@ -211,7 +212,7 @@ export default async function DashboardPage() {
         }
       />
 
-      {!energy.garmin && (
+      {!energy.wearable && (
         <Link
           href="/garmin"
           transitionTypes={["nav-forward"]}
@@ -219,7 +220,7 @@ export default async function DashboardPage() {
         >
           <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
           <span>
-            <b>Connect Garmin</b>
+            <b>Connect Garmin or Apple Watch</b>
             <span className="block text-xs text-zinc-500">
               See calories in vs out, recovery and your real maintenance
               calories.

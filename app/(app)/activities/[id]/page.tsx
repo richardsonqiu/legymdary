@@ -55,6 +55,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   if (!/^[\w-]{1,40}$/.test(id)) notFound();
   const a = await getActivityView(userId, id);
   if (!a) notFound();
+  const fromApple = a.id.startsWith("apple-");
 
   const zoneTotal = a.zonesSec.reduce<number>((acc, z) => acc + (z ?? 0), 0);
   const teWords = trainingEffectWords(a.aerobicTE);
@@ -237,11 +238,17 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           <Row label="Temperature" value={a.tempMin != null || a.tempMax != null ? `${r(a.tempMin) ?? "–"}–${r(a.tempMax) ?? "–"} °C` : null} />
           <Row label="Sweat loss (estimate)" value={a.sweatMl != null ? `${r(a.sweatMl)} ml` : null} hint="Roughly how much to drink back" />
         </Card>
-        <a href={`/api/garmin/fit/${a.id}`} className="mt-2 block text-center text-xs text-zinc-500 underline">
-          Download original .FIT file
-        </a>
+        {!fromApple && (
+          <a href={`/api/garmin/fit/${a.id}`} className="mt-2 block text-center text-xs text-zinc-500 underline">
+            Download original .FIT file
+          </a>
+        )}
       </section>
-      <GarminAttribution className="text-center" />
+      {fromApple ? (
+        <p className="text-center text-[11px] text-zinc-600">Data from Apple Health</p>
+      ) : (
+        <GarminAttribution className="text-center" />
+      )}
     </PageTransition>
   );
 }

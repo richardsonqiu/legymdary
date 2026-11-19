@@ -29,6 +29,13 @@ import { encryptSecret } from "@/lib/garmin/crypto";
 import { askAboutDay, generateDailyReport, type Report } from "@/lib/analysis/report";
 import { extractBodyScans, type ExtractedScan } from "@/lib/body-scan-ai";
 import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
+import { ahBatchSchema } from "@/lib/apple-health/types";
+import {
+  deleteAppleHealthData,
+  recordAppleHealthImport,
+  storeAppleHealthBatch,
+} from "@/lib/apple-health/store";
+import { z } from "zod";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import {
   ACTIVITY_LEVELS,
@@ -52,6 +59,7 @@ function revalidateAll() {
     "/food",
     "/plan",
     "/garmin",
+    "/apple-health",
     "/insights",
   ]) {
     revalidatePath(p);
@@ -997,9 +1005,12 @@ export async function disconnectGarmin(deleteData: boolean): Promise<void> {
   const userId = await requireUserId();
   await db.delete(garminConnections).where(eq(garminConnections.userId, userId));
   if (deleteData) {
-    await db.delete(garminDaily).where(eq(garminDaily.userId, userId));
-    await db.delete(garminActivities).where(eq(garminActivities.userId, userId));
-    await db.delete(garminRaw).where(eq(garminRaw.userId, userId));
+    // Apple Health uploads share these tables; keep them.
+    await db.delete(garminDaily).where(and(eq(garminDaily.userId, userId), eq(garminDaily.source, "garmin")));
+    await db
+      .delete(garminActivities)
+      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%'`));
+    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%'`));
     await db.delete(garminDatasets).where(eq(garminDatasets.userId, userId));
     await db
       .delete(bodyStats)
@@ -1043,6 +1054,51 @@ export async function retryGarminDataset(dataset: string): Promise<void> {
     .set({ status: "ok", emptyStreak: 0, lastError: null, backfilledTo: null, latestDate: null })
     .where(and(eq(garminDatasets.userId, userId), eq(garminDatasets.dataset, clip(dataset, 60))));
   revalidatePath("/garmin/data");
+}
+
+/* ------------------------------------------------------------------ */
+/* Apple Health (export upload, parsed in the browser)                 */
+/* ------------------------------------------------------------------ */
+
+/** Stores one batch of a parsed Apple Health export. Call once per batch, then finish. */
+export async function importAppleHealthBatch(batch: unknown): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const limit = await rateLimit(`apple:import:${userId}`, 300, HOUR);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
+  const parsed = ahBatchSchema.safeParse(batch);
+  if (!parsed.success) return { error: "That export didn't look right. Try exporting from the Health app again." };
+  try {
+    await storeAppleHealthBatch(userId, parsed.data);
+    return { ok: true };
+  } catch (err) {
+    console.error(`[apple-health] batch failed for ${userId}:`, (err as Error).message);
+    return { error: "Couldn't save that part of the import. Please try again." };
+  }
+}
+
+const ahFinishSchema = z.object({
+  firstDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  lastDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  days: z.number().int().min(0).max(100_000),
+  nights: z.number().int().min(0).max(100_000),
+  workouts: z.number().int().min(0).max(100_000),
+  weighIns: z.number().int().min(0).max(100_000),
+});
+
+export async function finishAppleHealthImport(meta: unknown): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const parsed = ahFinishSchema.safeParse(meta);
+  if (!parsed.success) return { error: "Invalid import summary." };
+  await recordAppleHealthImport(userId, parsed.data);
+  revalidateAll();
+  return { ok: true };
+}
+
+/** Deletes everything an Apple Health upload added (Garmin and manual data stay). */
+export async function removeAppleHealthData(): Promise<void> {
+  const userId = await requireUserId();
+  await deleteAppleHealthData(userId);
+  revalidateAll();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1154,7 +1210,7 @@ export async function saveBodyScans(scans: ExtractedScan[]): Promise<{ saved: nu
       .values({ userId, date, ...vals })
       .onConflictDoUpdate({ target: [bodyScans.userId, bodyScans.date], set: vals });
     // Mirror into body stats so the plan uses measured weight + body fat.
-    // A manual entry for that day wins; scans override Garmin scale imports.
+    // A manual entry for that day wins; scans override Garmin / Apple Health scale imports.
     if (vals.weight != null || vals.bodyFatPct != null) {
       const bs = { weight: vals.weight, bodyFat: vals.bodyFatPct };
       await db
@@ -1163,7 +1219,7 @@ export async function saveBodyScans(scans: ExtractedScan[]): Promise<{ saved: nu
         .onConflictDoUpdate({
           target: [bodyStats.userId, bodyStats.date],
           set: { ...bs, source: "inbody" },
-          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin')`,
+          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin', 'apple')`,
         });
     }
     saved++;

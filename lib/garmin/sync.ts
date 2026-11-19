@@ -181,10 +181,11 @@ export async function syncGarminForUser(
     if (!Object.keys(set).length) continue;
     await db
       .insert(garminDaily)
-      .values({ userId, date, ...set, updatedAt: now })
+      .values({ userId, date, ...set, source: "garmin", updatedAt: now })
       .onConflictDoUpdate({
         target: [garminDaily.userId, garminDaily.date],
-        set: { ...set, updatedAt: now },
+        // Garmin's live feed takes a day over from an Apple Health upload.
+        set: { ...set, source: "garmin", updatedAt: now },
       });
   }
 

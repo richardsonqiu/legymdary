@@ -14,6 +14,8 @@ export type TodayScoresInput = {
   /** Body Battery when you woke (0 to 100). */
   battery: number | null;
   garminConnected: boolean;
+  /** Watch data comes from an Apple Health upload (not a live sync). */
+  appleHealth?: boolean;
 };
 
 const ADVICE: Record<Readiness["band"], string> = {
@@ -54,7 +56,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
           value={stepsPct}
           display={s.steps == null ? "–" : s.steps >= 10000 ? `${Math.round(s.steps / 1000)}k` : `${(s.steps / 1000).toFixed(1)}k`}
           label="Steps"
-          href={s.garminConnected ? "/insights" : "/garmin"}
+          href={s.garminConnected || s.appleHealth ? "/insights" : "/garmin"}
         />
         <ScoreRing value={s.battery} label="Battery" href="/insights" />
       </div>
@@ -88,7 +90,9 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
               ? ADVICE[r.band]
               : s.garminConnected
                 ? "Shows after your watch syncs a night of sleep."
-                : "Connect Garmin to see your recovery here."}
+                : s.appleHealth
+                  ? "Upload a fresh Apple Health export to see last night."
+                  : "Connect Garmin or import Apple Health to see your recovery here."}
           </p>
         </div>
         {top.length > 0 && (

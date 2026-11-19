@@ -70,7 +70,7 @@ export default async function FoodPage({
         targets={energy.targets}
         skipped={skipped}
         menu={menu}
-        garminByDate={energy.garmin ? garminByDate : null}
+        garminByDate={energy.wearable ? garminByDate : null}
         planMissing={plan.calorieTarget == null}
         macroSplitNote={plan.macroBasis === "percent"}
       />
