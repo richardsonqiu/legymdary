@@ -6,6 +6,7 @@ import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation";
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
+import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
 import {
   CameraIcon,
   ChevronLeftIcon,
@@ -65,7 +66,7 @@ export function FoodDiary({
   macroSplitNote,
 }: {
   meals: Meal[];
-  /** Distinct recent meals for one-tap "eat again" (no AI call). */
+  /** Distinct recent meals, newest first: the first few are "Eat again", all of them feed the My menu picker. */
   recentMeals: Meal[];
   /** AI photo analyses this month and their estimated cost. */
   aiSpend: { calls: number; costUsd: number };
@@ -94,11 +95,14 @@ export function FoodDiary({
   const [preparing, setPreparing] = useState(false);
   const [deleting, startDelete] = useTransition();
   const [relogging, startRelog] = useTransition();
-  const [relogId, setRelogId] = useState<number | null>(null);
+  const [adding, setAdding] = useState<{ meal: QuickMeal; source: "recent" | "menu" } | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pinBusyId, setPinBusyId] = useState<number | null>(null);
+  const [pinError, setPinError] = useState<string | null>(null);
   const [skipping, startSkip] = useTransition();
   const [menuEdit, setMenuEdit] = useState(false);
   const [menuBusy, startMenu] = useTransition();
-  const [menuLogId, setMenuLogId] = useState<number | null>(null);
   const [skipError, setSkipError] = useState<string | null>(null);
 
   if (!date) {
@@ -115,12 +119,35 @@ export function FoodDiary({
   ) as Partial<Record<MealType, number>>;
   const budgets = dayTarget ? mealBudgets(dayTarget.calories, eatenByType, skippedTypes) : null;
 
-  function logFromMenu(item: SavedMeal) {
-    setMenuLogId(item.id);
+  function askAdd(meal: QuickMeal, source: "recent" | "menu") {
+    setConfirmError(null);
+    setAdding({ meal, source });
+  }
+  function confirmAdd(mealType: MealType) {
+    if (!adding) return;
+    const { meal, source } = adding;
+    startRelog(async () => {
+      try {
+        if (source === "menu") await logMenuItem({ id: meal.id, date: date!, mealType });
+        else await relogMeal({ mealId: meal.id, date: date!, mealType });
+        navigator.vibrate?.(12);
+        setAdding(null);
+        router.refresh();
+      } catch {
+        setConfirmError("Couldn't add it. Check your connection and try again.");
+      }
+    });
+  }
+  const pinKey = (m: { name: string; calories: number }) => `${m.name.trim().toLowerCase()}|${Math.round(m.calories)}`;
+  const pinnedKeys = new Set(menu.map(pinKey));
+  function pinFromPicker(m: QuickMeal) {
+    setPinError(null);
+    setPinBusyId(m.id);
     startMenu(async () => {
-      await logMenuItem({ id: item.id, date: date!, mealType: defaultMealType() });
-      navigator.vibrate?.(12);
-      router.refresh();
+      const res = await pinMeal(m.id);
+      setPinBusyId(null);
+      if ("error" in res) setPinError(res.error);
+      else router.refresh();
     });
   }
   function removeFromMenu(item: SavedMeal) {
@@ -230,15 +257,6 @@ export function FoodDiary({
     });
   }
 
-  function eatAgain(m: Meal) {
-    if (!date) return;
-    setRelogId(m.id);
-    startRelog(async () => {
-      await relogMeal({ mealId: m.id, date, mealType: defaultMealType() });
-      navigator.vibrate?.(12);
-      router.refresh();
-    });
-  }
 
   const prev = addDaysStr(date, -1);
   const next = addDaysStr(date, 1);
@@ -280,7 +298,7 @@ export function FoodDiary({
         {garminByDate && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
             <span>
-              Garmin burn{isToday ? " so far" : ""}:{" "}
+              You burned{isToday ? " so far" : ""}:{" "}
               <b className="tabular-nums text-zinc-200">
                 {garminByDate[date]?.burned != null
                   ? `${Math.round(garminByDate[date]!.burned!).toLocaleString("en-US")} kcal`
@@ -288,10 +306,11 @@ export function FoodDiary({
               </b>
               {garminByDate[date]?.burned != null && (
                 <span className="text-zinc-500">
-                  {" "}· net {totals.calories - garminByDate[date]!.burned! > 0 ? "+" : ""}
+                  {" "}· eaten minus burned {totals.calories - garminByDate[date]!.burned! > 0 ? "+" : ""}
                   {Math.round(totals.calories - garminByDate[date]!.burned!).toLocaleString("en-US")}
                 </span>
               )}
+              <span className="block text-[11px] text-zinc-500">Data from Garmin</span>
             </span>
             {!!garminByDate[date]?.bonus && (
               <span className="text-emerald-300/80">
@@ -372,16 +391,19 @@ export function FoodDiary({
         </SectionTitle>
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
           <button
-            onClick={newMenuItem}
+            onClick={() => {
+              setPinError(null);
+              setPickerOpen(true);
+            }}
             className="press flex w-28 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-white/15 p-2 text-xs text-zinc-300"
           >
             <PlusIcon className="h-4 w-4" />
-            New item
+            Add
           </button>
           {menu.map((m) => (
             <div key={m.id} className="relative shrink-0">
               <button
-                onClick={() => (menuEdit ? null : logFromMenu(m))}
+                onClick={() => (menuEdit ? null : askAdd(m, "menu"))}
                 disabled={menuBusy}
                 className="press flex w-36 items-center gap-2 rounded-xl border border-teal-300/20 bg-teal-300/[0.04] p-2 text-left hover:bg-teal-300/[0.08] disabled:opacity-60"
               >
@@ -396,7 +418,7 @@ export function FoodDiary({
                 <span className="min-w-0">
                   <span className="block truncate text-xs font-medium">{m.name}</span>
                   <span className="block text-[11px] tabular-nums text-zinc-500">
-                    {menuBusy && menuLogId === m.id ? "Adding…" : `+ ${Math.round(m.calories)} kcal`}
+                    {`+ ${Math.round(m.calories)} kcal`}
                   </span>
                 </span>
               </button>
@@ -414,7 +436,7 @@ export function FoodDiary({
         </div>
         {menu.length === 0 && (
           <p className="mt-2 text-xs text-zinc-500">
-            Pin meals you eat often, then log them with one tap. Open any meal below and tap Pin, or add a new one.
+            Pin meals you eat often, then add them in two taps. Tap Add to pick from meals you have eaten before.
           </p>
         )}
       </section>
@@ -424,10 +446,10 @@ export function FoodDiary({
         <section>
           <SectionTitle>Eat again</SectionTitle>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-            {recentMeals.map((m) => (
+            {recentMeals.slice(0, 8).map((m) => (
               <button
                 key={m.id}
-                onClick={() => eatAgain(m)}
+                onClick={() => askAdd(m, "recent")}
                 disabled={relogging}
                 className="press flex w-36 shrink-0 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-2 text-left hover:bg-zinc-800/60 disabled:opacity-60"
               >
@@ -442,7 +464,7 @@ export function FoodDiary({
                 <span className="min-w-0">
                   <span className="block truncate text-xs font-medium">{m.name}</span>
                   <span className="block text-[11px] tabular-nums text-zinc-500">
-                    {relogging && relogId === m.id ? "Adding…" : `+ ${Math.round(m.calories)} kcal`}
+                    {`+ ${Math.round(m.calories)} kcal`}
                   </span>
                 </span>
               </button>
@@ -501,7 +523,7 @@ export function FoodDiary({
                         onEdit={() => openEdit(m)}
                         onDelete={() => onDelete(m)}
                         disabled={deleting}
-                        pinned={menu.some((x) => x.name === m.name && x.calories === m.calories)}
+                        pinned={pinnedKeys.has(pinKey(m))}
                       />
                     ))}
                   </ul>
@@ -525,6 +547,34 @@ export function FoodDiary({
           {aiSpend.calls === 1 ? "analysis" : "analyses"} · about $
           {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
         </p>
+      )}
+
+      {adding && (
+        <ConfirmAddSheet
+          key={`${adding.source}-${adding.meal.id}`}
+          meal={adding.meal}
+          dateLabel={isToday ? "today" : formatPretty(date)}
+          defaultType={defaultMealType()}
+          busy={relogging}
+          error={confirmError}
+          onConfirm={confirmAdd}
+          onClose={() => !relogging && setAdding(null)}
+        />
+      )}
+
+      {pickerOpen && (
+        <PinPickerSheet
+          meals={recentMeals}
+          isPinned={(m) => pinnedKeys.has(pinKey(m))}
+          busyId={pinBusyId}
+          error={pinError}
+          onPin={pinFromPicker}
+          onCreate={() => {
+            setPickerOpen(false);
+            newMenuItem();
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
       )}
 
       {composer && (

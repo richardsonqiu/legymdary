@@ -28,7 +28,7 @@ your phone at the gym. Every account gets its own private diary.
   Balanced or Aggressive (each shows daily calories and the arrival date) or a
   date of your own. Arrival dates count from today using the pace your calories
   really give; a stale weigh-in is flagged.
-- **My menu**: pin any logged meal, or create one, and log it again with one tap.
+- **My menu**: tap Add to pick from meals you have eaten before (or create a new one). Tapping a menu item or an Eat again meal asks to confirm and lets you choose the meal slot.
 - **Recaps**: week, month and year stories (Progress → Recaps, or the Home banner
   early in a week or month): time moving, your top activity, longest session,
   records, rhythm, food logging, go-to meal, sleep, steps and weight, with share.
