@@ -77,6 +77,7 @@ export const MealEstimate = z.object({
       assumptions: z
         .string()
         .describe("Preparation and hidden-calorie assumptions, e.g. 'toasted, no extra spread'; empty string if none"),
+      is_drink: z.boolean().describe("true for drinks (coffee, tea, juice, milk, soda, beer, smoothie); false for food, soups and sauces"),
       calories: z.number(),
       protein_g: z.number(),
       carbs_g: z.number(),
@@ -225,6 +226,7 @@ async function attempt(
           amount: it.amount || null,
           calculation: it.calculation || null,
           assumptions: it.assumptions || null,
+          drink: it.is_drink === true,
           calories: Math.max(0, Math.round(it.calories)),
           protein: Math.max(0, Math.round(it.protein_g)),
           carbs: Math.max(0, Math.round(it.carbs_g)),

@@ -82,12 +82,24 @@ export type MealItem = {
   base?: Macros | null;
   /** How much of that portion was actually eaten: 0.5 = half, 2 = double. Default 1. */
   eaten?: number | null;
+  /** A drink rather than food (set by the AI; guessed from the name otherwise). */
+  drink?: boolean | null;
 };
 
-export type Macros = { calories: number; protein: number; carbs: number; fat: number };
+const DRINK_WORDS =
+  /\b(kopi|teh|tea|coffee|latte|cappuccino|americano|espresso|mocha|macchiato|flat white|milo|horlicks|juice|smoothie|shake|milkshake|soda|cola|coke|pepsi|sprite|lemonade|water|beer|wine|cider|sake|soju|whisky|vodka|cocktail|kombucha|boba|bubble tea|bandung|lassi|soy milk|soymilk|chocolate milk|drink|frappe|frappuccino|matcha latte|isotonic|100plus|gatorade|yakult)\b/i;
+const DRINK_PORTION = /\b(\d+\s*ml|ml|cup|glass|bottle|can|mug|pint)\b/i;
+const NOT_DRINK = /\b(soup|cake|bread|toast|egg|rice|noodle|ice cream|jelly|pudding|cookie|biscuit)\b/i;
 
-/** Quick choices for "how much did you eat?". */
-export const EATEN_STEPS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3] as const;
+/** Whether an item is a drink: the AI's flag, else a guess from its name and portion. */
+export function isDrink(it: Pick<MealItem, "name" | "portion" | "drink">): boolean {
+  if (typeof it.drink === "boolean") return it.drink;
+  const name = it.name ?? "";
+  if (NOT_DRINK.test(name)) return false;
+  return DRINK_WORDS.test(name) || (/\b(milk)\b/i.test(name) && DRINK_PORTION.test(it.portion ?? "")) || (DRINK_PORTION.test(it.portion ?? "") && !/\bg\b/.test(it.portion ?? ""));
+}
+
+export type Macros = { calories: number; protein: number; carbs: number; fat: number };
 
 export function eatenLabel(x: number): string {
   const map: Record<string, string> = { "0.25": "¼", "0.5": "½", "0.75": "¾", "1.5": "1½" };

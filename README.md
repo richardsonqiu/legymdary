@@ -176,9 +176,12 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   analysis (it is a decision, not a gap), and logging food in that slot cancels the skip.
 - **Photo plus context**: after you take a photo, add a few words ("kopi kosong, shared the toast")
   before the estimate runs. Nothing is sent to the AI until you tap *Estimate calories*.
-- **How much did you eat?** Set ½×, 2× and so on for the whole meal or for one item (one cookie in the
-  photo but you ate two = 2× on that item). Change it after the meal too. The full-portion numbers are
-  kept, so you can switch from ½× to 2× without losing the original estimate.
+- **How much did you eat (or drink)?** A plate that fills as you slide (a glass for drinks, which the
+  AI flags per item and typed items are guessed from their name), with words and calories beside it:
+  "Half the plate · 273 of 545 kcal", "2½ glasses · 263 kcal (105 per portion)". Slide from 0 to 3× in
+  quarter steps, or tap − / + (up to 10×). Works for the whole meal or one item (one cookie in the
+  photo but you ate two = 2× on that item), and can be changed after the meal. The full-portion
+  numbers are kept, so you can switch from ½× to 2× without losing the original estimate.
 
 - **Food tab** — tap *Snap a meal* to take a photo (or pick one / enter it
   manually). The photo is downscaled in the browser (≤1024px) and sent to

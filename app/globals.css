@@ -366,3 +366,59 @@ input[type="number"] {
 @media (prefers-reduced-motion: reduce) {
   .recap-in > *, .recap-rise, .recap-grow { animation: none; }
 }
+
+/* "How much did you eat?" slider (components/food/AmountPicker.tsx). */
+.amount-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.amount-range:focus-visible {
+  outline: none;
+}
+.amount-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-teal-300) var(--fill), var(--color-zinc-800) var(--fill));
+}
+.amount-range::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-teal-300) var(--fill), var(--color-zinc-800) var(--fill));
+}
+.amount-range-drink::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--color-sky-300) var(--fill), var(--color-zinc-800) var(--fill));
+}
+.amount-range-drink::-moz-range-track {
+  background: linear-gradient(to right, var(--color-sky-300) var(--fill), var(--color-zinc-800) var(--fill));
+}
+.amount-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
+  border-radius: 999px;
+  background: var(--color-zinc-50);
+  border: 3px solid var(--color-teal-300);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+.amount-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-zinc-50);
+  border: 3px solid var(--color-teal-300);
+}
+.amount-range-drink::-webkit-slider-thumb {
+  border-color: var(--color-sky-300);
+}
+.amount-range-drink::-moz-range-thumb {
+  border-color: var(--color-sky-300);
+}
+.amount-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgb(94 234 212 / 0.35);
+}

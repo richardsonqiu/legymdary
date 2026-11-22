@@ -522,6 +522,7 @@ function cleanItems(items: unknown): MealItem[] {
         edited: it.edited === true,
         base: cleanBase(it.base),
         eaten: cleanEaten(it.eaten),
+        drink: typeof it.drink === "boolean" ? it.drink : null,
       },
     ];
   });

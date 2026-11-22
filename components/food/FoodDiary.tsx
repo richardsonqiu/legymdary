@@ -6,6 +6,7 @@ import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation";
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
+import { amountWords } from "@/components/food/AmountPicker";
 import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
 import {
   CameraIcon,
@@ -25,7 +26,7 @@ import type { Meal, SavedMeal } from "@/db/schema";
 import { deleteMeal, logMenuItem, pinMeal, relogMeal, removeMenuItem, skipMeal, unskipMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
 import {
-  eatenLabel,
+  isDrink,
   MEAL_TYPES,
   mealBudgets,
   SKIPPABLE_MEALS,
@@ -659,7 +660,7 @@ function MealRow({
                           {it.portion && <span className="text-zinc-500"> · {it.portion}</span>}
                           {it.eaten != null && it.eaten !== 1 && (
                             <span className="ml-1.5 rounded-full bg-teal-300/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal-200">
-                              ate {eatenLabel(it.eaten)}
+                              {amountWords(it.eaten, isDrink(it) ? "drink" : "food").toLowerCase()}
                             </span>
                           )}
                         </span>
