@@ -214,7 +214,7 @@ export default async function DashboardPage() {
 
       {!energy.wearable && (
         <Link
-          href="/garmin"
+          href="/connect"
           transitionTypes={["nav-forward"]}
           className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900/50"
         >

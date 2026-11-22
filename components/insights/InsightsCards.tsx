@@ -199,7 +199,7 @@ export function BodyBatteryCard({ card }: { card: DayCard }) {
                   style={{ height: v == null ? "6%" : `${Math.max(8, v)}%` }}
                   title={v == null ? "No data" : String(v)}
                 />
-                <span className="text-[9px] tabular-nums leading-none text-zinc-500">{v ?? ""}</span>
+                <span className="text-[10px] tabular-nums leading-none text-zinc-500">{v ?? ""}</span>
               </div>
             ))}
           </div>

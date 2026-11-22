@@ -666,7 +666,7 @@ function MealRow({
                         </span>
                         <span className="shrink-0 tabular-nums text-zinc-400">{it.calories} kcal</span>
                       </div>
-                      <div className="text-[10px] tabular-nums text-zinc-600">
+                      <div className="text-[10px] tabular-nums text-zinc-500">
                         P {it.protein} g · C {it.carbs} g · F {it.fat} g
                       </div>
                       <ItemExplanation item={it} />

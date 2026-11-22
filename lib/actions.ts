@@ -22,6 +22,7 @@ import {
   workouts,
   skippedMeals,
   savedMeals,
+  sheetImports,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
@@ -36,6 +37,8 @@ import {
   storeAppleHealthBatch,
 } from "@/lib/apple-health/store";
 import { z } from "zod";
+import { cleanText } from "@/lib/sheet-import/format";
+import { batchSchema, ImportError, storeBatch, undoImport, type BatchResult } from "@/lib/sheet-import/store";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import {
   ACTIVITY_LEVELS,
@@ -61,6 +64,7 @@ function revalidateAll() {
     "/garmin",
     "/apple-health",
     "/insights",
+    "/connect",
   ]) {
     revalidatePath(p);
   }
@@ -1009,8 +1013,8 @@ export async function disconnectGarmin(deleteData: boolean): Promise<void> {
     await db.delete(garminDaily).where(and(eq(garminDaily.userId, userId), eq(garminDaily.source, "garmin")));
     await db
       .delete(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%'`));
-    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%'`));
+      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'sheet-%'`));
+    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'sheet-%'`));
     await db.delete(garminDatasets).where(eq(garminDatasets.userId, userId));
     await db
       .delete(bodyStats)
@@ -1242,4 +1246,76 @@ export async function deleteBodyScan(id: number): Promise<void> {
     .delete(bodyStats)
     .where(and(eq(bodyStats.userId, userId), eq(bodyStats.date, scan.date), eq(bodyStats.source, "inbody")));
   revalidateAll();
+}
+
+/* ------------------------------------------------------------------ */
+/* Spreadsheet import (Connections › Import file)                      */
+/* ------------------------------------------------------------------ */
+
+/** Opens an import record; batches are then sent with importSheetBatch. */
+export async function startSheetImport(fileName: string): Promise<{ importId: number } | { error: string }> {
+  const userId = await requireUserId();
+  const limit = await rateLimit(`sheet:import:${userId}`, 20, 60 * 60 * 1000);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
+  const [open] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(sheetImports)
+    .where(eq(sheetImports.userId, userId));
+  if ((open?.n ?? 0) >= 200) return { error: "You have 200 imports listed. Remove an old one first." };
+  const name = cleanText(fileName, 120).replace(/[^\p{L}\p{N} ._()-]/gu, "") || "spreadsheet";
+  const [row] = await db.insert(sheetImports).values({ userId, fileName: name }).returning({ id: sheetImports.id });
+  return { importId: row.id };
+}
+
+export async function importSheetBatch(importId: number, batch: unknown): Promise<BatchResult | { error: string }> {
+  const userId = await requireUserId();
+  if (!Number.isInteger(importId)) return { error: "Import not found." };
+  const [rec] = await db
+    .select({ id: sheetImports.id, createdAt: sheetImports.createdAt })
+    .from(sheetImports)
+    .where(and(eq(sheetImports.id, importId), eq(sheetImports.userId, userId)))
+    .limit(1);
+  if (!rec) return { error: "Import not found." };
+  if (Date.now() - rec.createdAt.getTime() > 60 * 60 * 1000) return { error: "This import has expired. Start again." };
+  const limit = await rateLimit(`sheet:batch:${userId}`, 300, 60 * 60 * 1000);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
+  const parsed = batchSchema.safeParse(batch);
+  if (!parsed.success) return { error: "Some rows didn't pass the checks. Re-open the file and try again." };
+  try {
+    return await storeBatch(userId, importId, parsed.data, await userToday());
+  } catch (e) {
+    if (e instanceof ImportError) return { error: e.message };
+    throw e;
+  }
+}
+
+/** Closes an import: drops the record when nothing was added, refreshes pages. */
+export async function finishSheetImport(importId: number): Promise<void> {
+  const userId = await requireUserId();
+  if (!Number.isInteger(importId)) return;
+  await db
+    .delete(sheetImports)
+    .where(
+      and(
+        eq(sheetImports.id, importId),
+        eq(sheetImports.userId, userId),
+        eq(sheetImports.workouts, 0),
+        eq(sheetImports.activities, 0),
+      ),
+    );
+  revalidateAll();
+  revalidatePath("/connect");
+  revalidatePath("/connect/import");
+}
+
+/** Removes everything one import added. */
+export async function removeSheetImport(importId: number): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (!Number.isInteger(importId)) return { error: "Import not found." };
+  const ok = await undoImport(userId, importId);
+  if (!ok) return { error: "Import not found." };
+  revalidateAll();
+  revalidatePath("/connect");
+  revalidatePath("/connect/import");
+  return { ok: true };
 }

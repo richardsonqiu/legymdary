@@ -63,7 +63,7 @@ export function GarminActivityList({
           </li>
         ))}
       </ul>
-      {activities.some((a) => !a.activityId.startsWith("apple-")) && <GarminAttribution />}
+      {activities.some((a) => !a.activityId.startsWith("apple-") && !a.activityId.startsWith("sheet-")) && <GarminAttribution />}
     </div>
   );
 }

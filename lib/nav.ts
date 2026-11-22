@@ -45,17 +45,31 @@ export const NAV: NavGroup[] = [
     key: "insights",
     label: "Insights",
     href: "/insights",
-    match: ["/insights", "/garmin", "/apple-health"],
-    tabs: [
-      { href: "/insights", label: "Daily" },
-      { href: "/garmin", label: "Garmin" },
-      { href: "/apple-health", label: "Apple Health" },
-    ],
+    match: ["/insights"],
+    tabs: [],
   },
 ];
+
+/**
+ * Connections: watches, scales and files that bring data in or out. Not a
+ * bottom tab (it's set-up you visit now and then); reached from Home's
+ * account menu, Insights, History and the Today guide.
+ */
+export const CONNECT: NavGroup = {
+  key: "connect",
+  label: "Connections",
+  href: "/connect",
+  match: ["/connect", "/garmin", "/apple-health"],
+  tabs: [
+    { href: "/connect", label: "All" },
+    { href: "/garmin", label: "Garmin" },
+    { href: "/apple-health", label: "Apple" },
+    { href: "/connect/import", label: "File" },
+  ],
+};
 
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 
 export function navGroupFor(path: string): NavGroup | undefined {
-  return NAV.find((g) => g.match.some((m) => under(path, m)));
+  return [...NAV, CONNECT].find((g) => g.match.some((m) => under(path, m)));
 }

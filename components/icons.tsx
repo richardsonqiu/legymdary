@@ -224,3 +224,29 @@ export const ShareIcon = (p: IconProps) => (
     <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
   </Base>
 );
+
+export const PlugIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M9 3v4M15 3v4M7 7h10v4a5 5 0 0 1-10 0V7ZM12 16v5" />
+  </Base>
+);
+
+export const DownloadIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+  </Base>
+);
+
+export const SheetIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="4" y="3.5" width="16" height="17" rx="2.5" />
+    <path d="M4 9h16M4 14.5h16M10 9v11.5" />
+  </Base>
+);
+
+export const AppleIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M15.5 3.5c-.9.1-2 .7-2.6 1.5-.6.7-1 1.7-.9 2.6 1 .1 2-.5 2.6-1.3.6-.8 1-1.8.9-2.8Z" />
+    <path d="M12 8.6c-1-.1-2.2-.9-3.4-.9C6.5 7.7 4.5 9.4 4.5 12.6c0 3.6 2.6 7.9 4.6 7.9 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7c1.4 0 2.6-2 3.3-3.6-1.7-.7-2.7-2.3-2.7-4 0-1.5.8-2.8 2.1-3.5-.8-1.1-2-1.7-3.2-1.7-1 0-1.9.7-2.4.9Z" />
+  </Base>
+);

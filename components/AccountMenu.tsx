@@ -48,10 +48,10 @@ export function AccountMenu({
           </div>
           <div className="my-1 h-px bg-zinc-800" />
           <a
-            href="/garmin"
+            href="/connect"
             className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
           >
-            Garmin connection
+            Connections and import
           </a>
           <a
             href="/plan"
@@ -59,27 +59,12 @@ export function AccountMenu({
           >
             Goal and plan
           </a>
-          <div className="my-1 h-px bg-zinc-800" />
-          <div className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
-            Export CSV
-          </div>
-          {(
-            [
-              ["workouts", "Workouts & sets"],
-              ["meals", "Food log"],
-              ["body", "Body stats"],
-              ["garmin", "Garmin daily data"],
-            ] as const
-          ).map(([type, label]) => (
-            <a
-              key={type}
-              href={`/api/export?type=${type}`}
-              download
-              className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
-            >
-              {label}
-            </a>
-          ))}
+          <a
+            href="/connect#export"
+            className="flex w-full items-center rounded-lg px-2.5 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+          >
+            Export my data
+          </a>
           <div className="my-1 h-px bg-zinc-800" />
           <button
             onClick={() => signOut({ callbackUrl: "/" })}

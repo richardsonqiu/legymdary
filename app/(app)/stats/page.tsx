@@ -51,7 +51,7 @@ export default async function StatsPage() {
         <BodyStatForm latest={latest} />
       </section>
 
-      <section>
+      <section id="inbody" className="scroll-mt-6">
         <SectionTitle help="bodyComp">Body composition (InBody)</SectionTitle>
         <BodyScans scans={scans} targetBodyFat={goals?.targetBodyFat ?? null} />
       </section>

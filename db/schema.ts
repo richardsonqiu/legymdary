@@ -101,6 +101,8 @@ export const workouts = sqliteTable(
     date: text("date").notNull(),
     notes: text("notes"),
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+    /** Set when the workout came from a spreadsheet import (so the import can be undone). */
+    importId: integer("import_id"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -529,6 +531,31 @@ export const appleHealthImports = sqliteTable("apple_health_imports", {
     .$defaultFn(() => new Date()),
 });
 
+/**
+ * One spreadsheet import (Connections › Import file). Workouts it created carry
+ * its id in workouts.import_id; cardio it created is listed in activity_ids
+ * (garmin_activities / garmin_raw keys starting "sheet-"), so it can be undone.
+ */
+export const sheetImports = sqliteTable(
+  "sheet_imports",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    workouts: integer("workouts").notNull().default(0),
+    sets: integer("sets").notNull().default(0),
+    activities: integer("activities").notNull().default(0),
+    /** JSON array of the cardio activity ids this import added. */
+    activityIds: text("activity_ids").notNull().default("[]"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("sheet_imports_user_idx").on(t.userId)],
+);
+
 /** One AI-written daily report per user per day (generated once, cached). */
 export const dailyReports = sqliteTable(
   "daily_reports",
@@ -587,6 +614,7 @@ export type SetRow = typeof sets.$inferSelect;
 export type BodyStat = typeof bodyStats.$inferSelect;
 export type Meal = typeof meals.$inferSelect;
 export type SavedMeal = typeof savedMeals.$inferSelect;
+export type SheetImport = typeof sheetImports.$inferSelect;
 export type Goals = typeof goals.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type GarminDaily = typeof garminDaily.$inferSelect;

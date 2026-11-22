@@ -56,7 +56,7 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
           value={stepsPct}
           display={s.steps == null ? "–" : s.steps >= 10000 ? `${Math.round(s.steps / 1000)}k` : `${(s.steps / 1000).toFixed(1)}k`}
           label="Steps"
-          href={s.garminConnected || s.appleHealth ? "/insights" : "/garmin"}
+          href={s.garminConnected || s.appleHealth ? "/insights" : "/connect"}
         />
         <ScoreRing value={s.battery} label="Battery" href="/insights" />
       </div>
