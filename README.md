@@ -187,6 +187,13 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   on Claude Sonnet 5.5. You can edit every item before saving. A small
   thumbnail is stored with the meal. **Eat again** re-logs a recent meal after a
   quick confirmation, with no AI call.
+- **Describe it (no photo)** — the Food tab's *Describe it* button opens the
+  same sheet with a "Describe what you ate" box: type what and how much (e.g.
+  "1 plate chicken rice, iced milo") and tap *Estimate with AI*. The same model
+  fills in the items with its working, assuming a typical serving where you give
+  no amount, and you check them before saving. You can still type everything
+  yourself. Text estimates share the photo daily limit and are recorded as
+  `meal_text` in `ai_usage`.
 - **AI cost** — every call's tokens and estimated cost are stored (`ai_usage`)
   and logged as `[meal-ai] model=… in=… out=… cost=$…`; the Food tab shows
   this month's total. Rough cost: ~$0.0005 per photo on Haiku 5.5, ~$0.01 on

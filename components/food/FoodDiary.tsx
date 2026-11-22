@@ -68,7 +68,7 @@ export function FoodDiary({
   meals: Meal[];
   /** Distinct recent meals, newest first: the first few are "Eat again", all of them feed the My menu picker. */
   recentMeals: Meal[];
-  /** AI photo analyses this month and their estimated cost. */
+  /** AI requests this month (photo and text estimates, reports) and their estimated cost. */
   aiSpend: { calls: number; costUsd: number };
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
@@ -370,7 +370,7 @@ export function FoodDiary({
             <ImageIcon className="h-4 w-4" /> From photos
           </Button>
           <Button variant="secondary" onClick={openManual}>
-            <PencilIcon className="h-4 w-4" /> Enter manually
+            <PencilIcon className="h-4 w-4" /> Describe it
           </Button>
         </div>
         {photoError && <p className="text-center text-sm text-amber-300">{photoError}</p>}
@@ -543,8 +543,7 @@ export function FoodDiary({
 
       {aiSpend.calls > 0 && (
         <p className="text-center text-[11px] text-zinc-600">
-          AI this month: {aiSpend.calls} photo{" "}
-          {aiSpend.calls === 1 ? "analysis" : "analyses"} · about $
+          AI this month: {aiSpend.calls} {aiSpend.calls === 1 ? "request" : "requests"} · about $
           {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
         </p>
       )}

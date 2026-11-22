@@ -126,6 +126,7 @@ How to estimate:
 - If the user adds a description, trust it over what you infer from the image (e.g. brand, portion, "only ate half").
 - If the photo is a nutrition label or menu item, use the stated values.
 - If the image does not show food or drink, set is_food to false and return an empty items list.
+- Sometimes there is no photo, only a written description. Then estimate from the description alone: use the amounts it gives, assume a typical single serving where it gives none (say so in assumptions, e.g. "1 standard hawker plate assumed"), and use "medium" or "low" confidence unless the amounts are exact. If the text does not describe anything eaten or drunk, set is_food to false and return an empty items list.
 Be realistic rather than optimistic: people usually under-estimate, so do not round portions down.
 Write notes and assumptions in short plain phrases. No em dashes.`;
 
@@ -144,7 +145,7 @@ type Attempt =
 async function attempt(
   c: Anthropic,
   model: string,
-  input: { base64: string; mediaType: ImageMediaType; hint?: string | null },
+  input: { base64?: string | null; mediaType?: ImageMediaType | null; hint?: string | null },
 ): Promise<Attempt> {
   const hint = input.hint?.trim();
   const serverFallback = SERVER_FALLBACK_MODELS.has(model);
@@ -160,18 +161,26 @@ async function attempt(
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: input.mediaType, data: input.base64 },
-            },
-            {
-              type: "text",
-              text: hint
-                ? `Estimate the nutrition of this meal. My description: ${hint}`
-                : "Estimate the nutrition of this meal.",
-            },
-          ],
+          content:
+            input.base64 && input.mediaType
+              ? [
+                  {
+                    type: "image",
+                    source: { type: "base64", media_type: input.mediaType, data: input.base64 },
+                  },
+                  {
+                    type: "text",
+                    text: hint
+                      ? `Estimate the nutrition of this meal. My description: ${hint}`
+                      : "Estimate the nutrition of this meal.",
+                  },
+                ]
+              : [
+                  {
+                    type: "text",
+                    text: `There is no photo. Estimate the nutrition of this meal from my description:\n<description>\n${hint ?? ""}\n</description>`,
+                  },
+                ],
         },
       ],
     });
@@ -236,7 +245,11 @@ async function attempt(
     }
     if (err instanceof Anthropic.BadRequestError) {
       console.error(`[meal-ai] ${model} bad request:`, err.message);
-      return { kind: "retry", error: "That image couldn't be processed. Try a different photo.", usage: null };
+      return {
+        kind: "retry",
+        error: input.base64 ? "That image couldn't be processed. Try a different photo." : "The AI couldn't read that description. Try rewording it.",
+        usage: null,
+      };
     }
     if (err instanceof Anthropic.APIError) {
       console.error(`[meal-ai] ${model} API error ${err.status}:`, err.message);
@@ -253,9 +266,10 @@ async function attempt(
 
 type ImageMediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 
+/** Estimates a meal from a photo (with an optional description), or from a description alone. */
 export async function analyzeMealImage(input: {
-  base64: string;
-  mediaType: ImageMediaType;
+  base64?: string | null;
+  mediaType?: ImageMediaType | null;
   hint?: string | null;
 }): Promise<AnalyzeResult> {
   const c = getClient();
@@ -272,7 +286,9 @@ export async function analyzeMealImage(input: {
   const models = [PRIMARY_MODEL, BACKUP_MODEL].filter(
     (m, i, arr) => m && arr.indexOf(m) === i,
   );
-  let lastError = "The AI couldn't analyse this photo. Try another one or enter it manually.";
+  let lastError = input.base64
+    ? "The AI couldn't analyse this photo. Try another one or enter it manually."
+    : "The AI couldn't estimate that. Add more detail (what, how much) or enter it yourself.";
   for (const model of models) {
     const res = await attempt(c, model, input);
     if (res.kind === "ok") {

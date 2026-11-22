@@ -69,13 +69,16 @@ export function MealComposer({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
 
-  const canAnalyze = !!init.analysisImage && !init.id;
+  const withPhoto = !!init.analysisImage;
+  // New meals (and new menu items) can be estimated from a photo or from a description alone.
+  const canAnalyze = !init.id;
+  const canRun = withPhoto || hint.trim().length >= 3;
 
   async function runAnalysis() {
-    if (!init.analysisImage) return;
+    if (!canRun) return;
     setStatus({ kind: "analyzing" });
     try {
-      const res = await analyzeMeal({ image: init.analysisImage, hint });
+      const res = await analyzeMeal({ image: init.analysisImage ?? null, hint });
       if ("error" in res) {
         setStatus({ kind: "error", message: res.error });
         return;
@@ -187,11 +190,23 @@ export function MealComposer({
 
             {canAnalyze && (
               <div className="space-y-2">
-                <Field label={status.kind === "idle" ? "Tell the AI about this meal (optional)" : "Add or change details"}>
+                <Field
+                  label={
+                    status.kind !== "idle"
+                      ? "Add or change details"
+                      : withPhoto
+                        ? "Tell the AI about this meal (optional)"
+                        : "Describe what you ate"
+                  }
+                >
                   <textarea
                     value={hint}
                     onChange={(e) => setHint(e.target.value)}
-                    placeholder="What is it, where from, how it was made. e.g. kopi kosong, 2 slices kaya toast, shared with a friend"
+                    placeholder={
+                      withPhoto
+                        ? "What is it, where from, how it was made. e.g. kopi kosong, 2 slices kaya toast, shared with a friend"
+                        : "What and how much. e.g. 1 plate chicken rice (roasted, extra rice), iced milo, half a curry puff"
+                    }
                     className={cn(inputClass, "h-auto min-h-[5.5rem] resize-none py-2.5 text-sm")}
                     maxLength={400}
                     rows={3}
@@ -201,14 +216,22 @@ export function MealComposer({
                   size="lg"
                   className="w-full"
                   onClick={runAnalysis}
-                  disabled={analyzing}
+                  disabled={analyzing || !canRun}
                 >
                   <SparkIcon className="h-4 w-4" />
-                  {analyzing ? "Estimating…" : status.kind === "idle" ? "Estimate calories" : "Estimate again"}
+                  {analyzing
+                    ? "Estimating…"
+                    : status.kind === "idle"
+                      ? withPhoto
+                        ? "Estimate calories"
+                        : "Estimate with AI"
+                      : "Estimate again"}
                 </Button>
                 {status.kind === "idle" && (
                   <p className="text-center text-xs text-zinc-500">
-                    Or skip the AI and fill it in yourself below.
+                    {withPhoto
+                      ? "Or skip the AI and fill it in yourself below."
+                      : "The AI fills in the items below for you to check. Or type them in yourself."}
                   </p>
                 )}
                 {status.kind === "error" && (
@@ -218,8 +241,9 @@ export function MealComposer({
                 )}
                 {status.kind === "done" && status.notFood && (
                   <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                    This doesn&apos;t look like food. Add details and
-                    estimate again, or enter it manually.
+                    {withPhoto
+                      ? "This doesn't look like food. Add details and estimate again, or enter it manually."
+                      : "That doesn't describe food or drink. Say what you ate and how much, then estimate again."}
                   </p>
                 )}
                 {status.kind === "done" && !status.notFood && (
@@ -252,7 +276,7 @@ export function MealComposer({
                 </div>
                 <AmountChips value={mealEaten} onPick={setMealEaten} />
                 <p className="text-xs text-zinc-500">
-                  Change this after your meal too. Half the noodles is ½×, two cookies when the photo shows one is 2×.
+                  Change this after your meal too. Half the noodles is ½×, two cookies when {withPhoto ? "the photo shows" : "the list has"} one is 2×.
                   Use the buttons on an item below to change just that item.
                 </p>
               </div>
