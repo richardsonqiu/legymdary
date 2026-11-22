@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { PlusIcon, SparkIcon, TrashIcon, XIcon } from "@/components/icons";
+import { AmountPicker } from "@/components/food/AmountPicker";
 import { ItemExplanation } from "@/components/food/ItemExplanation";
 import { Portal } from "@/components/Portal";
 import { Button, Field, inputClass } from "@/components/ui";
 import { analyzeMeal, saveMeal, saveMenuItem, updateMeal } from "@/lib/actions";
 import {
   baseOf,
-  EATEN_STEPS,
-  eatenLabel,
+  isDrink,
   MEAL_TYPES,
   sumMacros,
   withEaten,
@@ -69,13 +69,16 @@ export function MealComposer({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
 
-  const canAnalyze = !!init.analysisImage && !init.id;
+  const withPhoto = !!init.analysisImage;
+  // New meals (and new menu items) can be estimated from a photo or from a description alone.
+  const canAnalyze = !init.id;
+  const canRun = withPhoto || hint.trim().length >= 3;
 
   async function runAnalysis() {
-    if (!init.analysisImage) return;
+    if (!canRun) return;
     setStatus({ kind: "analyzing" });
     try {
-      const res = await analyzeMeal({ image: init.analysisImage, hint });
+      const res = await analyzeMeal({ image: init.analysisImage ?? null, hint });
       if ("error" in res) {
         setStatus({ kind: "error", message: res.error });
         return;
@@ -122,6 +125,7 @@ export function MealComposer({
   function setMealEaten(x: number) {
     setItems((prev) => prev.map((it) => (it.name.trim() ? withEaten(it, x) : it)));
   }
+  const mealKind: "food" | "drink" = validItems.length > 0 && validItems.every((it) => isDrink(it)) ? "drink" : "food";
   const eatenValues = validItems.map((i) => i.eaten ?? 1);
   const mealEaten = eatenValues.length && eatenValues.every((v) => v === eatenValues[0]) ? eatenValues[0] : null;
 
@@ -187,11 +191,23 @@ export function MealComposer({
 
             {canAnalyze && (
               <div className="space-y-2">
-                <Field label={status.kind === "idle" ? "Tell the AI about this meal (optional)" : "Add or change details"}>
+                <Field
+                  label={
+                    status.kind !== "idle"
+                      ? "Add or change details"
+                      : withPhoto
+                        ? "Tell the AI about this meal (optional)"
+                        : "Describe what you ate"
+                  }
+                >
                   <textarea
                     value={hint}
                     onChange={(e) => setHint(e.target.value)}
-                    placeholder="What is it, where from, how it was made. e.g. kopi kosong, 2 slices kaya toast, shared with a friend"
+                    placeholder={
+                      withPhoto
+                        ? "What is it, where from, how it was made. e.g. kopi kosong, 2 slices kaya toast, shared with a friend"
+                        : "What and how much. e.g. 1 plate chicken rice (roasted, extra rice), iced milo, half a curry puff"
+                    }
                     className={cn(inputClass, "h-auto min-h-[5.5rem] resize-none py-2.5 text-sm")}
                     maxLength={400}
                     rows={3}
@@ -201,14 +217,22 @@ export function MealComposer({
                   size="lg"
                   className="w-full"
                   onClick={runAnalysis}
-                  disabled={analyzing}
+                  disabled={analyzing || !canRun}
                 >
                   <SparkIcon className="h-4 w-4" />
-                  {analyzing ? "Estimating…" : status.kind === "idle" ? "Estimate calories" : "Estimate again"}
+                  {analyzing
+                    ? "Estimating…"
+                    : status.kind === "idle"
+                      ? withPhoto
+                        ? "Estimate calories"
+                        : "Estimate with AI"
+                      : "Estimate again"}
                 </Button>
                 {status.kind === "idle" && (
                   <p className="text-center text-xs text-zinc-500">
-                    Or skip the AI and fill it in yourself below.
+                    {withPhoto
+                      ? "Or skip the AI and fill it in yourself below."
+                      : "The AI fills in the items below for you to check. Or type them in yourself."}
                   </p>
                 )}
                 {status.kind === "error" && (
@@ -218,8 +242,9 @@ export function MealComposer({
                 )}
                 {status.kind === "done" && status.notFood && (
                   <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                    This doesn&apos;t look like food. Add details and
-                    estimate again, or enter it manually.
+                    {withPhoto
+                      ? "This doesn't look like food. Add details and estimate again, or enter it manually."
+                      : "That doesn't describe food or drink. Say what you ate and how much, then estimate again."}
                   </p>
                 )}
                 {status.kind === "done" && !status.notFood && (
@@ -244,16 +269,17 @@ export function MealComposer({
 
             {validItems.length > 0 && (
               <div className="space-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-medium">How much did you eat?</span>
-                  {mealEaten != null && mealEaten !== 1 && (
-                    <span className="text-xs tabular-nums text-teal-300">{eatenLabel(mealEaten)} of what&apos;s shown</span>
-                  )}
-                </div>
-                <AmountChips value={mealEaten} onPick={setMealEaten} />
+                <span className="text-sm font-medium">{mealKind === "drink" ? "How much did you drink?" : "How much did you eat?"}</span>
+                <AmountPicker
+                  value={mealEaten}
+                  onChange={setMealEaten}
+                  kind={mealKind}
+                  fullKcal={validItems.reduce((n, it) => n + baseOf(it).calories, 0)}
+                  currentKcal={totals.calories}
+                />
                 <p className="text-xs text-zinc-500">
-                  Change this after your meal too. Half the noodles is ½×, two cookies when the photo shows one is 2×.
-                  Use the buttons on an item below to change just that item.
+                  1× is the portion {withPhoto ? "in the photo" : "listed"}. Slide down if you left some, up for seconds. You can change it after
+                  your meal too, or set one item on its own below.
                 </p>
               </div>
             )}
@@ -434,65 +460,10 @@ export function MealComposer({
   );
 }
 
-function AmountChips({ value, onPick, small }: { value: number | null; onPick: (x: number) => void; small?: boolean }) {
-  const custom = value != null && !(EATEN_STEPS as readonly number[]).includes(value);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {EATEN_STEPS.map((x) => (
-        <button
-          key={x}
-          type="button"
-          onClick={() => onPick(x)}
-          aria-pressed={value === x}
-          className={cn(
-            "rounded-lg border font-medium tabular-nums transition-colors",
-            small ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
-            value === x
-              ? "border-teal-300 bg-teal-300 text-zinc-950"
-              : "border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08]",
-          )}
-        >
-          {eatenLabel(x)}
-        </button>
-      ))}
-      <label
-        className={cn(
-          "flex items-center gap-1 rounded-lg border px-2 tabular-nums",
-          small ? "text-xs" : "text-sm",
-          custom ? "border-teal-300 text-teal-200" : "border-white/10 text-zinc-400",
-        )}
-      >
-        <span>Other</span>
-        <input
-          inputMode="decimal"
-          aria-label="Other amount, in times the portion shown"
-          placeholder="1.2"
-          value={custom ? String(value) : ""}
-          onChange={(e) => {
-            const n = Number(e.target.value.replace(",", ".").replace(/[^\d.]/g, ""));
-            if (Number.isFinite(n) && n > 0) onPick(Math.min(10, n));
-          }}
-          className="w-10 bg-transparent py-1 text-center outline-none placeholder:text-zinc-600"
-        />
-      </label>
-    </div>
-  );
-}
-
 function ItemAmount({ item, onChange }: { item: MealItem; onChange: (x: number) => void }) {
-  const e = item.eaten ?? 1;
-  const b = baseOf(item);
   return (
-    <div className="space-y-1.5 border-t border-white/[0.06] pt-2">
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="text-zinc-400">Amount eaten</span>
-        {e !== 1 && (
-          <span className="tabular-nums text-zinc-400">
-            {Math.round(b.calories)} kcal × {eatenLabel(e)} = <b className="text-zinc-100">{item.calories} kcal</b>
-          </span>
-        )}
-      </div>
-      <AmountChips value={e} onPick={onChange} small />
+    <div className="border-t border-white/[0.06] pt-2">
+      <AmountPicker value={item.eaten ?? 1} onChange={onChange} kind={isDrink(item) ? "drink" : "food"} fullKcal={baseOf(item).calories} currentKcal={item.calories} compact />
     </div>
   );
 }

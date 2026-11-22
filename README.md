@@ -176,9 +176,12 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   analysis (it is a decision, not a gap), and logging food in that slot cancels the skip.
 - **Photo plus context**: after you take a photo, add a few words ("kopi kosong, shared the toast")
   before the estimate runs. Nothing is sent to the AI until you tap *Estimate calories*.
-- **How much did you eat?** Set ½×, 2× and so on for the whole meal or for one item (one cookie in the
-  photo but you ate two = 2× on that item). Change it after the meal too. The full-portion numbers are
-  kept, so you can switch from ½× to 2× without losing the original estimate.
+- **How much did you eat (or drink)?** A plate that fills as you slide (a glass for drinks, which the
+  AI flags per item and typed items are guessed from their name), with words and calories beside it:
+  "Half the plate · 273 of 545 kcal", "2½ glasses · 263 kcal (105 per portion)". Slide from 0 to 3× in
+  quarter steps, or tap − / + (up to 10×). Works for the whole meal or one item (one cookie in the
+  photo but you ate two = 2× on that item), and can be changed after the meal. The full-portion
+  numbers are kept, so you can switch from ½× to 2× without losing the original estimate.
 
 - **Food tab** — tap *Snap a meal* to take a photo (or pick one / enter it
   manually). The photo is downscaled in the browser (≤1024px) and sent to
@@ -187,6 +190,13 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   on Claude Sonnet 5.5. You can edit every item before saving. A small
   thumbnail is stored with the meal. **Eat again** re-logs a recent meal after a
   quick confirmation, with no AI call.
+- **Describe it (no photo)** — the Food tab's *Describe it* button opens the
+  same sheet with a "Describe what you ate" box: type what and how much (e.g.
+  "1 plate chicken rice, iced milo") and tap *Estimate with AI*. The same model
+  fills in the items with its working, assuming a typical serving where you give
+  no amount, and you check them before saving. You can still type everything
+  yourself. Text estimates share the photo daily limit and are recorded as
+  `meal_text` in `ai_usage`.
 - **AI cost** — every call's tokens and estimated cost are stored (`ai_usage`)
   and logged as `[meal-ai] model=… in=… out=… cost=$…`; the Food tab shows
   this month's total. Rough cost: ~$0.0005 per photo on Haiku 5.5, ~$0.01 on

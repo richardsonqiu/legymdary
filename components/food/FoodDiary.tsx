@@ -6,6 +6,7 @@ import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation";
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
+import { amountWords } from "@/components/food/AmountPicker";
 import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
 import {
   CameraIcon,
@@ -25,7 +26,7 @@ import type { Meal, SavedMeal } from "@/db/schema";
 import { deleteMeal, logMenuItem, pinMeal, relogMeal, removeMenuItem, skipMeal, unskipMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
 import {
-  eatenLabel,
+  isDrink,
   MEAL_TYPES,
   mealBudgets,
   SKIPPABLE_MEALS,
@@ -68,7 +69,7 @@ export function FoodDiary({
   meals: Meal[];
   /** Distinct recent meals, newest first: the first few are "Eat again", all of them feed the My menu picker. */
   recentMeals: Meal[];
-  /** AI photo analyses this month and their estimated cost. */
+  /** AI requests this month (photo and text estimates, reports) and their estimated cost. */
   aiSpend: { calls: number; costUsd: number };
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
@@ -370,7 +371,7 @@ export function FoodDiary({
             <ImageIcon className="h-4 w-4" /> From photos
           </Button>
           <Button variant="secondary" onClick={openManual}>
-            <PencilIcon className="h-4 w-4" /> Enter manually
+            <PencilIcon className="h-4 w-4" /> Describe it
           </Button>
         </div>
         {photoError && <p className="text-center text-sm text-amber-300">{photoError}</p>}
@@ -543,8 +544,7 @@ export function FoodDiary({
 
       {aiSpend.calls > 0 && (
         <p className="text-center text-[11px] text-zinc-600">
-          AI this month: {aiSpend.calls} photo{" "}
-          {aiSpend.calls === 1 ? "analysis" : "analyses"} · about $
+          AI this month: {aiSpend.calls} {aiSpend.calls === 1 ? "request" : "requests"} · about $
           {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
         </p>
       )}
@@ -660,7 +660,7 @@ function MealRow({
                           {it.portion && <span className="text-zinc-500"> · {it.portion}</span>}
                           {it.eaten != null && it.eaten !== 1 && (
                             <span className="ml-1.5 rounded-full bg-teal-300/15 px-1.5 py-0.5 text-[10px] font-semibold text-teal-200">
-                              ate {eatenLabel(it.eaten)}
+                              {amountWords(it.eaten, isDrink(it) ? "drink" : "food").toLowerCase()}
                             </span>
                           )}
                         </span>

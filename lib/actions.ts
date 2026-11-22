@@ -433,36 +433,42 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const IMAGE_DATA_URL_RE =
   /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/;
 
-/** Sends a (client-downscaled) meal photo to the AI for a nutrition estimate. */
+/**
+ * AI nutrition estimate: from a (client-downscaled) meal photo with an
+ * optional description, or from a description alone (no photo).
+ */
 export async function analyzeMeal(input: {
-  image: string;
+  image?: string | null;
   hint?: string | null;
 }): Promise<MealAnalysis | { error: string }> {
   const userId = await requireUserId();
-  const m = IMAGE_DATA_URL_RE.exec(input.image ?? "");
+  const hint = cleanText(input.hint, 500);
+  const hasImage = !!input.image;
+  const m = hasImage ? IMAGE_DATA_URL_RE.exec(input.image ?? "") : null;
+  if (hasImage && !m) return { error: "Unsupported image. Please use a JPEG or PNG photo." };
+  if (m && m[2].length > 5_000_000) return { error: "That photo is too large." };
+  if (!hasImage && hint.length < 3) return { error: "Describe what you ate first, e.g. 1 plate chicken rice with soup." };
   // Cost guard: burst + daily caps per user (tunable via MEAL_AI_DAILY_LIMIT).
   const daily = Math.max(1, Number(process.env.MEAL_AI_DAILY_LIMIT) || 60);
   const [burst, perDay] = await Promise.all([
     rateLimit(`ai:min:${userId}`, 8, 60 * 1000),
     rateLimit(`ai:day:${userId}`, daily, DAY),
   ]);
-  if (!burst.ok) return { error: "Too many photos at once. Wait a moment and try again." };
+  if (!burst.ok) return { error: "Too many estimates at once. Wait a moment and try again." };
   if (!perDay.ok) {
-    return { error: `Daily AI photo limit reached (${daily}). You can still enter meals manually.` };
+    return { error: `Daily AI estimate limit reached (${daily}). You can still enter meals yourself.` };
   }
-  if (!m) return { error: "Unsupported image. Please use a JPEG or PNG photo." };
-  if (m[2].length > 5_000_000) return { error: "That photo is too large." };
   const res = await analyzeMealImage({
-    base64: m[2],
-    mediaType: m[1] as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-    hint: input.hint?.slice(0, 500),
+    base64: m?.[2] ?? null,
+    mediaType: (m?.[1] as "image/jpeg" | "image/png" | "image/webp" | "image/gif" | undefined) ?? null,
+    hint: hint || null,
   });
   if (res.usage.length) {
     try {
       await db.insert(aiUsage).values(
         res.usage.map((u) => ({
           userId,
-          feature: "meal_photo",
+          feature: hasImage ? "meal_photo" : "meal_text",
           model: u.model,
           inputTokens: u.inputTokens,
           outputTokens: u.outputTokens,
@@ -516,6 +522,7 @@ function cleanItems(items: unknown): MealItem[] {
         edited: it.edited === true,
         base: cleanBase(it.base),
         eaten: cleanEaten(it.eaten),
+        drink: typeof it.drink === "boolean" ? it.drink : null,
       },
     ];
   });
