@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 
 export const CHART = {
   line: "#f5f7fb", // zinc-50
-  lineSoft: "#8c98b0", // zinc-400
+  lineSoft: "#a7b2c7", // zinc-400
   grid: "#222b40", // zinc-800
-  axis: "#67738c", // zinc-500
-  bar: "#b3bdd0", // zinc-300
+  axis: "#8b97ae", // zinc-500
+  bar: "#c2cbdc", // zinc-300
 };
 
 export const tooltipStyle = {
@@ -20,7 +20,7 @@ export const tooltipStyle = {
   padding: "6px 10px",
 };
 
-export const tooltipLabelStyle = { color: "#8c98b0", marginBottom: 2 };
+export const tooltipLabelStyle = { color: "#a7b2c7", marginBottom: 2 };
 
 const emptySubscribe = () => () => {};
 

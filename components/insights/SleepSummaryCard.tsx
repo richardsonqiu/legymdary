@@ -224,7 +224,7 @@ export function SleepSummaryCard({ s, compact }: { s: SleepSummary; compact?: bo
                 style={{ height: n.score == null ? "6%" : `${Math.max(8, n.score)}%` }}
                 title={n.score == null ? "No score" : `${n.score}`}
               />
-              <span className="text-[9px] tabular-nums leading-none text-zinc-500">{n.score ?? ""}</span>
+              <span className="text-[10px] tabular-nums leading-none text-zinc-500">{n.score ?? ""}</span>
               <span className="text-[10px] leading-none text-zinc-500">{format(parseISO(n.date), "EEE")}</span>
             </div>
           ))}

@@ -150,7 +150,7 @@ function MonthView({
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-zinc-600">
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-zinc-500">
         {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
           <div key={i}>{l}</div>
         ))}
@@ -200,7 +200,7 @@ function YearGrid({ byDate, today, layer }: { byDate: Map<string, ConsistencyDay
       <div className="flex gap-[3px]">
         {weeks.map((wk, wi) => (
           <div key={wi} className="flex flex-col gap-[3px]">
-            <div className="h-3 text-[9px] leading-3 text-zinc-600">
+            <div className="h-3 text-[10px] leading-3 text-zinc-500">
               {wk[0].slice(8) <= "07" ? format(parseISO(wk[0]), "MMM") : ""}
             </div>
             {wk.map((d) => (
