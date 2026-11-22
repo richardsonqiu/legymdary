@@ -39,6 +39,7 @@ import {
   type Meal,
   skippedMeals,
   savedMeals,
+  sheetImports,
   type SavedMeal,
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
@@ -1045,3 +1046,31 @@ export const getConsistencyDays = cache(async function getConsistencyDays(
   for (const r of skipRows) day(r.date).skipped = Number(r.n);
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 });
+
+/** Names of every exercise the user can pick (built-in and their own). */
+export async function getExerciseNames(): Promise<string[]> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({ name: exercises.name })
+    .from(exercises)
+    .where(or(isNull(exercises.userId), eq(exercises.userId, userId)));
+  return rows.map((r) => r.name);
+}
+
+/** Spreadsheet imports, newest first. */
+export async function getSheetImports() {
+  const userId = await requireUserId();
+  return db
+    .select({
+      id: sheetImports.id,
+      fileName: sheetImports.fileName,
+      workouts: sheetImports.workouts,
+      sets: sheetImports.sets,
+      activities: sheetImports.activities,
+      createdAt: sheetImports.createdAt,
+    })
+    .from(sheetImports)
+    .where(eq(sheetImports.userId, userId))
+    .orderBy(desc(sheetImports.createdAt))
+    .limit(50);
+}

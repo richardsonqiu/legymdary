@@ -23,7 +23,18 @@ your phone at the gym. Every account gets its own private diary.
   cards, a row of score rings on Home (Readiness, Sleep, Food, Steps, Week) and a
   large readiness gauge with a plain-language verdict.
 - **Navigation**: 5 tabs. **Home** · **Train** (Workout, History, Exercises) ·
-  **Food** · **Progress** (Body, Goal, PRs) · **Insights** (Daily, Garmin).
+  **Food** · **Progress** (Body, Goal, PRs) · **Insights**. Data sources live
+  in one place, **Connections** (`/connect`: All, Garmin, Apple, File), reached
+  from Home's account menu, the Sources button on Insights, History and the
+  Today guide. It also holds InBody, spreadsheet import and CSV export.
+- **Spreadsheet import** (Connections → File, `/connect/import`): download an
+  Excel template (Workouts sheet: one row per set; Cardio sheet: one row per
+  activity; dropdowns for exercises, muscle groups and activity types; an
+  Example and a How to fill sheet), fill it in Excel, Google Sheets or Numbers,
+  and upload the .xlsx (or CSV). A preview lists workouts, new exercises and
+  every skipped row with its reason before anything is saved. Same-date,
+  same-name workouts and identical cardio rows are skipped, so re-imports are
+  safe, and each import can be undone.
 - **Goal and pace**: set a target weight or body fat, then pick Relaxed,
   Balanced or Aggressive (each shows daily calories and the arrival date) or a
   date of your own. Arrival dates count from today using the pace your calories
@@ -246,10 +257,27 @@ The analysis design built on top of this lives in
 The Personal API is intended for personal use, not commercial apps serving
 many users — see Garmin's FAQ before opening this app to the public.
 
+## Spreadsheet import: how it stays safe
+
+- The file is read in the browser: .xlsx is unzipped with a 40 MB cap per part
+  (zip bombs stop early) and its XML is read with small regular expressions, so
+  DTDs and entities are refused rather than expanded. Formulas are never run;
+  only the saved value is used. Files over 5 MB are refused.
+- Every text value is cleaned (control, zero-width and bidi characters removed,
+  length capped) and every number range-checked, in the browser and again on
+  the server with a strict zod schema (unknown keys, wrong types, impossible
+  dates and oversized batches are rejected).
+- All writes use Drizzle's parameterised queries; nothing from the file is ever
+  joined into SQL. React escapes names on screen, and CSV export neutralises
+  cells starting with `=`, `+`, `-` or `@`.
+- Imports are rate limited (20 an hour), expire after an hour, and may add at
+  most 100 new exercises. Cardio rows get ids `sheet-<hash>` in the watch
+  activity tables; disconnecting Garmin or removing Apple data leaves them.
+
 ## Apple Health (Apple Watch, no Garmin)
 
 People with an Apple Watch upload their Health export instead of connecting
-Garmin: **Insights → Apple Health** (`/apple-health`).
+Garmin: **Connections → Apple** (`/apple-health`).
 
 - **Getting the file.** iPhone Health app → profile picture → *Export All Health
   Data* → save `export.zip` → pick it on the page (the zip or an unzipped

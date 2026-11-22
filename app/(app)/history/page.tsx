@@ -2,7 +2,8 @@ import { userToday } from "@/lib/session";
 import { ConsistencyCalendar } from "@/components/consistency/ConsistencyCalendar";
 import { PageTransition } from "@/components/PageTransition";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
-import { CalendarIcon } from "@/components/icons";
+import Link from "next/link";
+import { CalendarIcon, SheetIcon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, SectionTitle } from "@/components/ui";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getConsistencyDays, getGarminActivities, getGarminStatus, getWorkoutDetails } from "@/lib/queries";
@@ -29,7 +30,7 @@ export default async function HistoryPage() {
       </section>
       {(garmin || activities.length > 0) && (
         <section>
-          <SectionTitle>Garmin activities</SectionTitle>
+          <SectionTitle>Activities</SectionTitle>
           <GarminActivityList activities={activities} />
         </section>
       )}
@@ -39,7 +40,7 @@ export default async function HistoryPage() {
           title="No gym sessions logged"
           description={
             garmin || activities.length > 0
-              ? "Sessions you log in Workout show here. Garmin activities are above."
+              ? "Sessions you log in Workout show here. Watch activities are above."
               : "Finish a workout and it shows here."
           }
         />
@@ -69,6 +70,17 @@ export default async function HistoryPage() {
           </div>
         </section>
       )}
+      <Link
+        href="/connect/import"
+        transitionTypes={["nav-forward"]}
+        className="press flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900/50"
+      >
+        <SheetIcon className="h-5 w-5 shrink-0 text-zinc-500" />
+        <span>
+          <b>Logged workouts somewhere else?</b>
+          <span className="block text-xs text-zinc-500">Import them from Excel or CSV with our template</span>
+        </span>
+      </Link>
     </PageTransition>
   );
 }

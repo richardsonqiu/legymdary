@@ -12,7 +12,7 @@ import {
   YesterdayCard,
 } from "@/components/insights/InsightsCards";
 import { TrendChart } from "@/components/insights/TrendChart";
-import { ChevronLeftIcon, ChevronRightIcon, WatchIcon } from "@/components/icons";
+import { ChevronLeftIcon, ChevronRightIcon, WatchIcon, PlugIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
 import { getStoredReport } from "@/lib/analysis/report";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
@@ -51,7 +51,20 @@ export default async function InsightsPage({
   return (
     <PageTransition className="space-y-6">
       {garminSyncing && <AutoRefresh />}
-      <PageHeader title="Insights" subtitle="Recovery, sleep and training, compared with your usual" />
+      <PageHeader
+        title="Insights"
+        subtitle="Recovery, sleep and training, compared with your usual"
+        action={
+          <Link
+            href="/connect"
+            transitionTypes={["nav-forward"]}
+            aria-label="Connections"
+            className="press flex h-10 items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+          >
+            <PlugIcon className="h-4 w-4" /> Sources
+          </Link>
+        }
+      />
 
       <div className="flex items-center justify-between gap-2">
         <Link
@@ -86,9 +99,8 @@ export default async function InsightsPage({
         <div className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300">
           <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
           <span>
-            <Link href="/garmin" className="underline">Connect Garmin</Link> or{" "}
-            <Link href="/apple-health" className="underline">import Apple Health</Link> to unlock readiness, sleep
-            and recovery insights.
+            <Link href="/connect" className="underline">Connect Garmin or Apple Health</Link> to unlock readiness,
+            sleep and recovery insights.
           </span>
         </div>
       )}

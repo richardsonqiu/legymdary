@@ -257,7 +257,7 @@ function Onboarding({ g }: { g: GuideInput }) {
     { text: "Add your weight (or an InBody scan)", href: "/stats", done: g.weight != null },
     { text: "Log your first meal", href: "/food", done: g.hasMeal },
     { text: "Log your first workout", href: "/log", done: g.hasWorkout },
-    { text: "Connect Garmin or Apple Health (optional)", href: "/garmin", done: g.garminConnected },
+    { text: "Connect Garmin or Apple Health (optional)", href: "/connect", done: g.garminConnected },
     { text: "Add an InBody scan (optional)", href: "/stats", done: g.hasScan },
   ];
   const done = steps.filter((s) => s.done).length;
