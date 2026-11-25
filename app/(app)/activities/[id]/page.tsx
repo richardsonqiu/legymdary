@@ -57,6 +57,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   if (!a) notFound();
   const fromApple = a.id.startsWith("apple-");
   const fromSheet = a.id.startsWith("sheet-");
+  const fromOura = a.id.startsWith("oura-");
 
   const zoneTotal = a.zonesSec.reduce<number>((acc, z) => acc + (z ?? 0), 0);
   const teWords = trainingEffectWords(a.aerobicTE);
@@ -239,14 +240,16 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           <Row label="Temperature" value={a.tempMin != null || a.tempMax != null ? `${r(a.tempMin) ?? "–"}–${r(a.tempMax) ?? "–"} °C` : null} />
           <Row label="Sweat loss (estimate)" value={a.sweatMl != null ? `${r(a.sweatMl)} ml` : null} hint="Roughly how much to drink back" />
         </Card>
-        {!fromApple && !fromSheet && (
+        {!fromApple && !fromSheet && !fromOura && (
           <a href={`/api/garmin/fit/${a.id}`} className="mt-2 block text-center text-xs text-zinc-500 underline">
             Download original .FIT file
           </a>
         )}
       </section>
-      {fromApple || fromSheet ? (
-        <p className="text-center text-[11px] text-zinc-600">{fromApple ? "Data from Apple Health" : "Imported from a spreadsheet"}</p>
+      {fromApple || fromSheet || fromOura ? (
+        <p className="text-center text-[11px] text-zinc-500">
+          {fromApple ? "Data from Apple Health" : fromOura ? "Data from Oura" : "Imported from a spreadsheet"}
+        </p>
       ) : (
         <GarminAttribution className="text-center" />
       )}

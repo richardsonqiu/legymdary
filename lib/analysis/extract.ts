@@ -10,6 +10,7 @@ import {
   workouts,
   skippedMeals,
 } from "@/db/schema";
+import { getPrefs, orderFor, pickActivities, pickBySource, type Category } from "@/lib/sources";
 import { addDaysStr } from "@/lib/utils";
 
 /**
@@ -267,6 +268,7 @@ export async function extractDays(
     db
       .select({
         date: garminRaw.date,
+        key: garminRaw.key,
         payload: sql<string>`${projection(fields)}`,
       })
       .from(garminRaw)
@@ -279,7 +281,7 @@ export async function extractDays(
       )
       .then((rows) => rows.map((r) => ({ ...r, dataset }))),
   );
-  const [raw, typed, mealRows, setRows, body, skipRows] = await Promise.all([
+  const [raw, typed, mealRows, setRows, body, skipRows, prefs] = await Promise.all([
     Promise.all(rawQueries).then((r) => r.flat()),
     db
       .select()
@@ -329,9 +331,10 @@ export async function extractDays(
       .select({ date: skippedMeals.date })
       .from(skippedMeals)
       .where(and(eq(skippedMeals.userId, userId), between(skippedMeals.date, from, to))),
+    getPrefs(userId),
   ]);
 
-  const rawBy = new Map<string, Json[]>(); // `${dataset}|${date}` → payloads
+  const rawBy = new Map<string, { key: string | null; p: Json }[]>(); // `${dataset}|${date}` → payloads
   for (const r of raw) {
     if (!r.date) continue;
     let p: unknown;
@@ -342,10 +345,19 @@ export async function extractDays(
     }
     if (!p || typeof p !== "object") continue;
     const k = `${r.dataset}|${r.date}`;
-    rawBy.set(k, [...(rawBy.get(k) ?? []), p as Json]);
+    rawBy.set(k, [...(rawBy.get(k) ?? []), { key: r.key, p: p as Json }]);
   }
+  // Several devices can have a payload for the same day: use the one the
+  // user prefers for that kind of data (lib/sources.ts), else the next.
+  const CAT: Record<string, Category> = {
+    sleep_summary: "sleep",
+    hrv_daily: "recovery",
+    user_summary: "activity",
+    daily_summary: "activity",
+    body_battery_daily: "recovery",
+  };
   const one = (ds: string, date: string) =>
-    rawBy.get(`${ds}|${date}`)?.[0] ?? null;
+    pickBySource(rawBy.get(`${ds}|${date}`) ?? [], orderFor(prefs, CAT[ds] ?? "activity"))?.p ?? null;
   const typedBy = new Map(typed.map((t) => [t.date, t]));
 
   // Timezone offset (for meal times): from the most recent sleep with both clocks.
@@ -375,7 +387,7 @@ export async function extractDays(
     const us = one("user_summary", d);
     const bb = one("body_battery_daily", d);
     const tg = typedBy.get(d);
-    const acts = rawBy.get(`activities|${d}`) ?? [];
+    const acts = pickActivities(rawBy.get(`activities|${d}`) ?? [], orderFor(prefs, "workouts")).map((a) => a.p);
 
     // Sleep need may be an object ({actual, baseline}) or a number of minutes.
     // Sleep need may be an object ({actual, baseline}) or a plain number of minutes.
@@ -468,10 +480,11 @@ export async function extractDays(
       hrvStatus: str(hv, "status") ?? tg?.hrvStatus ?? null,
       hrvBalancedLow: num(hv, "baseline.balancedLow"),
       hrvBalancedHigh: num(hv, "baseline.balancedUpper"),
+      // The merged row already follows the "recovery" device preference.
       rhr:
+        tg?.restingHr ??
         num(ds, "heartRate.restingValue") ??
         num(us, "restingHeartRate") ??
-        tg?.restingHr ??
         null,
       stressAvg: (() => {
         const v =

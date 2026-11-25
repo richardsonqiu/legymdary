@@ -60,7 +60,7 @@ export function SleepSummaryCard({ s, compact }: { s: SleepSummary; compact?: bo
         <div className="flex items-end justify-between gap-3">
           <div>
             <div className="text-3xl font-semibold tabular-nums leading-none">
-              {hoursMinutes(s.hours * 60)}
+              {hoursMinutes(s.minutes)}
             </div>
             <div className="mt-1 text-xs text-zinc-400">
               {s.pctOfNeed}% of your {s.needHours} h need

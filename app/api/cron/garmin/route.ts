@@ -6,6 +6,7 @@ import { generateDailyReport, getStoredReport } from "@/lib/analysis/report";
 import { latestDataDate } from "@/lib/analysis/service";
 import { runGarminImport } from "@/lib/garmin/raw-import";
 import { staleGarminUsers, syncGarminForUser } from "@/lib/garmin/sync";
+import { staleOuraUsers, syncOuraForUser } from "@/lib/oura/sync";
 
 /** Constant-time comparison (hashing first equalises lengths). */
 function safeEqual(a: string, b: string) {
@@ -49,7 +50,14 @@ export async function GET(request: Request) {
       }
     }
   }
+  // Oura rings: a short sync for each connected account not synced in 12 hours.
+  let ouraSynced = 0;
+  for (const userId of Date.now() - started < 50_000 ? await staleOuraUsers(12 * 60 * 60 * 1000) : []) {
+    if (Date.now() - started > 55_000) break;
+    if ((await syncOuraForUser(userId, { days: 10 })).ok) ouraSynced++;
+  }
   return Response.json({
+    ouraSynced,
     candidates: users.length,
     synced: results.filter((r) => r.ok).length,
     failed: results.filter((r) => !r.ok).length,

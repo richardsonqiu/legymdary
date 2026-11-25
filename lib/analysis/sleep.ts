@@ -24,6 +24,8 @@ export type Driver = { tone: "good" | "bad"; text: string };
 export type SleepSummary = {
   date: string;
   hours: number;
+  /** Exact minutes asleep (hours is rounded to 0.1 h). */
+  minutes: number;
   needHours: number;
   pctOfNeed: number;
   score: number | null;
@@ -214,6 +216,7 @@ export function buildSleepSummary(rows: DayRow[], i: number): SleepSummary | nul
   return {
     date: r.date,
     hours: r1(asleepMin / 60),
+    minutes: Math.round(asleepMin),
     needHours: r1(needMin / 60),
     pctOfNeed,
     score: r.sleepScore,

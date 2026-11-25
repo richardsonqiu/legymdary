@@ -18,7 +18,9 @@ import { getStoredReport } from "@/lib/analysis/report";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
-import { getAppleHealthStatus, getGarminStatus } from "@/lib/queries";
+import { scheduleOuraSync } from "@/lib/oura/background";
+import { getAppleHealthStatus, getGarminStatus, getOuraExtras, getOuraStatus } from "@/lib/queries";
+import { OuraExtrasCard } from "@/components/oura/OuraExtrasCard";
 import { requireUserId, userToday } from "@/lib/session";
 import { addDaysStr, formatPretty } from "@/lib/utils";
 
@@ -34,19 +36,24 @@ export default async function InsightsPage({
 }) {
   const userId = await requireUserId();
   const sp = await searchParams;
-  const [garmin, apple, latest] = await Promise.all([
+  const [garmin, apple, oura, latest] = await Promise.all([
     getGarminStatus(),
     getAppleHealthStatus(),
+    getOuraStatus(),
     latestDataDate(userId),
   ]);
   const date = typeof sp.date === "string" && DATE_RE.test(sp.date) ? sp.date : latest;
 
-  const [{ card, series }, stored] = await Promise.all([
+  const [{ card, series }, stored, ouraDays] = await Promise.all([
     buildAnalysis(userId, date),
     getStoredReport(userId, date),
+    oura ? getOuraExtras(addDaysStr(date, -14), date) : Promise.resolve([]),
   ]);
+  const ouraDay = ouraDays.find((d) => d.date === date) ?? null;
+  const ouraReadiness = ouraDays.filter((d) => d.date < date && d.readinessScore != null).map((d) => d.readinessScore!);
+  const ouraUsual = ouraReadiness.length >= 4 ? Math.round(ouraReadiness.reduce((a, b) => a + b, 0) / ouraReadiness.length) : null;
   const isLatest = date >= latest;
-  const garminSyncing = scheduleGarminSync(userId, garmin);
+  const garminSyncing = [scheduleGarminSync(userId, garmin), scheduleOuraSync(userId, oura)].some(Boolean);
 
   return (
     <PageTransition className="space-y-6">
@@ -95,16 +102,16 @@ export default async function InsightsPage({
         )}
       </div>
 
-      {!garmin && !apple && (
+      {!garmin && !apple && !oura && (
         <div className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300">
           <WatchIcon className="h-5 w-5 shrink-0 text-zinc-500" />
           <span>
-            <Link href="/connect" className="underline">Connect Garmin or Apple Health</Link> to unlock readiness,
+            <Link href="/connect" className="underline">Connect Garmin, Oura or Apple Health</Link> to unlock readiness,
             sleep and recovery insights.
           </span>
         </div>
       )}
-      {!garmin && apple && isLatest && apple.lastDate && apple.lastDate < addDaysStr(await userToday(), -1) && (
+      {!garmin && !oura && apple && isLatest && apple.lastDate && apple.lastDate < addDaysStr(await userToday(), -1) && (
         <Link
           href="/apple-health"
           className="flex items-center gap-3 rounded-2xl border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-300"
@@ -135,6 +142,12 @@ export default async function InsightsPage({
         <SectionTitle help="sleep">Last night</SectionTitle>
         {card.sleep ? <SleepSummaryCard s={card.sleep} /> : <SleepRecoveryCard card={card} />}
       </section>
+      {ouraDay && (
+        <section>
+          <SectionTitle>From your Oura Ring</SectionTitle>
+          <OuraExtrasCard day={ouraDay} usual={{ readiness: ouraUsual }} />
+        </section>
+      )}
 
       {card.bodyBattery && (
         <section>

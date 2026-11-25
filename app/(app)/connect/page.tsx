@@ -1,9 +1,11 @@
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
-import { AppleIcon, ChevronRightIcon, DownloadIcon, ScaleIcon, SheetIcon, WatchIcon } from "@/components/icons";
+import { SourcePrefsCard } from "@/components/connect/SourcePrefsCard";
+import type { Device } from "@/lib/sources-shared";
+import { AppleIcon, ChevronRightIcon, DownloadIcon, ScaleIcon, SheetIcon, WatchIcon, RingIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
-import { getAppleHealthStatus, getGarminStatus, getSheetImports } from "@/lib/queries";
+import { getAppleHealthStatus, getGarminStatus, getSheetImports, getOuraStatus, getSourcePrefs } from "@/lib/queries";
 import { cn, formatPretty } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -52,16 +54,23 @@ const EXPORTS = [
 ] as const;
 
 export default async function ConnectPage() {
-  const [garmin, apple, imports] = await Promise.all([getGarminStatus(), getAppleHealthStatus(), getSheetImports()]);
+  const [garmin, apple, oura, imports, prefs] = await Promise.all([
+    getGarminStatus(),
+    getAppleHealthStatus(),
+    getOuraStatus(),
+    getSheetImports(),
+    getSourcePrefs(),
+  ]);
+  const devices: Device[] = [garmin ? "garmin" : null, oura ? "oura" : null, apple ? "apple" : null].filter((d): d is Device => !!d);
   const garminOn = !!garmin && garmin.status !== "error";
   const lastImport = imports[0];
 
   return (
     <PageTransition className="space-y-7">
-      <PageHeader title="Connections" subtitle="Bring in data from your watch, scale or a spreadsheet" />
+      <PageHeader title="Connections" subtitle="Bring in data from your watch, ring, scale or a spreadsheet" />
 
       <section>
-        <SectionTitle>Watch</SectionTitle>
+        <SectionTitle>Watch and ring</SectionTitle>
         <div className="space-y-2">
           <Row
             href="/garmin"
@@ -80,6 +89,22 @@ export default async function ConnectPage() {
             note={garmin ? undefined : "Syncs calories burned, sleep, recovery and activities on its own"}
           />
           <Row
+            href="/oura"
+            icon={<RingIcon className="h-5 w-5" />}
+            title="Oura Ring"
+            on={!!oura && oura.status !== "error"}
+            status={
+              oura
+                ? oura.status === "error"
+                  ? "Needs attention: connect again"
+                  : oura.lastSyncAt
+                    ? `Connected · synced ${formatDistanceToNow(oura.lastSyncAt, { addSuffix: true })}`
+                    : "Connected · first sync running"
+                : "Not connected"
+            }
+            note={oura ? undefined : "Sleep, readiness, temperature and SpO2 from your ring"}
+          />
+          <Row
             href="/apple-health"
             icon={<AppleIcon className="h-5 w-5" />}
             title="Apple Health"
@@ -92,8 +117,19 @@ export default async function ConnectPage() {
             note={apple ? undefined : "For Apple Watch: upload the Health app's export now and then"}
           />
         </div>
-        <p className="mt-2 text-xs text-zinc-500">Use one watch. If both are set up, Garmin wins on days they overlap.</p>
+        {devices.length < 2 && (
+          <p className="mt-2 text-xs text-zinc-500">
+            Wear more than one? Connect both and choose which device to use for sleep, recovery, daily activity and workouts.
+          </p>
+        )}
       </section>
+
+      {devices.length >= 2 && (
+        <section>
+          <SectionTitle>Which device for what</SectionTitle>
+          <SourcePrefsCard prefs={prefs} devices={devices} />
+        </section>
+      )}
 
       <section>
         <SectionTitle>Body scans</SectionTitle>

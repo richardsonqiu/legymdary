@@ -1,12 +1,13 @@
-import { and, eq, inArray, like, not, sql } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   appleHealthImports,
   bodyStats,
   garminActivities,
-  garminDaily,
   garminRaw,
+  sourceDaily,
 } from "@/db/schema";
+import { resolveDays } from "@/lib/sources";
 import type { AhBatch } from "@/lib/apple-health/types";
 
 /**
@@ -21,8 +22,9 @@ import type { AhBatch } from "@/lib/apple-health/types";
  * - workouts → garmin_activities + garmin_raw "activities" (id "apple-…").
  * - weigh-ins → body_stats (source "apple").
  *
- * Rules: Garmin and manual data always win. Apple never overwrites a Garmin
- * day, a Garmin night, or a weigh-in you typed (or an InBody scan).
+ * Rules: Apple's numbers are stored on their own (source_daily, keys "apple-…")
+ * and the user's "which device for what" choice decides what is shown
+ * (lib/sources.ts). Weigh-ins you typed (or InBody scans) are never overwritten.
  */
 
 const CHUNK = 80;
@@ -41,7 +43,7 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
   /* ---- days ---- */
   for (const part of chunks(b.days)) {
     await db
-      .insert(garminDaily)
+      .insert(sourceDaily)
       .values(
         part.map((d) => ({
           userId,
@@ -59,7 +61,7 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
         })),
       )
       .onConflictDoUpdate({
-        target: [garminDaily.userId, garminDaily.date],
+        target: [sourceDaily.userId, sourceDaily.date, sourceDaily.source],
         set: {
           steps: ex("steps"),
           activeKcal: ex("active_kcal"),
@@ -71,29 +73,13 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
           hrvWeeklyAvg: ex("hrv_weekly_avg"),
           updatedAt: now,
         },
-        setWhere: eq(garminDaily.source, "apple"),
       });
   }
 
   /* ---- nights ---- */
   if (b.sleep.length) {
-    // Skip nights Garmin already has.
-    const garminNights = new Set(
-      (
-        await db
-          .select({ date: garminRaw.date })
-          .from(garminRaw)
-          .where(
-            and(
-              eq(garminRaw.userId, userId),
-              eq(garminRaw.dataset, "sleep_summary"),
-              inArray(garminRaw.date, b.sleep.map((s) => s.date)),
-              not(like(garminRaw.key, APPLE)),
-            ),
-          )
-      ).map((r) => r.date),
-    );
-    const nights = b.sleep.filter((s) => !garminNights.has(s.date));
+    // Stored even when Garmin has the night; "which device for what" decides which is used.
+    const nights = b.sleep;
     for (const part of chunks(nights)) {
       await db
         .insert(garminRaw)
@@ -129,12 +115,11 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
           set: { payload: ex("payload"), date: ex("date"), fetchedAt: now },
         });
       await db
-        .insert(garminDaily)
+        .insert(sourceDaily)
         .values(part.map((s) => ({ userId, date: s.date, source: "apple", sleepSeconds: s.asleepSec, updatedAt: now })))
         .onConflictDoUpdate({
-          target: [garminDaily.userId, garminDaily.date],
+          target: [sourceDaily.userId, sourceDaily.date, sourceDaily.source],
           set: { sleepSeconds: ex("sleep_seconds"), updatedAt: now },
-          setWhere: eq(garminDaily.source, "apple"),
         });
     }
   }
@@ -218,6 +203,9 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
         setWhere: eq(bodyStats.source, "apple"),
       });
   }
+
+  const dates = [...b.days.map((d) => d.date), ...b.sleep.map((x) => x.date), ...b.workouts.map((w) => w.date)].sort();
+  if (dates.length) await resolveDays(userId, { from: dates[0], to: dates[dates.length - 1] });
 }
 
 export async function recordAppleHealthImport(
@@ -233,9 +221,10 @@ export async function recordAppleHealthImport(
 
 /** Removes everything an Apple Health upload added. Garmin and manual data stay. */
 export async function deleteAppleHealthData(userId: string) {
-  await db.delete(garminDaily).where(and(eq(garminDaily.userId, userId), eq(garminDaily.source, "apple")));
+  await db.delete(sourceDaily).where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "apple")));
   await db.delete(garminActivities).where(and(eq(garminActivities.userId, userId), like(garminActivities.activityId, APPLE)));
   await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), like(garminRaw.key, APPLE)));
   await db.delete(bodyStats).where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, "apple")));
   await db.delete(appleHealthImports).where(eq(appleHealthImports.userId, userId));
+  await resolveDays(userId);
 }
