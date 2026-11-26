@@ -1,26 +1,22 @@
 "use server";
 
 import { cleanPrefs } from "@legymdary/shared";
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
-  aiUsage,
   bodyScans,
   bodyStats,
   garminActivities,
   garminConnections,
   garminDatasets,
   garminRaw,
-  exercises,
   goals,
   meals,
   templateExercises,
   templates,
-  sets,
   workoutExercises,
   workouts,
-  skippedMeals,
   savedMeals,
   sheetImports,
   sourceDaily,
@@ -28,13 +24,13 @@ import {
   dailyTargets,
   targetReviews,
 } from "@/db/schema";
-import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
+import type { MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
 import { decryptSecret, encryptSecret } from "@/lib/garmin/crypto";
 import { askAboutDay, generateDailyReport, type Report } from "@/lib/analysis/report";
 import { extractBodyScans, type ExtractedScan } from "@/lib/body-scan-ai";
 import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
-import { ahBatchSchema, ACTIVITY_LEVELS, MEAL_TYPES, parseItems, sumMacros, type MealItem, SKIPPABLE_MEALS, qualityFromItems, SLOT_MINUTES, addDaysStr, estimate1RM, todayStr } from "@legymdary/shared";
+import { ahBatchSchema, MEAL_TYPES, parseItems, qualityFromItems } from "@legymdary/shared";
 import {
   deleteAppleHealthData,
   recordAppleHealthImport,
@@ -42,14 +38,20 @@ import {
 } from "@/lib/apple-health/store";
 import { z } from "zod";
 import { cleanText } from "@/lib/sheet-import/format";
-import { getRecommendation } from "@/lib/training/history";
 import { batchSchema, ImportError, storeBatch, undoImport, type BatchResult } from "@/lib/sheet-import/store";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import { resolveDays, savePrefs } from "@/lib/sources";
 import { revokeToken } from "@/lib/oura/client";
 import { deleteOuraData, syncOuraForUser } from "@/lib/oura/sync";
-import { requireUserId, userNowMinutes, userToday } from "@/lib/session";
+import { requireUserId, userToday } from "@/lib/session";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
+import * as bodySvc from "@/lib/services/body";
+import * as foodSvc from "@/lib/services/food";
+import * as planSvc from "@/lib/services/plan";
+import * as workoutsSvc from "@/lib/services/workouts";
+import { DATE_RE, DAY, HOUR, IMAGE_DATA_URL_RE, clip, clockMinutes, numOrNull, safeDate } from "@/lib/services/util";
+import { clearSkip, defaultEatenAt, mealValues, type MealInput } from "@/lib/services/food";
+import { assertOwnsWorkout } from "@/lib/services/workouts";
 
 function revalidateAll() {
   for (const p of [
@@ -71,49 +73,10 @@ function revalidateAll() {
   }
 }
 
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-/** A YYYY-MM-DD string that is a real calendar date, else the fallback. */
-function safeDate(v: unknown, fallback = todayStr()): string {
-  if (typeof v !== "string" || !DATE_ONLY.test(v)) return fallback;
-  const d = new Date(`${v}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? fallback : v;
-}
-const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
 
-function numOrNull(v: unknown): number | null {
-  if (v === null || v === undefined || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
 
-/** Throws unless the workout belongs to the user. */
-async function assertOwnsWorkout(userId: string, workoutId: number) {
-  const rows = await db
-    .select({ id: workouts.id })
-    .from(workouts)
-    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
-    .limit(1);
-  if (!rows[0]) throw new Error("Workout not found.");
-}
 
-/** Returns the workout-exercise's exerciseId if it belongs to the user. */
-async function ownedWorkoutExercise(userId: string, workoutExerciseId: number) {
-  const rows = await db
-    .select({
-      exerciseId: workoutExercises.exerciseId,
-      userId: workouts.userId,
-    })
-    .from(workoutExercises)
-    .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .where(eq(workoutExercises.id, workoutExerciseId))
-    .limit(1);
-  const row = rows[0];
-  if (!row || row.userId !== userId) return null;
-  return row.exerciseId;
-}
 
 /* ------------------------------------------------------------------ */
 /* Workout sessions                                                    */
@@ -124,44 +87,16 @@ export async function createWorkout(input: {
   date: string;
 }): Promise<number> {
   const userId = await requireUserId();
-  const name = clip(input.name, 80) || "Workout";
-  const date = safeDate(input.date);
-  const [row] = await db
-    .insert(workouts)
-    .values({ userId, name, date })
-    .returning({ id: workouts.id });
+  const r = await workoutsSvc.createWorkout(userId, input);
   revalidateAll();
-  return row.id;
+  return r;
 }
 
 export async function duplicateLastWorkout(): Promise<number | null> {
   const userId = await requireUserId();
-  const candidates = await db.query.workouts.findMany({
-    where: eq(workouts.userId, userId),
-    orderBy: desc(workouts.date),
-    limit: 10,
-    with: { workoutExercises: { orderBy: (f, ops) => ops.asc(f.position) } },
-  });
-  const last =
-    candidates.find((c) => c.workoutExercises.length > 0) ?? candidates[0];
-  if (!last) return null;
-
-  const [row] = await db
-    .insert(workouts)
-    .values({ userId, name: last.name, date: await userToday() })
-    .returning({ id: workouts.id });
-
-  if (last.workoutExercises.length) {
-    await db.insert(workoutExercises).values(
-      last.workoutExercises.map((we, i) => ({
-        workoutId: row.id,
-        exerciseId: we.exerciseId,
-        position: i,
-      })),
-    );
-  }
+  const r = await workoutsSvc.duplicateLastWorkout(userId);
   revalidateAll();
-  return row.id;
+  return r;
 }
 
 export async function updateWorkout(
@@ -169,56 +104,16 @@ export async function updateWorkout(
   input: { name?: string; date?: string; notes?: string | null },
 ): Promise<void> {
   const userId = await requireUserId();
-  const patch: Record<string, unknown> = {};
-  if (input.name !== undefined) patch.name = clip(input.name, 80) || "Workout";
-  if (input.date !== undefined && input.date) patch.date = safeDate(input.date);
-  if (input.notes !== undefined) patch.notes = clip(input.notes, 2000) || null;
-  if (Object.keys(patch).length) {
-    await db
-      .update(workouts)
-      .set(patch)
-      .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));
-  }
+  await workoutsSvc.updateWorkout(userId, workoutId, input);
   revalidateAll();
 }
 
 export async function finishWorkout(workoutId: number): Promise<void> {
   const userId = await requireUserId();
-  await db
-    .update(workouts)
-    .set({ finishedAt: new Date() })
-    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));
-  await autoLinkActivity(userId, workoutId);
+  await workoutsSvc.finishWorkout(userId, workoutId);
   revalidateAll();
 }
 
-/**
- * A gym session logged in the app while the watch also recorded it: link it
- * to that day's strength activity (if exactly one isn't linked yet), so the
- * two count as one session and the activity shows the exercises.
- */
-async function autoLinkActivity(userId: string, workoutId: number) {
-  const [w] = await db
-    .select({ date: workouts.date, linked: workouts.garminActivityId })
-    .from(workouts)
-    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
-    .limit(1);
-  if (!w || w.linked) return;
-  const candidates = await db
-    .select({ activityId: garminActivities.activityId })
-    .from(garminActivities)
-    .where(
-      and(
-        eq(garminActivities.userId, userId),
-        eq(garminActivities.date, w.date),
-        sql`(${garminActivities.type} like '%strength%' or ${garminActivities.type} like '%weight%' or ${garminActivities.type} = 'hiit')`,
-        sql`not exists (select 1 from ${workouts} x where x.user_id = ${userId} and x.garmin_activity_id = ${garminActivities.activityId})`,
-      ),
-    );
-  if (candidates.length === 1) {
-    await db.update(workouts).set({ garminActivityId: candidates[0].activityId }).where(eq(workouts.id, workoutId));
-  }
-}
 
 /**
  * "Add exercises" on a watch activity: opens (or reopens) the workout linked
@@ -272,21 +167,7 @@ export async function startWorkoutForActivity(activityId: string): Promise<{ id:
 
 export async function discardWorkout(workoutId: number): Promise<void> {
   const userId = await requireUserId();
-  await assertOwnsWorkout(userId, workoutId);
-  const wes = await db
-    .select({ id: workoutExercises.id })
-    .from(workoutExercises)
-    .where(eq(workoutExercises.workoutId, workoutId));
-  const ids = wes.map((w) => w.id);
-  if (ids.length) {
-    await db.delete(sets).where(inArray(sets.workoutExerciseId, ids));
-  }
-  await db
-    .delete(workoutExercises)
-    .where(eq(workoutExercises.workoutId, workoutId));
-  await db
-    .delete(workouts)
-    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));
+  await workoutsSvc.discardWorkout(userId, workoutId);
   revalidateAll();
 }
 
@@ -299,43 +180,16 @@ export async function addExerciseToWorkout(
   exerciseId: number,
 ): Promise<number> {
   const userId = await requireUserId();
-  await assertOwnsWorkout(userId, workoutId);
-
-  // The exercise must be a built-in or one of this user's customs.
-  const ex = await db
-    .select({ id: exercises.id })
-    .from(exercises)
-    .where(
-      and(
-        eq(exercises.id, exerciseId),
-        or(isNull(exercises.userId), eq(exercises.userId, userId)),
-      ),
-    )
-    .limit(1);
-  if (!ex[0]) throw new Error("Exercise not found.");
-
-  const position = await db.$count(
-    workoutExercises,
-    eq(workoutExercises.workoutId, workoutId),
-  );
-  const [row] = await db
-    .insert(workoutExercises)
-    .values({ workoutId, exerciseId, position })
-    .returning({ id: workoutExercises.id });
+  const r = await workoutsSvc.addExerciseToWorkout(userId, workoutId, exerciseId);
   revalidateAll();
-  return row.id;
+  return r;
 }
 
 export async function removeWorkoutExercise(
   workoutExerciseId: number,
 ): Promise<void> {
   const userId = await requireUserId();
-  const owned = await ownedWorkoutExercise(userId, workoutExerciseId);
-  if (owned === null) throw new Error("Not found.");
-  await db.delete(sets).where(eq(sets.workoutExerciseId, workoutExerciseId));
-  await db
-    .delete(workoutExercises)
-    .where(eq(workoutExercises.id, workoutExerciseId));
+  await workoutsSvc.removeWorkoutExercise(userId, workoutExerciseId);
   revalidateAll();
 }
 
@@ -351,75 +205,14 @@ export async function logSet(input: {
   notes?: string | null;
 }): Promise<{ isPR: boolean; e1rm: number }> {
   const userId = await requireUserId();
-  const reps = Math.round(Number(input.reps));
-  const weight = Number(input.weight);
-  if (!Number.isFinite(reps) || reps <= 0 || reps > 1000) {
-    throw new Error("Reps must be between 1 and 1000.");
-  }
-  if (!Number.isFinite(weight) || weight < 0 || weight > 2000) {
-    throw new Error("Weight must be between 0 and 2000 kg.");
-  }
-  const isWarmup = !!input.isWarmup;
-
-  const exerciseId = await ownedWorkoutExercise(userId, input.workoutExerciseId);
-  if (exerciseId === null) throw new Error("That exercise is not in your workout.");
-
-  // Best estimated 1RM for this exercise across *this user's* sets so far.
-  let prevBest = 0;
-  if (!isWarmup) {
-    const rows = await db
-      .select({ reps: sets.reps, weight: sets.weight })
-      .from(sets)
-      .innerJoin(
-        workoutExercises,
-        eq(sets.workoutExerciseId, workoutExercises.id),
-      )
-      .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-      .where(
-        and(
-          eq(workoutExercises.exerciseId, exerciseId),
-          eq(sets.isWarmup, false),
-          eq(workouts.userId, userId),
-        ),
-      );
-    for (const r of rows) {
-      prevBest = Math.max(prevBest, estimate1RM(r.weight, r.reps));
-    }
-  }
-
-  const position = await db.$count(
-    sets,
-    eq(sets.workoutExerciseId, input.workoutExerciseId),
-  );
-  await db.insert(sets).values({
-    workoutExerciseId: input.workoutExerciseId,
-    reps,
-    weight,
-    isWarmup,
-    notes: clip(input.notes, 500) || null,
-    position,
-  });
-
-  const e1rm = estimate1RM(weight, reps);
-  const isPR = !isWarmup && e1rm > 0 && e1rm > prevBest;
+  const r = await workoutsSvc.logSet(userId, input);
   revalidateAll();
-  return { isPR, e1rm };
+  return r;
 }
 
 export async function deleteSet(setId: number): Promise<void> {
   const userId = await requireUserId();
-  const rows = await db
-    .select({ userId: workouts.userId })
-    .from(sets)
-    .innerJoin(
-      workoutExercises,
-      eq(sets.workoutExerciseId, workoutExercises.id),
-    )
-    .innerJoin(workouts, eq(workoutExercises.workoutId, workouts.id))
-    .where(eq(sets.id, setId))
-    .limit(1);
-  if (!rows[0] || rows[0].userId !== userId) throw new Error("Not found.");
-  await db.delete(sets).where(eq(sets.id, setId));
+  await workoutsSvc.deleteSet(userId, setId);
   revalidateAll();
 }
 
@@ -433,26 +226,9 @@ export async function createExercise(input: {
   equipment: string;
 }): Promise<{ id: number } | { error: string }> {
   const userId = await requireUserId();
-  const name = clip(input.name, 80);
-  if (!name) return { error: "Please enter a name." };
-  const muscleGroup = clip(input.muscleGroup, 40) || "Other";
-  const equipment = clip(input.equipment, 40) || "Other";
-
-  // Reject if it clashes with a built-in or one of the user's own exercises.
-  const existing = await db
-    .select({ name: exercises.name })
-    .from(exercises)
-    .where(or(isNull(exercises.userId), eq(exercises.userId, userId)));
-  if (existing.some((e) => e.name.toLowerCase() === name.toLowerCase())) {
-    return { error: "You already have an exercise with that name." };
-  }
-
-  const [row] = await db
-    .insert(exercises)
-    .values({ name, muscleGroup, equipment, isCustom: true, userId })
-    .returning({ id: exercises.id });
-  revalidateAll();
-  return { id: row.id };
+  const r = await workoutsSvc.createExercise(userId, input);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 /* ------------------------------------------------------------------ */
@@ -466,42 +242,14 @@ export async function logBodyStat(input: {
   bodyFat?: number | string | null;
 }): Promise<{ error?: string }> {
   const userId = await requireUserId();
-  const date = safeDate(input.date);
-  const bad = (v: number | null, lo: number, hi: number) => v != null && (v < lo || v > hi);
-  const weight = numOrNull(input.weight);
-  const waist = numOrNull(input.waist);
-  const bodyFat = numOrNull(input.bodyFat);
-  if (bad(weight, 20, 400)) return { error: "Weight should be between 20 and 400 kg." };
-  if (bad(waist, 30, 250)) return { error: "Waist should be between 30 and 250 cm." };
-  if (bad(bodyFat, 2, 75)) return { error: "Body fat should be between 2 and 75%." };
-  const vals = {
-    userId,
-    date,
-    weight,
-    waist,
-    bodyFat,
-  };
-  await db
-    .insert(bodyStats)
-    .values(vals)
-    .onConflictDoUpdate({
-      target: [bodyStats.userId, bodyStats.date],
-      set: {
-        weight: vals.weight,
-        waist: vals.waist,
-        bodyFat: vals.bodyFat,
-        source: "manual", // a manual edit takes ownership from a Garmin import
-      },
-    });
-  revalidateAll();
-  return {};
+  const r = await bodySvc.logBodyStat(userId, input);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 export async function deleteBodyStat(id: number): Promise<void> {
   const userId = await requireUserId();
-  await db
-    .delete(bodyStats)
-    .where(and(eq(bodyStats.id, id), eq(bodyStats.userId, userId)));
+  await bodySvc.deleteBodyStat(userId, id);
   revalidateAll();
 }
 
@@ -509,9 +257,6 @@ export async function deleteBodyStat(id: number): Promise<void> {
 /* Food log — AI photo analysis + meals                                */
 /* ------------------------------------------------------------------ */
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const IMAGE_DATA_URL_RE =
-  /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/;
 
 /**
  * AI nutrition estimate: from a (client-downscaled) meal photo with an
@@ -522,196 +267,27 @@ export async function analyzeMeal(input: {
   hint?: string | null;
 }): Promise<MealAnalysis | { error: string }> {
   const userId = await requireUserId();
-  const hint = cleanText(input.hint, 500);
-  const hasImage = !!input.image;
-  const m = hasImage ? IMAGE_DATA_URL_RE.exec(input.image ?? "") : null;
-  if (hasImage && !m) return { error: "Unsupported image. Please use a JPEG or PNG photo." };
-  if (m && m[2].length > 5_000_000) return { error: "That photo is too large." };
-  if (!hasImage && hint.length < 3) return { error: "Describe what you ate first, e.g. 1 plate chicken rice with soup." };
-  // Cost guard: burst + daily caps per user (tunable via MEAL_AI_DAILY_LIMIT).
-  const daily = Math.max(1, Number(process.env.MEAL_AI_DAILY_LIMIT) || 60);
-  const [burst, perDay] = await Promise.all([
-    rateLimit(`ai:min:${userId}`, 8, 60 * 1000),
-    rateLimit(`ai:day:${userId}`, daily, DAY),
-  ]);
-  if (!burst.ok) return { error: "Too many estimates at once. Wait a moment and try again." };
-  if (!perDay.ok) {
-    return { error: `Daily AI estimate limit reached (${daily}). You can still enter meals yourself.` };
-  }
-  const res = await analyzeMealImage({
-    base64: m?.[2] ?? null,
-    mediaType: (m?.[1] as "image/jpeg" | "image/png" | "image/webp" | "image/gif" | undefined) ?? null,
-    hint: hint || null,
-  });
-  if (res.usage.length) {
-    try {
-      await db.insert(aiUsage).values(
-        res.usage.map((u) => ({
-          userId,
-          feature: hasImage ? "meal_photo" : "meal_text",
-          model: u.model,
-          inputTokens: u.inputTokens,
-          outputTokens: u.outputTokens,
-          costUsd: u.costUsd,
-        })),
-      );
-    } catch (err) {
-      console.error("Failed to record AI usage:", err); // never block the user
-    }
-  }
-  return res.ok ? res.analysis : { error: res.error };
+  return foodSvc.analyzeMeal(userId, input);
 }
 
-function cleanBase(v: unknown): MealItem["base"] {
-  if (!v || typeof v !== "object") return null;
-  const b = v as Record<string, unknown>;
-  const n = (x: unknown) => Math.max(0, Math.min(20000, Math.round((numOrNull(x) ?? 0) * 10) / 10));
-  return { calories: n(b.calories), protein: n(b.protein), carbs: n(b.carbs), fat: n(b.fat) };
-}
 
-function cleanEaten(v: unknown): number | null {
-  const n = numOrNull(v);
-  if (n == null || !Number.isFinite(n) || n === 1) return null;
-  return Math.max(0, Math.min(10, Math.round(n * 100) / 100));
-}
 
-/** Optional grams, 0 to 500, one decimal. */
-function grams(v: unknown): number | null {
-  const n = numOrNull(v);
-  return n == null || !Number.isFinite(n) ? null : Math.max(0, Math.min(500, Math.round(n * 10) / 10));
-}
-function proc(v: unknown): number | null {
-  const n = numOrNull(v);
-  return n != null && [1, 2, 3, 4].includes(Math.round(n)) ? Math.round(n) : null;
-}
 
-/** Minutes after midnight, 0 to 1439. */
-function clockMinutes(v: unknown): number | null {
-  const n = numOrNull(v);
-  return n == null || !Number.isFinite(n) ? null : Math.max(0, Math.min(1439, Math.round(n)));
-}
 
-/** When a meal was eaten if not given: now for today, else the slot's usual time. */
-async function defaultEatenAt(date: string, mealType: string): Promise<number> {
-  if (date === (await userToday())) {
-    const now = await userNowMinutes();
-    if (now != null) return now;
-  }
-  return SLOT_MINUTES[mealType] ?? SLOT_MINUTES.snack;
-}
 
-function cleanItems(items: unknown): MealItem[] {
-  if (!Array.isArray(items)) return [];
-  return items.slice(0, 40).flatMap((raw) => {
-    const it = raw as Record<string, unknown>;
-    const name = String(it.name ?? "").trim().slice(0, 120);
-    if (!name) return [];
-    const n = (v: unknown) => Math.max(0, Math.round(numOrNull(v) ?? 0));
-    const t = (v: unknown, max: number) => {
-      const x = String(v ?? "").trim().slice(0, max);
-      return x || null;
-    };
-    return [
-      {
-        name,
-        portion: String(it.portion ?? "").trim().slice(0, 80),
-        calories: n(it.calories),
-        protein: n(it.protein),
-        carbs: n(it.carbs),
-        fat: n(it.fat),
-        dish: t(it.dish, 80),
-        reference: t(it.reference, 200),
-        amount: t(it.amount, 160),
-        calculation: t(it.calculation, 160),
-        assumptions: t(it.assumptions, 200),
-        edited: it.edited === true,
-        base: cleanBase(it.base),
-        eaten: cleanEaten(it.eaten),
-        drink: typeof it.drink === "boolean" ? it.drink : null,
-        fiber: grams(it.fiber),
-        sugar: grams(it.sugar),
-        processing: proc(it.processing),
-      },
-    ];
-  });
-}
 
-export type MealInput = {
-  date: string;
-  mealType: string;
-  name: string;
-  items: MealItem[];
-  /** Used only when there are no items (quick manual entry). */
-  calories?: number | string | null;
-  protein?: number | string | null;
-  carbs?: number | string | null;
-  fat?: number | string | null;
-  notes?: string | null;
-  photo?: string | null;
-  aiEstimated?: boolean;
-  /** Minutes after local midnight. Omitted: now (today) or the slot's usual time. */
-  eatenAt?: number | null;
-  /** AI note on the meal; undefined keeps the current one when editing. */
-  advisor?: string | null;
-};
 
-function mealValues(input: MealInput) {
-  if (!DATE_RE.test(input.date ?? "")) throw new Error("Invalid date.");
-  const items = cleanItems(input.items);
-  const totals = items.length
-    ? sumMacros(items)
-    : {
-        calories: Math.max(0, numOrNull(input.calories) ?? 0),
-        protein: Math.max(0, numOrNull(input.protein) ?? 0),
-        carbs: Math.max(0, numOrNull(input.carbs) ?? 0),
-        fat: Math.max(0, numOrNull(input.fat) ?? 0),
-      };
-  const mealType = (MEAL_TYPES as readonly string[]).includes(input.mealType)
-    ? input.mealType
-    : "snack";
-  return {
-    date: input.date,
-    mealType,
-    name: input.name?.trim().slice(0, 120) || items[0]?.name || "Meal",
-    ...totals,
-    items: items.length ? JSON.stringify(items) : null,
-    notes: input.notes?.trim().slice(0, 1000) || null,
-    aiEstimated: !!input.aiEstimated,
-    ...qualityFromItems(items),
-    ...(input.advisor !== undefined ? { advisor: cleanText(input.advisor, 400) || null } : {}),
-  };
-}
 
 export async function saveMeal(input: MealInput): Promise<{ id: number }> {
   const userId = await requireUserId();
-  const vals = mealValues(input);
-  let photo: string | null = null;
-  if (input.photo) {
-    // Thumbnails only — keep rows small.
-    if (!IMAGE_DATA_URL_RE.test(input.photo) || input.photo.length > 300_000) {
-      throw new Error("Photo thumbnail is invalid or too large.");
-    }
-    photo = input.photo;
-  }
-  const eatenAt = clockMinutes(input.eatenAt) ?? (await defaultEatenAt(vals.date, vals.mealType));
-  const [row] = await db
-    .insert(meals)
-    .values({ userId, ...vals, photo, eatenAt })
-    .returning({ id: meals.id });
-  await clearSkip(userId, vals.date, vals.mealType);
+  const r = await foodSvc.saveMeal(userId, input);
   revalidateAll();
-  return { id: row.id };
+  return r;
 }
 
 export async function updateMeal(id: number, input: MealInput): Promise<void> {
   const userId = await requireUserId();
-  const vals = mealValues(input);
-  const eatenAt = clockMinutes(input.eatenAt);
-  await db
-    .update(meals)
-    .set(eatenAt != null ? { ...vals, eatenAt } : vals)
-    .where(and(eq(meals.id, id), eq(meals.userId, userId)));
-  await clearSkip(userId, vals.date, vals.mealType);
+  await foodSvc.updateMeal(userId, id, input);
   revalidateAll();
 }
 
@@ -722,71 +298,25 @@ export async function relogMeal(input: {
   mealType?: string;
 }): Promise<void> {
   const userId = await requireUserId();
-  if (!DATE_RE.test(input.date ?? "")) throw new Error("Invalid date.");
-  const [src] = await db
-    .select()
-    .from(meals)
-    .where(and(eq(meals.id, input.mealId), eq(meals.userId, userId)))
-    .limit(1);
-  if (!src) throw new Error("Meal not found.");
-  const mealType = (MEAL_TYPES as readonly string[]).includes(input.mealType ?? "")
-    ? input.mealType!
-    : src.mealType;
-  await db.insert(meals).values({
-    userId,
-    date: input.date,
-    mealType,
-    name: src.name,
-    calories: src.calories,
-    protein: src.protein,
-    carbs: src.carbs,
-    fat: src.fat,
-    items: src.items,
-    notes: src.notes,
-    photo: src.photo,
-    aiEstimated: src.aiEstimated,
-    fiber: src.fiber,
-    sugar: src.sugar,
-    processing: src.processing,
-    advisor: src.advisor,
-    eatenAt: await defaultEatenAt(input.date, mealType),
-  });
-  await clearSkip(userId, input.date, mealType);
+  await foodSvc.relogMeal(userId, input);
   revalidateAll();
 }
 
-const SKIPPABLE = SKIPPABLE_MEALS as readonly string[];
 
 /** Marks a meal as skipped for a day (e.g. no breakfast). Its calories stay free for your other meals. */
 export async function skipMeal(input: { date: string; mealType: string }): Promise<{ ok: true } | { error: string }> {
   const userId = await requireUserId();
-  if (!DATE_RE.test(input.date ?? "") || !SKIPPABLE.includes(input.mealType)) return { error: "That meal can't be skipped." };
-  const existing = await db
-    .select({ id: meals.id })
-    .from(meals)
-    .where(and(eq(meals.userId, userId), eq(meals.date, input.date), eq(meals.mealType, input.mealType)))
-    .limit(1);
-  if (existing.length) return { error: "You already logged food for this meal." };
-  await db.insert(skippedMeals).values({ userId, date: input.date, mealType: input.mealType }).onConflictDoNothing();
-  revalidateAll();
-  return { ok: true };
+  const r = await foodSvc.skipMeal(userId, input);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 export async function unskipMeal(input: { date: string; mealType: string }): Promise<void> {
   const userId = await requireUserId();
-  if (!DATE_RE.test(input.date ?? "")) return;
-  await db
-    .delete(skippedMeals)
-    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, input.date), eq(skippedMeals.mealType, input.mealType)));
+  await foodSvc.unskipMeal(userId, input);
   revalidateAll();
 }
 
-/** Logging food in a slot you had marked as skipped cancels the skip. */
-async function clearSkip(userId: string, date: string, mealType: string) {
-  await db
-    .delete(skippedMeals)
-    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, date), eq(skippedMeals.mealType, mealType)));
-}
 
 /* ---------------- My menu (pinned meals) ---------------- */
 
@@ -890,7 +420,7 @@ export async function logMenuItem(input: { id: number; date: string; mealType: s
 
 export async function deleteMeal(id: number): Promise<void> {
   const userId = await requireUserId();
-  await db.delete(meals).where(and(eq(meals.id, id), eq(meals.userId, userId)));
+  await foodSvc.deleteMeal(userId, id);
   revalidateAll();
 }
 
@@ -909,49 +439,9 @@ export async function saveGoals(input: {
   calorieOverride?: number | string | null;
 }): Promise<{ ok: true } | { error: string }> {
   const userId = await requireUserId();
-  const inRange = (v: number | null, lo: number, hi: number) =>
-    v == null || (v >= lo && v <= hi);
-
-  const sex = input.sex === "male" || input.sex === "female" ? input.sex : null;
-  const birthYear = numOrNull(input.birthYear);
-  const heightCm = numOrNull(input.heightCm);
-  const activityLevel =
-    input.activityLevel && input.activityLevel in ACTIVITY_LEVELS
-      ? input.activityLevel
-      : null;
-  const targetWeight = numOrNull(input.targetWeight);
-  const targetBodyFat = numOrNull(input.targetBodyFat);
-  const weeklyRate = numOrNull(input.weeklyRate);
-  const calorieOverride = numOrNull(input.calorieOverride);
-
-  const thisYear = new Date().getFullYear();
-  if (!inRange(birthYear, thisYear - 100, thisYear - 13))
-    return { error: "Birth year looks off." };
-  if (!inRange(heightCm, 100, 250)) return { error: "Height should be in cm (100–250)." };
-  if (!inRange(targetWeight, 30, 300)) return { error: "Target weight should be 30–300 kg." };
-  if (!inRange(targetBodyFat, 3, 60)) return { error: "Target body fat should be 3–60%." };
-  if (!inRange(weeklyRate, 0, 2)) return { error: "Weekly pace should be 0–2 kg." };
-  if (!inRange(calorieOverride, 800, 6000))
-    return { error: "Custom calorie target should be 800–6000 kcal." };
-
-  const vals = {
-    sex,
-    birthYear: birthYear != null ? Math.round(birthYear) : null,
-    heightCm,
-    activityLevel,
-    targetWeight,
-    targetBodyFat,
-    // Pace and goal date are set by the pace chooser; only change them when sent.
-    ...("weeklyRate" in input ? { weeklyRate } : {}),
-    calorieOverride,
-    updatedAt: new Date(),
-  };
-  await db
-    .insert(goals)
-    .values({ userId, ...vals })
-    .onConflictDoUpdate({ target: goals.userId, set: vals });
-  revalidateAll();
-  return { ok: true };
+  const r = await planSvc.saveGoals(userId, input);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 /**
@@ -962,25 +452,9 @@ export async function setGoalPace(
   input: { weeklyRate: number } | { targetDate: string },
 ): Promise<{ ok: true } | { error: string }> {
   const userId = await requireUserId();
-  // Choosing a pace or date means "use the plan", so it also clears custom calories.
-  let vals: { weeklyRate: number | null; targetDate: string | null; calorieOverride: null };
-  if ("targetDate" in input) {
-    const today = await userToday();
-    if (!DATE_RE.test(input.targetDate ?? "")) return { error: "Pick a date." };
-    if (input.targetDate <= today) return { error: "Pick a date in the future." };
-    if (input.targetDate > addDaysStr(today, 3 * 365)) return { error: "Pick a date within 3 years." };
-    vals = { weeklyRate: null, targetDate: input.targetDate, calorieOverride: null };
-  } else {
-    const r = numOrNull(input.weeklyRate);
-    if (r == null || r <= 0 || r > 2) return { error: "That pace looks off." };
-    vals = { weeklyRate: Math.round(r * 100) / 100, targetDate: null, calorieOverride: null };
-  }
-  await db
-    .insert(goals)
-    .values({ userId, ...vals, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: goals.userId, set: { ...vals, updatedAt: new Date() } });
-  revalidateAll();
-  return { ok: true };
+  const r = await planSvc.setGoalPace(userId, input);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1028,33 +502,9 @@ export async function startWorkoutFromTemplate(
   date: string,
 ): Promise<number> {
   const userId = await requireUserId();
-  const [tpl] = await db
-    .select()
-    .from(templates)
-    .where(and(eq(templates.id, templateId), eq(templates.userId, userId)))
-    .limit(1);
-  if (!tpl) throw new Error("Template not found.");
-  const items = await db
-    .select()
-    .from(templateExercises)
-    .where(eq(templateExercises.templateId, templateId))
-    .orderBy(templateExercises.position);
-
-  const [row] = await db
-    .insert(workouts)
-    .values({ userId, name: tpl.name, date: DATE_RE.test(date) ? date : await userToday() })
-    .returning({ id: workouts.id });
-  if (items.length) {
-    await db.insert(workoutExercises).values(
-      items.map((it, i) => ({ workoutId: row.id, exerciseId: it.exerciseId, position: i, targetSets: it.targetSets })),
-    );
-  }
-  await db
-    .update(templates)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(templates.id, templateId));
+  const r = await workoutsSvc.startWorkoutFromTemplate(userId, templateId, date);
   revalidateAll();
-  return row.id;
+  return r;
 }
 
 export async function deleteTemplate(id: number): Promise<void> {
@@ -1143,8 +593,8 @@ export async function disconnectGarmin(deleteData: boolean): Promise<void> {
     await db.delete(sourceDaily).where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "garmin")));
     await db
       .delete(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'sheet-%' and ${garminActivities.activityId} not like 'oura-%'`));
-    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'sheet-%' and ${garminRaw.key} not like 'oura-%'`));
+      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'hc-%' and ${garminActivities.activityId} not like 'sheet-%' and ${garminActivities.activityId} not like 'oura-%'`));
+    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'hc-%' and ${garminRaw.key} not like 'sheet-%' and ${garminRaw.key} not like 'oura-%'`));
     await db.delete(garminDatasets).where(eq(garminDatasets.userId, userId));
     await db
       .delete(bodyStats)
@@ -1354,7 +804,7 @@ export async function saveBodyScans(scans: ExtractedScan[]): Promise<{ saved: nu
         .onConflictDoUpdate({
           target: [bodyStats.userId, bodyStats.date],
           set: { ...bs, source: "inbody" },
-          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin', 'apple')`,
+          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin', 'apple', 'health_connect')`,
         });
     }
     saved++;
@@ -1498,11 +948,9 @@ export async function setSourcePrefs(input: unknown): Promise<{ ok: true } | { e
 /** "steady": the daily target stays put (extra exercise = extra deficit). "adaptive": it follows burn and weight. */
 export async function setTargetMode(mode: string): Promise<{ ok: true } | { error: string }> {
   const userId = await requireUserId();
-  if (mode !== "steady" && mode !== "adaptive") return { error: "Unknown option." };
-  const res = await db.update(goals).set({ targetMode: mode, updatedAt: new Date() }).where(eq(goals.userId, userId));
-  if (!res.rowsAffected) return { error: "Set your goal first." };
-  revalidateAll();
-  return { ok: true };
+  const r = await planSvc.setTargetMode(userId, mode);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 /** Steady mode: take the plan's current number as the new target (from today). */
@@ -1575,31 +1023,9 @@ export async function setTrainingDays(days: number | null): Promise<{ ok: true }
 /** Starts today's recommended session with its exercises and targets. */
 export async function startRecommendedWorkout(): Promise<{ id: number } | { error: string }> {
   const userId = await requireUserId();
-  const today = await userToday();
-  const [open] = await db
-    .select({ id: workouts.id })
-    .from(workouts)
-    .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt)))
-    .limit(1);
-  if (open) return { error: "Finish or discard the workout in progress first." };
-  const rec = await getRecommendation(userId, today);
-  if (!rec.exercises.length) return { error: "No matching exercises in your library." };
-  const [w] = await db
-    .insert(workouts)
-    .values({ userId, name: rec.title, date: today, planKey: rec.planKey })
-    .returning({ id: workouts.id });
-  await db.insert(workoutExercises).values(
-    rec.exercises.map((e, i) => ({
-      workoutId: w.id,
-      exerciseId: e.exerciseId,
-      position: i,
-      targetSets: e.sets,
-      targetReps: e.reps,
-      targetWeight: e.weight,
-    })),
-  );
-  revalidateAll();
-  return { id: w.id };
+  const r = await workoutsSvc.startRecommendedWorkout(userId);
+  if (!("error" in r)) revalidateAll();
+  return r;
 }
 
 /** Changes when a meal was eaten (and its meal type). */

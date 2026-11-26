@@ -1,4 +1,4 @@
-import { and, eq, like, sql } from "drizzle-orm";
+import { and, eq, like, inArray, notInArray, between, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   appleHealthImports,
@@ -8,7 +8,7 @@ import {
   sourceDaily,
 } from "@/db/schema";
 import { resolveDays } from "@/lib/sources";
-import type { AhBatch } from "@legymdary/shared";
+import type { AhBatch, HealthSource } from "@legymdary/shared";
 
 /**
  * Server-only. Writes a parsed Apple Health batch into the same tables the
@@ -37,8 +37,23 @@ function chunks<T>(xs: T[], n = CHUNK): T[][] {
 }
 const ex = (col: string) => sql.raw(`excluded.${col}`);
 
-export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
+/** Raw-row and activity-id prefix per source: "apple-…" (HealthKit) or "hc-…" (Health Connect). */
+const PREFIX: Record<HealthSource, string> = { apple: "apple", health_connect: "hc" };
+
+/**
+ * Stores one batch. `source` defaults to Apple Health (the web upload). With
+ * `workoutRange`, workouts of this source in that range that are not in the batch are
+ * removed first: the same workout read again can carry a new id (zip export vs live sync).
+ */
+export async function storeAppleHealthBatch(
+  userId: string,
+  b: AhBatch,
+  opts: { source?: HealthSource; workoutRange?: { from: string; to: string } } = {},
+) {
   const now = new Date();
+  const source = opts.source ?? "apple";
+  const prefix = PREFIX[source];
+  const payloadSource = source === "apple" ? "apple_health" : "health_connect";
 
   /* ---- days ---- */
   for (const part of chunks(b.days)) {
@@ -48,7 +63,7 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
         part.map((d) => ({
           userId,
           date: d.date,
-          source: "apple",
+          source,
           steps: d.steps,
           activeKcal: d.activeKcal,
           bmrKcal: d.basalKcal,
@@ -87,11 +102,11 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
           part.map((s) => ({
             userId,
             dataset: "sleep_summary",
-            key: `apple-${s.date}`,
+            key: `${prefix}-${s.date}`,
             date: s.date,
             fetchedAt: now,
             payload: JSON.stringify({
-              source: "apple_health",
+              source: payloadSource,
               calendarDate: s.date,
               sleepTimeSeconds: s.asleepSec,
               deepSleepSeconds: s.deepSec,
@@ -116,7 +131,7 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
         });
       await db
         .insert(sourceDaily)
-        .values(part.map((s) => ({ userId, date: s.date, source: "apple", sleepSeconds: s.asleepSec, updatedAt: now })))
+        .values(part.map((s) => ({ userId, date: s.date, source, sleepSeconds: s.asleepSec, updatedAt: now })))
         .onConflictDoUpdate({
           target: [sourceDaily.userId, sourceDaily.date, sourceDaily.source],
           set: { sleepSeconds: ex("sleep_seconds"), updatedAt: now },
@@ -125,6 +140,23 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
   }
 
   /* ---- workouts ---- */
+  if (opts.workoutRange) {
+    const { from, to } = opts.workoutRange;
+    const keep = b.workouts.map((w) => w.id);
+    const stale = and(
+      eq(garminActivities.userId, userId),
+      like(garminActivities.activityId, `${prefix}-%`),
+      between(garminActivities.date, from, to),
+      keep.length ? notInArray(garminActivities.activityId, keep) : undefined,
+      // A workout logged in the app and linked to this activity keeps it.
+      sql`not exists (select 1 from workouts x where x.user_id = ${userId} and x.garmin_activity_id = ${garminActivities.activityId})`,
+    );
+    const ids = (await db.select({ id: garminActivities.activityId }).from(garminActivities).where(stale)).map((r) => r.id);
+    for (const part of chunks(ids)) {
+      await db.delete(garminActivities).where(and(eq(garminActivities.userId, userId), inArray(garminActivities.activityId, part)));
+      await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), eq(garminRaw.dataset, "activities"), inArray(garminRaw.key, part)));
+    }
+  }
   for (const part of chunks(b.workouts)) {
     await db
       .insert(garminActivities)
@@ -167,7 +199,7 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
           date: w.date,
           fetchedAt: now,
           payload: JSON.stringify({
-            source: "apple_health",
+            source: payloadSource,
             activityId: w.id,
             activityName: w.name,
             activityType: { typeKey: w.type },
@@ -196,11 +228,11 @@ export async function storeAppleHealthBatch(userId: string, b: AhBatch) {
   for (const part of chunks(weighIns)) {
     await db
       .insert(bodyStats)
-      .values(part.map((w) => ({ userId, date: w.date, weight: w.weight, bodyFat: w.bodyFat, source: "apple" })))
+      .values(part.map((w) => ({ userId, date: w.date, weight: w.weight, bodyFat: w.bodyFat, source })))
       .onConflictDoUpdate({
         target: [bodyStats.userId, bodyStats.date],
         set: { weight: ex("weight"), bodyFat: ex("body_fat") },
-        setWhere: eq(bodyStats.source, "apple"),
+        setWhere: eq(bodyStats.source, source),
       });
   }
 
@@ -219,12 +251,51 @@ export async function recordAppleHealthImport(
     .onConflictDoUpdate({ target: appleHealthImports.userId, set: vals });
 }
 
-/** Removes everything an Apple Health upload added. Garmin and manual data stay. */
-export async function deleteAppleHealthData(userId: string) {
-  await db.delete(sourceDaily).where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "apple")));
-  await db.delete(garminActivities).where(and(eq(garminActivities.userId, userId), like(garminActivities.activityId, APPLE)));
-  await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), like(garminRaw.key, APPLE)));
-  await db.delete(bodyStats).where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, "apple")));
-  await db.delete(appleHealthImports).where(eq(appleHealthImports.userId, userId));
+/** Removes everything one health source added (Apple Health or Health Connect). Other devices and manual data stay. */
+export async function deleteHealthData(userId: string, source: HealthSource = "apple") {
+  const like_ = `${PREFIX[source]}-%`;
+  await db.delete(sourceDaily).where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, source)));
+  await db.delete(garminActivities).where(and(eq(garminActivities.userId, userId), like(garminActivities.activityId, like_)));
+  await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), like(garminRaw.key, like_)));
+  await db.delete(bodyStats).where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, source)));
+  if (source === "apple") await db.delete(appleHealthImports).where(eq(appleHealthImports.userId, userId));
   await resolveDays(userId);
+}
+
+/** Removes everything an Apple Health upload added. Garmin and manual data stay. */
+export const deleteAppleHealthData = (userId: string) => deleteHealthData(userId, "apple");
+
+/** True when the user has synced Android Health Connect data. */
+export async function hasHealthConnectData(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: sourceDaily.date })
+    .from(sourceDaily)
+    .where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "health_connect")))
+    .limit(1);
+  return !!row;
+}
+
+/**
+ * Live syncs from the phone never send the "finish" summary the web upload does, so the
+ * Apple Health status (what makes Home show watch data) is rebuilt from the stored rows.
+ */
+export async function refreshAppleHealthStatus(userId: string) {
+  const one = async (q: Promise<{ n: number; lo?: string | null; hi?: string | null }[]>) => (await q)[0] ?? { n: 0, lo: null, hi: null };
+  const days = await one(
+    db
+      .select({ n: sql<number>`count(*)`, lo: sql<string | null>`min(${sourceDaily.date})`, hi: sql<string | null>`max(${sourceDaily.date})` })
+      .from(sourceDaily)
+      .where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "apple"))),
+  );
+  const nights = await one(db.select({ n: sql<number>`count(*)` }).from(garminRaw).where(and(eq(garminRaw.userId, userId), eq(garminRaw.dataset, "sleep_summary"), like(garminRaw.key, APPLE))));
+  const workouts = await one(db.select({ n: sql<number>`count(*)` }).from(garminActivities).where(and(eq(garminActivities.userId, userId), like(garminActivities.activityId, APPLE))));
+  const weighIns = await one(db.select({ n: sql<number>`count(*)` }).from(bodyStats).where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, "apple"))));
+  await recordAppleHealthImport(userId, {
+    firstDate: days.lo ?? null,
+    lastDate: days.hi ?? null,
+    days: Number(days.n),
+    nights: Number(nights.n),
+    workouts: Number(workouts.n),
+    weighIns: Number(weighIns.n),
+  });
 }
