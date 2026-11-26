@@ -236,8 +236,8 @@ lib/            Queries (reads), actions (mutations), session helper, utils
   yourself. Text estimates share the photo daily limit and are recorded as
   `meal_text` in `ai_usage`.
 - **AI cost** — every call's tokens and estimated cost are stored (`ai_usage`)
-  and logged as `[meal-ai] model=… in=… out=… cost=$…`; the Food tab shows
-  this month's total. Rough cost: ~$0.0005 per photo on Haiku 5.5, ~$0.01 on
+  and logged as `[meal-ai] model=… in=… out=… cost=$…` for the server logs only;
+  the app doesn't show cost to users. Rough cost: ~$0.0005 per photo on Haiku 5.5, ~$0.01 on
   Sonnet 5.5.
 - **Plan** — enter sex, birth year, height, activity level and a target weight
   and/or target body-fat %. Current weight and body fat come from your latest
