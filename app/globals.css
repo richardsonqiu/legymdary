@@ -139,17 +139,23 @@ input[type="number"] {
   border-radius: 9999px;
 }
 
-/* Editorial wordmark: lowercase with a Citron full stop. */
+/* Editorial wordmark: lowercase with a round Citron full stop. */
 .wordmark {
   font-weight: 700;
   letter-spacing: -0.035em;
 }
+/* The full stop is a round dot in the accent colour. */
 .wordmark::after {
-  content: ".";
-  color: var(--color-citron);
+  content: "";
+  display: inline-block;
+  width: 0.22em;
+  height: 0.22em;
+  margin-left: 0.07em;
+  border-radius: 9999px;
+  background: var(--color-citron);
 }
 :root[data-theme="light"] .wordmark::after {
-  color: var(--color-teal-400);
+  background: var(--color-teal-400);
 }
 
 /* Editorial photo, softened a touch (the source photos are small). */
@@ -552,9 +558,9 @@ input[type="number"] {
 @keyframes dot-pop { 0% { transform: scale(0); } 65% { transform: scale(1.5); } 100% { transform: scale(1); } }
 .launch-w1 { animation: word-rise 420ms var(--ease-out-snappy, ease-out) 60ms both; }
 .launch-w2 { animation: word-rise 420ms var(--ease-out-snappy, ease-out) 200ms both; }
-.launch-dot { transform-origin: 50% 80%; animation: dot-pop 380ms ease-out 480ms both; }
+.launch-dot { transform-origin: center; animation: dot-pop 380ms ease-out 480ms both; }
 .launch-tag { animation: word-rise 400ms ease-out 560ms both; }
-:root[data-theme="light"] .launch-dot { color: var(--color-teal-400); }
+:root[data-theme="light"] .launch-dot { background: var(--color-teal-400); }
 @media (prefers-reduced-motion: reduce) {
   .launch-w1, .launch-w2, .launch-dot, .launch-tag { animation: none; }
 }

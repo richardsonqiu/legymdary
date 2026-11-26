@@ -44,7 +44,7 @@ export function LaunchSplash() {
     >
       <p className="text-5xl font-bold tracking-[-0.035em] text-zinc-50">
         <span className="launch-w1 inline-block">one</span> <span className="launch-w2 inline-block">up</span>
-        <span className="launch-dot inline-block text-citron">.</span>
+        <span className="launch-dot ml-[0.07em] inline-block h-[0.22em] w-[0.22em] rounded-full bg-citron" />
       </p>
       <p className="launch-tag mt-3 text-sm text-zinc-500">One better than yesterday.</p>
     </div>

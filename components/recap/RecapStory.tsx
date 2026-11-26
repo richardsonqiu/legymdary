@@ -557,7 +557,9 @@ export function RecapStory({ recap, links }: { recap: Recap; links: { label: str
           <span>
             {i + 1} / {slides.length}
           </span>
-          <span>one up. · {t.label}</span>
+          <span>
+            <span className="wordmark normal-case tracking-normal">one up</span> · {t.label}
+          </span>
         </div>
       </div>
     </div>
