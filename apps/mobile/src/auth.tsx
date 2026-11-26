@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      const res = await api.login({ email, password, deviceName: "LeGYMdary app" });
+      const res = await api.login({ email, password, deviceName: "One Up app" });
       await SecureStore.setItemAsync(TOKEN_KEY, res.token);
       token.current = res.token;
       setUser(res.user);

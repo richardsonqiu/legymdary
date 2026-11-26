@@ -1,3 +1,4 @@
+import { LaunchSplash } from "@/components/brand/LaunchSplash";
 import { LoginForm } from "@/components/LoginForm";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4 py-10">
       <LoginForm googleEnabled={googleEnabled} />
+      <LaunchSplash />
     </div>
   );
 }

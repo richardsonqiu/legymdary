@@ -386,7 +386,7 @@ export function RecapStory({ recap, links }: { recap: Recap; links: { label: str
     .filter((x): x is { v: string; l: string } => !!x)
     .slice(0, 3);
 
-  const shareText = `My ${t.noun} on LeGYMdary (${t.label}): ${top3.map((x) => `${x.v} ${x.l}`).join(", ")}.`;
+  const shareText = `My ${t.noun} on One Up (${t.label}): ${top3.map((x) => `${x.v} ${x.l}`).join(", ")}.`;
   const slides: Slide[] = [
     ...content,
     {
@@ -557,7 +557,7 @@ export function RecapStory({ recap, links }: { recap: Recap; links: { label: str
           <span>
             {i + 1} / {slides.length}
           </span>
-          <span>LeGYMdary · {t.label}</span>
+          <span>one up. · {t.label}</span>
         </div>
       </div>
     </div>

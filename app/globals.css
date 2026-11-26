@@ -545,3 +545,17 @@ input[type="number"] {
   .confetti-piece { display: none; }
   .badge-pop { animation: none; }
 }
+
+/* --- Opening splash --- */
+[data-booted] .launch-splash { display: none; }
+@keyframes mark-rise { from { transform: translateY(70px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mark-pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes mark-draw { from { stroke-dashoffset: 760; } to { stroke-dashoffset: 0; } }
+@keyframes word-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.mark-one { stroke-dasharray: 760; animation: mark-draw 520ms var(--ease-out-snappy, ease-out) both; }
+.mark-chevron { animation: mark-rise 420ms var(--ease-out-snappy, ease-out) 380ms both; }
+.mark-dot { transform-box: fill-box; transform-origin: center; animation: mark-pop 380ms ease-out 620ms both; }
+.launch-word { animation: word-in 400ms ease-out 450ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .mark-one, .mark-chevron, .mark-dot, .launch-word { animation: none; }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { OneUpMark } from "@/components/brand/OneUpMark";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState, useTransition } from "react";
@@ -50,6 +51,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-6 text-center">
+        <OneUpMark tile className="mx-auto mb-3 h-16 w-16 rounded-2xl" />
         <p className="wordmark text-2xl">one up</p>
         <h1 className="mt-4 text-2xl font-semibold tracking-tight">
           {mode === "signin" ? "Welcome back" : "Create your account"}

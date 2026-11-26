@@ -1,6 +1,6 @@
 import { ApiClientError } from "@legymdary/shared";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/auth";
 import { useTheme } from "../src/theme";
@@ -33,7 +33,10 @@ export default function Login() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={[s.root, { backgroundColor: t.page, paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }]}
     >
-      <Text style={[s.title, { color: t.text }]}>LeGYMdary</Text>
+      <Image source={require("../assets/splash-icon.png")} style={{ width: 64, height: 64, alignSelf: "center", marginBottom: 12 }} accessibilityIgnoresInvertColors />
+      <Text style={[s.title, { color: t.text }]}>
+        one up<Text style={{ color: "#DED97A" }}>.</Text>
+      </Text>
       <Text style={[s.sub, { color: t.muted }]}>Sign in to continue</Text>
 
       <TextInput

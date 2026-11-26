@@ -1,4 +1,4 @@
-# LeGYMdary mobile (Expo)
+# One Up mobile (Expo)
 
 One Expo (React Native, TypeScript strict) app for iOS and Android. Bundle id / package: `com.richardsonqiu.legymdary`.
 
@@ -17,6 +17,10 @@ From the repo root, `npm ci` once. Then in `apps/mobile`:
 - `src/auth.tsx` builds the shared client (`createApiClient` in `packages/shared/src/api/client.ts`), which sends `Authorization: Bearer` and `X-Timezone` on every request and parses responses with the zod schemas from `@legymdary/shared`.
 - Tabs come from the shared `NAV` (moved from `lib/nav.ts` to `packages/shared/src/nav.ts`; web imports it from there). Only Today is built; the rest are placeholders.
 - Theme: Carbon / Citron / Paper from `app/globals.css`, dark 7 PM to 6 AM like the web Auto rule.
+
+## Icon and splash
+
+`assets/icon.png`, `adaptive-icon.png`, `splash-icon.png` and `favicon.png` are generated with the web icons by `node scripts/gen-icons.mjs` (repo root) from one SVG mark. The splash (`expo-splash-screen` plugin in `app.json`) shows the mark on Paper in light mode and Carbon in dark mode; `app/_layout.tsx` keeps it up until auth is ready. Native config changes need a new dev build.
 
 ## React version
 

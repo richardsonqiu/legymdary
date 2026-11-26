@@ -62,6 +62,8 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* Skip the opening splash if it already played this session. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(sessionStorage.getItem("oneup.booted")==="1")document.documentElement.dataset.booted="1"}catch(e){}` }} />
       </head>
       <body className="min-h-dvh">{children}</body>
     </html>
