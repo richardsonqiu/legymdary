@@ -35,8 +35,8 @@ export const metadata: Metadata = {
   },
 };
 
-/** Picks light or dark before first paint: saved choice, else the system's. */
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("oneup.theme");var m=window.matchMedia("(prefers-color-scheme: light)");function a(){var v=t==="light"||t==="dark"?t:(m.matches?"light":"dark");document.documentElement.dataset.theme=v;}a();m.addEventListener("change",function(){t=localStorage.getItem("oneup.theme");a();});}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+/** Picks light or dark before first paint: saved choice, else dark from 7 PM to 6 AM local time. */
+const THEME_SCRIPT = `(function(){try{function d(){var h=new Date().getHours();return h>=19||h<6;}function a(){var t=localStorage.getItem("oneup.theme");document.documentElement.dataset.theme=t==="light"||t==="dark"?t:(d()?"dark":"light");}a();setInterval(a,60000);document.addEventListener("visibilitychange",a);}catch(e){document.documentElement.dataset.theme="dark";}})();`;
 
 export const viewport: Viewport = {
   themeColor: [

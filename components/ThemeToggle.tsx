@@ -26,7 +26,8 @@ function apply(choice: Choice) {
     if (choice === "system") localStorage.removeItem(KEY);
     else localStorage.setItem(KEY, choice);
   } catch {}
-  const light = choice === "light" || (choice === "system" && window.matchMedia("(prefers-color-scheme: light)").matches);
+  const h = new Date().getHours();
+  const light = choice === "light" || (choice === "system" && h >= 6 && h < 19);
   document.documentElement.dataset.theme = light ? "light" : "dark";
   listeners.forEach((l) => l());
 }
