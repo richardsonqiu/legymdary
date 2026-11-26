@@ -1,4 +1,4 @@
-import type { NutrientKey } from "@/lib/meal-quality";
+import type { NutrientKey } from "./meal-quality";
 
 /** Short explainers for the nutrient pages. Plain words, a few lines each. */
 export type NutrientInfo = {

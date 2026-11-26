@@ -1,4 +1,4 @@
-import type { AhDay, AhSleep, AhSummary, AhWeighIn, AhWorkout } from "@/lib/apple-health/types";
+import type { AhDay, AhSleep, AhSummary, AhWeighIn, AhWorkout } from "./types";
 
 /**
  * Streaming reader for Apple Health's `export.xml`. Runs in the browser (and

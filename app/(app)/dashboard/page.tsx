@@ -11,8 +11,7 @@ import {
   type TodayScoresInput,
 } from "@/components/score/TodayScores";
 import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
-import { sceneFor, sceneStyle } from "@/lib/scenes";
-import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
+import { sceneFor, sceneStyle, compareScans, parseSegments, segmentBalance, addDaysStr, formatShort, kg } from "@legymdary/shared";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import { DumbbellIcon, TrophyIcon, WatchIcon, CalendarIcon, ChevronRightIcon } from "@/components/icons";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
@@ -34,11 +33,6 @@ import { scheduleOuraSync } from "@/lib/oura/background";
 import { NudgePopup } from "@/components/nudge/NudgePopup";
 import { nudgeFrom } from "@/lib/nudge-data";
 import { getSessionUser, userToday } from "@/lib/session";
-import {
-  addDaysStr,
-  formatShort,
-  kg,
-} from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Home" };

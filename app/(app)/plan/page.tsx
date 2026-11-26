@@ -9,14 +9,12 @@ import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { TargetModeCard } from "@/components/plan/TargetModeCard";
 import { ReviewCard } from "@/components/plan/ReviewCard";
 import { WhyCard } from "@/components/plan/WhyCard";
-import { explainPlan } from "@/lib/plan-explain";
+import { explainPlan, paceOptions, weightTrendPerWeek, type Plan, addDaysStr, daysBetween, formatMedium, formatShort, kg } from "@legymdary/shared";
 import { cadenceOf, nextReviewDate, recentReviews } from "@/lib/review";
 import { requireUserId } from "@/lib/session";
 import { TargetChangeNote } from "@/components/food/TargetChangeNote";
-import { paceOptions, weightTrendPerWeek, type Plan } from "@/lib/nutrition";
 import { PaceChooser } from "@/components/plan/PaceChooser";
 import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
-import { addDaysStr, daysBetween, formatMedium, formatShort, kg } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Goal" };

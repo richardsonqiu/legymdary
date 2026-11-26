@@ -2,7 +2,7 @@ import { TrophyIcon } from "@/components/icons";
 import { PageTransition } from "@/components/PageTransition";
 import { EmptyState, PageHeader, Tag } from "@/components/ui";
 import { getAllPRs } from "@/lib/queries";
-import { formatMedium, kg } from "@/lib/utils";
+import { formatMedium, kg } from "@legymdary/shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Personal records" };

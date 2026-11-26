@@ -1,5 +1,6 @@
 "use client";
 
+import { estimate1RM, formatShort, kg, todayStr } from "@legymdary/shared";
 import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -25,7 +26,7 @@ import type {
   WorkoutDetail,
   WorkoutExerciseDetail,
 } from "@/lib/queries";
-import { cn, estimate1RM, formatShort, kg, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Input = { weight: string; reps: string; warmup: boolean };
 

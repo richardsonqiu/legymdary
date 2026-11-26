@@ -5,8 +5,8 @@ import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { GarminConnect } from "@/components/garmin/GarminConnect";
 import { PageHeader, SectionTitle } from "@/components/ui";
 import { getGarminActivities, getGarminStatus } from "@/lib/queries";
-import { sourceOfKey } from "@/lib/sources";
-import { addDaysStr } from "@/lib/utils";
+import { sourceOfKey } from "@legymdary/shared";
+import { addDaysStr } from "@legymdary/shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Garmin" };

@@ -16,7 +16,7 @@ import {
   tooltipLabelStyle,
   tooltipStyle,
 } from "@/components/charts/common";
-import { addDaysStr, formatMedium, formatShort, kg } from "@/lib/utils";
+import { addDaysStr, formatMedium, formatShort, kg } from "@legymdary/shared";
 
 /**
  * Logged weights plus a straight-line projection from the latest weigh-in to

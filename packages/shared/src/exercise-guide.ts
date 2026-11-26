@@ -2,7 +2,7 @@
  * How to do each exercise: the animation pattern, main muscles, three steps
  * and two tips. Short and plain, for people new to the gym.
  */
-import type { PatternKey } from "@/lib/exercise-patterns";
+import type { PatternKey } from "./exercise-patterns";
 
 export type Guide = { pattern: PatternKey; muscles: string[]; steps: string[]; tips: string[]; note?: string };
 

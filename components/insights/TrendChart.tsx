@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART, ChartFrame, Segmented, tooltipLabelStyle, tooltipStyle } from "@/components/charts/common";
 import type { SeriesPoint } from "@/lib/analysis/service";
-import { formatMedium, formatShort } from "@/lib/utils";
+import { formatMedium, formatShort } from "@legymdary/shared";
 
 const METRICS = [
   { value: "readiness", label: "Ready", unit: "" },

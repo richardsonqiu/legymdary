@@ -7,7 +7,7 @@ import { CalendarIcon, SheetIcon } from "@/components/icons";
 import { Card, EmptyState, PageHeader, SectionTitle } from "@/components/ui";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getConsistencyDays, getGarminActivities, getGarminStatus, getWorkoutDetails } from "@/lib/queries";
-import { addDaysStr } from "@/lib/utils";
+import { addDaysStr } from "@legymdary/shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "History" };

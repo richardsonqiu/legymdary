@@ -1,8 +1,9 @@
 "use client";
 
+import { formatPretty } from "@legymdary/shared";
 import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, FlameIcon, InfoIcon, LockIcon, ScaleIcon, TargetIcon } from "@/components/icons";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export type ChangeReason = { kind: "goal" | "source" | "burn" | "weight" | "pace" | "review" | "other"; text: string; from?: number; to?: number };
 export type TargetChangeInfo = { from: number; to: number; since: string; reasons: ChangeReason[] };

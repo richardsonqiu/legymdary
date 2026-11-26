@@ -1,5 +1,4 @@
-import type { ConsistencyDay } from "@/lib/queries";
-import { isActiveDay, isLoggedDay } from "@/lib/streaks";
+import { type ConsistencyDay, isActiveDay, isLoggedDay } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 export type Layer = "both" | "exercise" | "food";

@@ -15,7 +15,7 @@ import {
   tooltipLabelStyle,
   tooltipStyle,
 } from "@/components/charts/common";
-import { formatShort } from "@/lib/utils";
+import { formatShort } from "@legymdary/shared";
 
 export function WeeklyVolumeChart({
   weeks,

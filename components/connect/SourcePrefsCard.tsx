@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Card } from "@/components/ui";
 import { setSourcePrefs } from "@/lib/actions";
-import { CATEGORIES, CATEGORY_INFO, DEVICE_LABEL, orderFor, type Category, type Device, type Prefs } from "@/lib/sources-shared";
+import { CATEGORIES, CATEGORY_INFO, DEVICE_LABEL, orderFor, type Category, type Device, type Prefs } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /**

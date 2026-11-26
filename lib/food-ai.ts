@@ -1,8 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { plainText } from "@/lib/utils";
+import { plainText, type MealItem } from "@legymdary/shared";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
-import type { MealItem } from "@/lib/nutrition";
 
 /**
  * Server-only: estimates the contents and nutrition of a meal photo with

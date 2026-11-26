@@ -1,5 +1,6 @@
 "use client";
 
+import { EQUIPMENT, MUSCLE_GROUPS } from "@legymdary/shared";
 import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -7,7 +8,7 @@ import { PlusIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Button, Card, Field, inputClass, Tag } from "@/components/ui";
 import type { Exercise } from "@/db/schema";
 import { createExercise } from "@/lib/actions";
-import { cn, EQUIPMENT, MUSCLE_GROUPS } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const selectClass =
   "h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950/60 px-3 text-base text-zinc-100 outline-none focus:border-zinc-500";

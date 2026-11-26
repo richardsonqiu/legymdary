@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Button, Card, Field, inputClass } from "@/components/ui";
 import type { Goals } from "@/db/schema";
 import { saveGoals } from "@/lib/actions";
-import { ACTIVITY_LEVELS, type ActivityLevel } from "@/lib/nutrition";
+import { ACTIVITY_LEVELS, type ActivityLevel } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 const str = (v: number | null | undefined) => (v != null ? String(v) : "");

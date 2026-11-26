@@ -6,7 +6,7 @@ import { ArrowUpIcon, BoltIcon, CalendarIcon, DumbbellIcon, InfoIcon, PlayIcon }
 import { Button, Card } from "@/components/ui";
 import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { setTrainingDays, startRecommendedWorkout } from "@/lib/actions";
-import type { Recommendation } from "@/lib/training/program";
+import type { Recommendation } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 const fmtKg = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));

@@ -5,10 +5,9 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { Segmented } from "@/components/charts/common";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
-import type { ConsistencyDay } from "@/lib/queries";
-import { isActiveDay, isLoggedDay } from "@/lib/streaks";
+import { type ConsistencyDay, isActiveDay, isLoggedDay, todayStr } from "@legymdary/shared";
 import { DayCell, DayLegend, exLevel, type Layer } from "@/components/consistency/DayCell";
-import { cn, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type View = "week" | "month" | "year";
 const ds = (d: Date) => format(d, "yyyy-MM-dd");

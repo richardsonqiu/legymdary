@@ -5,8 +5,8 @@ import { useSyncExternalStore } from "react";
 import { GarminAttribution } from "@/components/garmin/GarminAttribution";
 import { BoltIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
-import type { Readiness } from "@/lib/energy";
-import { cn, todayStr } from "@/lib/utils";
+import { type Readiness, todayStr } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 

@@ -6,8 +6,8 @@ import { ChevronDownIcon, ForkIcon, InfoIcon } from "@/components/icons";
 import { BAND_DOT } from "@/components/meal/QualityParts";
 import { MealIntro } from "@/components/meal/MealIntro";
 import { Card, SectionTitle } from "@/components/ui";
-import { BANDS, fmtClock, type Band, type Regularity } from "@/lib/meal-quality";
-import { cn, formatShort } from "@/lib/utils";
+import { BANDS, fmtClock, type Band, type Regularity, formatShort } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 export type RhythmMeal = { id: number; date: string; name: string; minutes: number; band: Band | null; calories: number; estimated: boolean };
 

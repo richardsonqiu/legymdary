@@ -1,5 +1,6 @@
 "use server";
 
+import { cleanPrefs } from "@legymdary/shared";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
@@ -33,7 +34,7 @@ import { decryptSecret, encryptSecret } from "@/lib/garmin/crypto";
 import { askAboutDay, generateDailyReport, type Report } from "@/lib/analysis/report";
 import { extractBodyScans, type ExtractedScan } from "@/lib/body-scan-ai";
 import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
-import { ahBatchSchema } from "@/lib/apple-health/types";
+import { ahBatchSchema, ACTIVITY_LEVELS, MEAL_TYPES, parseItems, sumMacros, type MealItem, SKIPPABLE_MEALS, qualityFromItems, SLOT_MINUTES, addDaysStr, estimate1RM, todayStr } from "@legymdary/shared";
 import {
   deleteAppleHealthData,
   recordAppleHealthImport,
@@ -44,21 +45,11 @@ import { cleanText } from "@/lib/sheet-import/format";
 import { getRecommendation } from "@/lib/training/history";
 import { batchSchema, ImportError, storeBatch, undoImport, type BatchResult } from "@/lib/sheet-import/store";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
-import { cleanPrefs, resolveDays, savePrefs } from "@/lib/sources";
+import { resolveDays, savePrefs } from "@/lib/sources";
 import { revokeToken } from "@/lib/oura/client";
 import { deleteOuraData, syncOuraForUser } from "@/lib/oura/sync";
-import {
-  ACTIVITY_LEVELS,
-  MEAL_TYPES,
-  parseItems,
-  sumMacros,
-  type MealItem,
-  SKIPPABLE_MEALS,
-} from "@/lib/nutrition";
 import { requireUserId, userNowMinutes, userToday } from "@/lib/session";
-import { qualityFromItems, SLOT_MINUTES } from "@/lib/meal-quality";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
-import { addDaysStr, estimate1RM, todayStr } from "@/lib/utils";
 
 function revalidateAll() {
   for (const p of [

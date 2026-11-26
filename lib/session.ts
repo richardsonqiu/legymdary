@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { auth } from "@/auth";
+import { localDateMinutes } from "@legymdary/shared";
 
 /** Deduped per request so multiple queries don't re-decode the session. */
 export const getSessionUser = cache(async () => {
@@ -36,15 +37,6 @@ export async function userNowMinutes(at: Date = new Date()): Promise<number | nu
   return localMinutes(at, tz);
 }
 
-/** Local date (YYYY-MM-DD) and minutes after midnight of an instant in a zone. */
-export function localDateMinutes(at: Date, tz: string): { date: string; minutes: number } {
-  const p = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
-      .formatToParts(at)
-      .map((x) => [x.type, x.value]),
-  );
-  return { date: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
-}
 function localMinutes(at: Date, tz: string) {
   return localDateMinutes(at, tz).minutes;
 }

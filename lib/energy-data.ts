@@ -1,21 +1,7 @@
 import { userToday } from "@/lib/session";
 import { cache } from "react";
 import type { GarminDaily, Goals } from "@/db/schema";
-import {
-  activityBonus,
-  chooseMaintenance,
-  garminMaintenance,
-  measuredMaintenance,
-  readiness,
-  type MeasuredMaintenance,
-  type Readiness,
-} from "@/lib/energy";
-import {
-  computePlan,
-  planInputFrom,
-  targetsFromPlan,
-  type DailyTargets,
-  type Plan, type PlanInput } from "@/lib/nutrition";
+import { activityBonus, chooseMaintenance, garminMaintenance, measuredMaintenance, readiness, type MeasuredMaintenance, type Readiness, computePlan, planInputFrom, targetsFromPlan, type DailyTargets, type Plan, type PlanInput, addDaysStr } from "@legymdary/shared";
 import {
   getBodyStats,
   getDailyTotals,
@@ -30,7 +16,6 @@ import {
   getOuraStatus,
   type OuraStatus,
 } from "@/lib/queries";
-import { addDaysStr } from "@/lib/utils";
 import { requireUserId } from "@/lib/session";
 import { lockTargets, targetModeOf, type TargetChange } from "@/lib/targets";
 import type { TargetReview } from "@/db/schema";

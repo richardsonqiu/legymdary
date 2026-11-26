@@ -6,7 +6,7 @@
 import { addDays, addMonths, endOfMonth, format, parseISO, startOfMonth, startOfWeek } from "date-fns";
 import { extractDays, type DayRow } from "@/lib/analysis/extract";
 import { getAllPRs } from "@/lib/queries";
-import { isFullyLogged } from "@/lib/energy";
+import { isFullyLogged } from "@legymdary/shared";
 
 export type RecapPeriod = "week" | "month" | "year";
 

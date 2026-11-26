@@ -21,11 +21,8 @@ import {
   type Pattern,
   type Readiness,
 } from "@/lib/analysis/metrics";
-import { compareScans, leanMass, parseSegments, segmentBalance } from "@/lib/body-scan";
+import { compareScans, leanMass, parseSegments, segmentBalance, isFullyLogged, computePlan, planInputFrom, addDaysStr } from "@legymdary/shared";
 import { latestBodyValues } from "@/lib/body-values";
-import { isFullyLogged } from "@/lib/energy";
-import { computePlan, planInputFrom } from "@/lib/nutrition";
-import { addDaysStr } from "@/lib/utils";
 
 /**
  * Server-only, session-free (usable from cron). Builds the analysis for one

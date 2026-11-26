@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, CheckIcon, FlameIcon, ForkIcon, InfoIcon, PencilIcon, ScaleIcon, TargetIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
-import type { Balance, Period } from "@/lib/balance";
-import { cn, formatShort } from "@/lib/utils";
+import { type Balance, type Period, formatShort } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 const fmt = (n: number) => Math.round(Math.abs(n)).toLocaleString("en-US");
 const signed = (n: number, d = 0) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(d)}`;

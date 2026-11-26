@@ -6,18 +6,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import { Celebration } from "@/components/consistency/Celebration";
 import { DumbbellIcon } from "@/components/icons";
 import { buttonClass, Card } from "@/components/ui";
-import type { ConsistencyDay } from "@/lib/queries";
-import {
-  foodStreak,
-  FOOD_MILESTONES,
-  isActiveDay,
-  isLoggedDay,
-  milestoneReached,
-  weekStreak,
-  WEEK_MILESTONES,
-  WEEKLY_TARGET,
-} from "@/lib/streaks";
-import { cn, todayStr } from "@/lib/utils";
+import { type ConsistencyDay, foodStreak, FOOD_MILESTONES, isActiveDay, isLoggedDay, milestoneReached, weekStreak, WEEK_MILESTONES, WEEKLY_TARGET, todayStr } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 const ds = (d: Date) => format(d, "yyyy-MM-dd");

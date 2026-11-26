@@ -20,7 +20,7 @@ import { decryptSecret, encryptSecret } from "@/lib/garmin/crypto";
 import { listCollection, OuraError, refreshTokens } from "@/lib/oura/client";
 import { rateLimit } from "@/lib/rate-limit";
 import { resolveDays } from "@/lib/sources";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr, todayStr } from "@legymdary/shared";
 
 type J = Record<string, unknown>;
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);

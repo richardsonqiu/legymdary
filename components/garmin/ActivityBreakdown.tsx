@@ -6,7 +6,7 @@ import { DumbbellIcon, PencilIcon, PlusIcon } from "@/components/icons";
 import { Button, Card } from "@/components/ui";
 import { startWorkoutForActivity } from "@/lib/actions";
 import type { WorkoutDetail } from "@/lib/queries";
-import { kg } from "@/lib/utils";
+import { kg } from "@legymdary/shared";
 
 /** Exercises and sets logged for a watch activity, or a button to add them. */
 export function ActivityBreakdown({ activityId, workout, gym }: { activityId: string; workout: WorkoutDetail | null; gym: boolean }) {

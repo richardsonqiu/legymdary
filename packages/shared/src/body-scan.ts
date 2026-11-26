@@ -1,4 +1,29 @@
-import type { BodyScan } from "@/db/schema";
+/** A stored body scan row (same shape as the db row, without the db import). */
+export type BodyScan = {
+  id: number;
+  userId: string;
+  date: string;
+  time: string | null;
+  device: string;
+  score: number | null;
+  weight: number | null;
+  skeletalMuscle: number | null;
+  fatMass: number | null;
+  bodyFatPct: number | null;
+  bmi: number | null;
+  visceralFat: number | null;
+  waistHip: number | null;
+  totalBodyWater: number | null;
+  protein: number | null;
+  mineral: number | null;
+  bmr: number | null;
+  smi: number | null;
+  segmentalLean: string | null;
+  segmentalFat: string | null;
+  bodyType: string | null;
+  balance: string | null; // JSON { upper, lower, upperLower }
+  createdAt: Date;
+};
 
 /** Pure helpers for body-composition scans (shared by Stats, Plan and Insights). */
 

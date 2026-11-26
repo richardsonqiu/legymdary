@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { bodyStats } from "@/db/schema";
-import { addDaysStr } from "@/lib/utils";
+import { addDaysStr } from "@legymdary/shared";
 
 /**
  * Latest weight and body fat for a user as of `asOf` (session-free).

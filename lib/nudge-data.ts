@@ -1,6 +1,5 @@
 import type { EnergyContext } from "@/lib/energy-data";
-import { pickNudge, type Nudge, type NudgeDay } from "@/lib/nudges";
-import { addDaysStr } from "@/lib/utils";
+import { pickNudge, type Nudge, type NudgeDay, addDaysStr } from "@legymdary/shared";
 
 /** The popup to show (if any), from data the page already loaded. */
 export function nudgeFrom(energy: EnergyContext, today: string): Nudge | null {

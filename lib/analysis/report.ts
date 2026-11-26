@@ -1,4 +1,4 @@
-import { plainText } from "@/lib/utils";
+import { plainText } from "@legymdary/shared";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";

@@ -4,9 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ExerciseAnimation } from "@/components/exercise/ExerciseAnimation";
 import { CheckIcon, InfoIcon, PlayIcon, XIcon } from "@/components/icons";
 import { Portal } from "@/components/Portal";
-import { guideFor } from "@/lib/exercise-guide";
-import type { Pattern } from "@/lib/exercise-motion";
-import { PATTERNS } from "@/lib/exercise-patterns";
+import { guideFor, type Pattern, PATTERNS } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /** "How to" button that opens the animated guide. Renders nothing if we have no guide. */

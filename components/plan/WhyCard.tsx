@@ -1,6 +1,6 @@
 import { ArrowDownIcon, ArrowUpIcon, BoltIcon, FlameIcon, InfoIcon, LockIcon, ScaleIcon, TargetIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
-import type { ExplainStep, MacroLine } from "@/lib/plan-explain";
+import type { ExplainStep, MacroLine } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 const ICON: Record<ExplainStep["key"], (p: { className?: string }) => React.ReactNode> = {

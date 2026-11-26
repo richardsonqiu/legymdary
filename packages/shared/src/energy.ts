@@ -2,8 +2,8 @@
  * Pure energy-balance analysis (no DB). Combines the food log, weigh-ins and
  * Garmin's daily burn.
  */
-import { KCAL_PER_KG, weightTrendPerWeek, type MaintenanceSource } from "@/lib/nutrition";
-import { addDaysStr, daysBetween } from "@/lib/utils";
+import { KCAL_PER_KG, weightTrendPerWeek, type MaintenanceSource } from "./nutrition";
+import { addDaysStr, daysBetween } from "./utils";
 
 export type IntakeDay = { date: string; calories: number; count: number; /** Meals marked as skipped. */ skipped?: number };
 export type BurnDay = {

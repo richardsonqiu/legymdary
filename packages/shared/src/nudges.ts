@@ -9,8 +9,8 @@
  * - offTrack: 3 or more of the last 5 logged days were over target by 10%+
  *   (under, when gaining) and activity was at or below usual.
  */
-import { isFullyLogged } from "@/lib/energy";
-import { addDaysStr } from "@/lib/utils";
+import { isFullyLogged } from "./energy";
+import { addDaysStr } from "./utils";
 
 export type NudgeDay = {
   date: string;
