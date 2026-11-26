@@ -1,5 +1,6 @@
 "use client";
 
+import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { PlusIcon, SearchIcon, XIcon } from "@/components/icons";
@@ -97,8 +98,9 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
               key={e.id}
               className="flex items-center justify-between gap-3 bg-zinc-900/40 px-3.5 py-3"
             >
-              <span className="min-w-0 truncate text-sm font-medium">
-                {e.name}
+              <span className="flex min-w-0 items-center gap-2">
+                <ExerciseHowTo name={e.name} muscleGroup={e.muscleGroup} variant="icon" />
+                <span className="truncate text-sm font-medium">{e.name}</span>
               </span>
               <div className="flex shrink-0 gap-1.5">
                 <Tag>{e.muscleGroup}</Tag>

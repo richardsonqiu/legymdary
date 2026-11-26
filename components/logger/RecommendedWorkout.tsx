@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ArrowUpIcon, BoltIcon, CalendarIcon, DumbbellIcon, InfoIcon, PlayIcon } from "@/components/icons";
 import { Button, Card } from "@/components/ui";
+import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { setTrainingDays, startRecommendedWorkout } from "@/lib/actions";
 import type { Recommendation } from "@/lib/training/program";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,10 @@ export function RecommendedWorkout({ rec }: { rec: Recommendation }) {
           <li key={e.exerciseId} className="flex items-center gap-3 py-2.5">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs tabular-nums text-zinc-300">{i + 1}</span>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{e.name}</div>
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium">{e.name}</span>
+                <ExerciseHowTo name={e.name} muscleGroup={e.muscleGroup} />
+              </div>
               <div className="text-xs tabular-nums text-zinc-400">
                 {e.sets} × {e.reps}
                 {e.weight != null && e.weight > 0 ? ` @ ${fmtKg(e.weight)} kg` : ""}
