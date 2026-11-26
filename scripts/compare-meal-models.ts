@@ -13,7 +13,7 @@
  * (roughly $0.001 per photo on Haiku, $0.02 on Sonnet).
  */
 import "dotenv/config";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
@@ -44,22 +44,30 @@ async function toJpeg(file: string) {
 async function child(dir: string) {
   const { analyzeMealImage } = await import("../lib/food-ai");
   const hints: Record<string, string> = readJson(path.join(dir, "hints.json"));
-  const out: RunOut[] = [];
-  for (const f of fs.readdirSync(dir).filter((f) => IMG.test(f)).sort()) {
-    const t0 = Date.now();
-    const res = await analyzeMealImage({ base64: await toJpeg(path.join(dir, f)), mediaType: "image/jpeg", hint: hints[f] ?? null });
-    const ms = Date.now() - t0;
-    const costUsd = res.usage.reduce((s, u) => s + u.costUsd, 0);
-    const model = res.usage.at(-1)?.model;
-    if (!res.ok) out.push({ file: f, ok: false, error: res.error, ms, costUsd, model });
-    else
-      out.push({
-        file: f, ok: true, ms, costUsd, model,
-        name: res.analysis.name, confidence: res.analysis.confidence, notes: res.analysis.notes, advisor: res.analysis.advisor,
-        items: res.analysis.items.map((i) => ({ name: i.name, portion: i.portion, calories: i.calories, protein: i.protein, carbs: i.carbs, fat: i.fat })),
-      });
-    process.stderr.write(`  ${f}: ${res.ok ? "ok" : res.error} (${ms} ms)\n`);
+  const files = fs.readdirSync(dir).filter((f) => IMG.test(f)).sort();
+  const out: RunOut[] = new Array(files.length);
+  let next = 0;
+  // A few photos at a time; each call is independent.
+  async function worker() {
+    while (next < files.length) {
+      const idx = next++;
+      const f = files[idx];
+      const t0 = Date.now();
+      const res = await analyzeMealImage({ base64: await toJpeg(path.join(dir, f)), mediaType: "image/jpeg", hint: hints[f] ?? null });
+      const ms = Date.now() - t0;
+      const costUsd = res.usage.reduce((s, u) => s + u.costUsd, 0);
+      const model = res.usage.at(-1)?.model;
+      out[idx] = !res.ok
+        ? { file: f, ok: false, error: res.error, ms, costUsd, model }
+        : {
+            file: f, ok: true, ms, costUsd, model,
+            name: res.analysis.name, confidence: res.analysis.confidence, notes: res.analysis.notes, advisor: res.analysis.advisor,
+            items: res.analysis.items.map((i) => ({ name: i.name, portion: i.portion, calories: i.calories, protein: i.protein, carbs: i.carbs, fat: i.fat })),
+          };
+      process.stderr.write(`  ${process.env.MEAL_AI_MODEL}/${process.env.MEAL_AI_EFFORT} ${f}: ${res.ok ? "ok" : res.error} (${ms} ms)\n`);
+    }
   }
+  await Promise.all(Array.from({ length: 4 }, worker));
   process.stdout.write(JSON.stringify(out));
 }
 
@@ -84,17 +92,26 @@ async function main() {
   });
 
   const results: Record<string, RunOut[]> = {};
-  for (const v of variants) {
-    process.stderr.write(`Running ${v.label}\n`);
-    const r = spawnSync("npx", ["tsx", __filename, "--child", dir], {
-      env: { ...process.env, MEAL_AI_MODEL: v.model, MEAL_AI_BACKUP_MODEL: "", MEAL_AI_EFFORT: v.effort },
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "inherit"],
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    if (r.status !== 0) throw new Error(`${v.label} failed`);
-    results[v.label] = JSON.parse(r.stdout);
-  }
+  // All variants run at the same time, each in its own process.
+  await Promise.all(
+    variants.map(
+      (v) =>
+        new Promise<void>((resolve, reject) => {
+          process.stderr.write(`Running ${v.label}\n`);
+          const p = spawn("npx", ["tsx", __filename, "--child", dir], {
+            env: { ...process.env, MEAL_AI_MODEL: v.model, MEAL_AI_BACKUP_MODEL: "", MEAL_AI_EFFORT: v.effort },
+            stdio: ["ignore", "pipe", "inherit"],
+          });
+          let buf = "";
+          p.stdout.on("data", (d) => (buf += d));
+          p.on("close", (code) => {
+            if (code !== 0) return reject(new Error(`${v.label} failed`));
+            results[v.label] = JSON.parse(buf);
+            resolve();
+          });
+        }),
+    ),
+  );
 
   const files = fs.readdirSync(dir).filter((f) => IMG.test(f)).sort();
   const truth: Record<string, number> = readJson(path.join(dir, "truth.json"));
