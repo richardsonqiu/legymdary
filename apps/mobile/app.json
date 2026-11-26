@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "LeGYMdary",
+    "slug": "legymdary",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "legymdary",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.richardsonqiu.legymdary",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.richardsonqiu.legymdary"
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-dev-client"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
