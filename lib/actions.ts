@@ -24,6 +24,7 @@ import {
   sheetImports,
   sourceDaily,
   ouraConnections,
+  dailyTargets,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
@@ -1392,6 +1393,21 @@ export async function relockTarget(): Promise<{ ok: true } | { error: string }> 
   const userId = await requireUserId();
   const res = await db.update(goals).set({ relockedAt: new Date(), updatedAt: new Date() }).where(eq(goals.userId, userId));
   if (!res.rowsAffected) return { error: "Set your goal first." };
+  revalidateAll();
+  return { ok: true };
+}
+
+/** Steady target: after a big-burn day, eat part of it back (added to today's target only). */
+export async function claimBurnBonus(amount: number): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Nothing to add." };
+  const bonus = Math.min(600, Math.round(amount / 10) * 10);
+  const today = await userToday();
+  const res = await db
+    .update(dailyTargets)
+    .set({ bonus, updatedAt: new Date() })
+    .where(and(eq(dailyTargets.userId, userId), eq(dailyTargets.date, today)));
+  if (!res.rowsAffected) return { error: "Open the Food page once today first." };
   revalidateAll();
   return { ok: true };
 }

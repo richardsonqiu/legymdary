@@ -53,6 +53,8 @@ export type EnergyContext = {
   plan: Plan;
   /** Today's target (see lib/targets.ts: past days are locked, small changes ignored). */
   targets: DailyTargets;
+  /** Weigh-ins of the last 5 weeks. */
+  weights: { date: string; weight: number }[];
   /** "steady" (fixed until you change it) or "adaptive" (follows burn and weight). */
   targetMode: "steady" | "adaptive";
   /** What the plan would say right now from live inputs (to offer an update in steady mode). */
@@ -151,9 +153,12 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
       : livePlan;
   // Past days use the activity bonus they had.
   for (const [d, b] of Object.entries(locked.bonusByDate)) if (d < today) bonusByDate[d] = b;
+  if (locked.todayBonus) bonusByDate[today] = locked.todayBonus;
+  else if (targetModeOf(goals) === "steady") delete bonusByDate[today];
 
   return {
     targetMode: targetModeOf(goals),
+    weights,
     liveTarget: liveTargets ? Math.round(liveTargets.calories) : null,
     targetsByDate: locked.byDate,
     targetChange: locked.change,

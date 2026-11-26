@@ -35,6 +35,8 @@ import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
 import { scheduleOuraSync } from "@/lib/oura/background";
+import { NudgePopup } from "@/components/nudge/NudgePopup";
+import { nudgeFrom } from "@/lib/nudge-data";
 import { getSessionUser, userToday } from "@/lib/session";
 import {
   addDaysStr,
@@ -204,6 +206,7 @@ export default async function DashboardPage() {
 
       {card?.sleep && <SleepSummaryCard s={card.sleep} compact />}
 
+      <NudgePopup nudge={nudgeFrom(energy, serverToday)} />
       <TodayGuide g={guide} />
 
       <StreaksCard

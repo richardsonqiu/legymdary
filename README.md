@@ -47,6 +47,12 @@ your phone at the gym. Every account gets its own private diary.
   goal date, goal change). For existing users, every past day (up to 3 years, from the first meal or
   weigh-in) is rebuilt the way the app calculated it that day, so Progress › Calorie balance can show how
   far over or under target you were across a week, month or year.
+- **Nudges (popups, shown once)**: 🔥 *Big burn day* when today's activity is 250+ kcal above your usual,
+  with confetti, a "Nth this month" badge and, on a Steady target, a choice: *Eat +X today* (half the extra,
+  max 600, added to today's target only) or *Keep as deficit*. 🎯 *Right direction* once a week when the
+  7-day balance and the scale both point toward your goal (deficit to lose, surplus to gain), with your
+  on-target streak. ⚠ *Heads up* when 3 of your last 5 logged days missed the target (over when losing,
+  under when gaining) and activity was low, at most every 3 days. Rules in `lib/nudges.ts`.
 - **My menu**: tap Add to pick from meals you have eaten before (or create a new one). Tapping a menu item or an Eat again meal asks to confirm and lets you choose the meal slot.
 - **Recaps**: week, month and year stories (Progress → Recaps, or the Home banner
   early in a week or month): time moving, your top activity, longest session,

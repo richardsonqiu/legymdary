@@ -63,6 +63,8 @@ export type LockedTargets = {
   /** Saved activity bonus by date. */
   bonusByDate: Record<string, number>;
   change: TargetChange | null;
+  /** Calories added to today's target (activity bonus, or eaten back after a big burn). */
+  todayBonus: number;
 };
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
@@ -268,7 +270,8 @@ export async function lockTargets(i: Inputs): Promise<LockedTargets> {
       protein: today!.protein,
       carbs: today!.carbs,
       fat: today!.fat,
-      bonus: i.bonusToday,
+      // Steady: no automatic bonus, but keep calories the user chose to eat back today.
+      bonus: targetModeOf(i.goals) === "steady" ? (todayRow?.bonus ?? 0) : i.bonusToday,
       maintenance: i.maintenance?.kcal ?? i.plan.tdee,
       maintenanceSource: i.plan.maintenanceSource,
       weight: i.weight,
@@ -315,7 +318,8 @@ export async function lockTargets(i: Inputs): Promise<LockedTargets> {
       }),
     };
   }
-  return { today, byDate, bonusByDate, change };
+  const todayBonus = targetModeOf(i.goals) === "steady" ? (todayRow?.bonus ?? 0) : i.bonusToday;
+  return { today, byDate, bonusByDate, change, todayBonus };
 }
 
 /** The target a past date had: its saved one, else the oldest saved one after it, else today's. */

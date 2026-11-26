@@ -6,6 +6,8 @@ import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
 import { scheduleOuraSync } from "@/lib/oura/background";
+import { NudgePopup } from "@/components/nudge/NudgePopup";
+import { nudgeFrom } from "@/lib/nudge-data";
 import { requireUserId, userToday } from "@/lib/session";
 import {
   getAiUsageSince,
@@ -57,15 +59,15 @@ export default async function FoodPage({
       bonus:
         d.date < serverToday && energy.targetsByDate[d.date]
           ? (energy.bonusByDate[d.date] ?? 0)
-          : adjust
-            ? activityBonus(d.activeKcal, energy.garminMaint?.avgActive ?? null)
-            : 0,
+          : (energy.bonusByDate[d.date] ??
+            (adjust ? activityBonus(d.activeKcal, energy.garminMaint?.avgActive ?? null) : 0)),
     };
   }
 
   return (
     <PageTransition className="space-y-0">
       {garminSyncing && <AutoRefresh />}
+      {!requested && <NudgePopup nudge={nudgeFrom(energy, serverToday)} />}
       <PageHeader
         title="Food"
         subtitle="Take a photo and get the calories"
