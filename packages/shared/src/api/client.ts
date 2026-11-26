@@ -17,6 +17,7 @@ import {
   type SkipMealRequest,
   type TodayResponse,
 } from "./food";
+import { progressMethods } from "./progress-client";
 import {
   exercisesResponseSchema,
   logSetResponseSchema,
@@ -80,7 +81,7 @@ export function createApiClient(opts: ApiClientOptions) {
   const doFetch: FetchLike = opts.fetch ?? (globalThis as unknown as { fetch: FetchLike }).fetch;
   const base = opts.baseUrl.replace(/\/+$/, "");
 
-  async function request<S extends z.ZodType>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, schema: S, body?: unknown): Promise<z.output<S>> {
+  async function request<S extends z.ZodType>(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", path: string, schema: S, body?: unknown): Promise<z.output<S>> {
     const token = await opts.getToken();
     const headers: Record<string, string> = { Accept: "application/json", "X-Timezone": opts.timeZone() };
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -105,6 +106,7 @@ export function createApiClient(opts: ApiClientOptions) {
   }
 
   return {
+    ...progressMethods(request),
     login: (body: LoginRequest): Promise<AuthResponse> => request("POST", "/api/v1/auth/login", authResponseSchema, body),
     logout: (): Promise<LogoutResponse> => request("POST", "/api/v1/auth/logout", logoutResponseSchema, {}),
     me: (): Promise<MeResponse> => request("GET", "/api/v1/me", meResponseSchema),

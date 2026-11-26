@@ -9,7 +9,7 @@ import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { TargetModeCard } from "@/components/plan/TargetModeCard";
 import { ReviewCard } from "@/components/plan/ReviewCard";
 import { WhyCard } from "@/components/plan/WhyCard";
-import { explainPlan, paceOptions, weightTrendPerWeek, type Plan, addDaysStr, daysBetween, formatMedium, formatShort, kg } from "@legymdary/shared";
+import { explainPlan, paceOptions, recentWeightTrend, type Plan, addDaysStr, daysBetween, formatMedium, formatShort, kg } from "@legymdary/shared";
 import { cadenceOf, nextReviewDate, recentReviews } from "@/lib/review";
 import { requireUserId } from "@/lib/session";
 import { TargetChangeNote } from "@/components/food/TargetChangeNote";
@@ -53,10 +53,7 @@ export default async function PlanPage() {
   const weights = stats
     .filter((s) => s.weight != null && s.date >= addDaysStr(today, -90))
     .map((s) => ({ date: s.date, weight: s.weight as number }));
-  const recent = weights.filter((w) => w.date >= addDaysStr(today, -28));
-  const trend = weightTrendPerWeek(
-    recent.map((w) => ({ day: daysBetween(recent[0].date, w.date), weight: w.weight })),
-  );
+  const trend = recentWeightTrend(weights, today);
 
   // Average intake over the last 7 days that have at least one meal (excl. today).
   const logged = totals.filter((t) => t.date < today).slice(-7);
