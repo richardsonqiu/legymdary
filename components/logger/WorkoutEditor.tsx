@@ -1,5 +1,6 @@
 "use client";
 
+import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ExercisePicker } from "@/components/logger/ExercisePicker";
@@ -295,7 +296,8 @@ export function WorkoutEditor({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-semibold">{ex.name}</div>
-                    <div className="mt-1 flex gap-1.5">
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <ExerciseHowTo name={ex.name} muscleGroup={ex.muscleGroup} />
                       <Tag>{ex.muscleGroup}</Tag>
                       <Tag>{ex.equipment}</Tag>
                     </div>
