@@ -54,6 +54,8 @@ export type EnergyContext = {
   plan: Plan;
   /** Today's target (see lib/targets.ts: past days are locked, small changes ignored). */
   targets: DailyTargets;
+  /** The plan from today's numbers before locking (for "how we got your number"). */
+  livePlan: Plan;
   /** This week's (or month's) target review. */
   review: TargetReview | null;
   /** Weigh-ins of the last 5 weeks. */
@@ -161,6 +163,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   else if (targetModeOf(goals) === "steady") delete bonusByDate[today];
 
   return {
+    livePlan,
     targetMode: targetModeOf(goals),
     review: locked.review,
     weights,

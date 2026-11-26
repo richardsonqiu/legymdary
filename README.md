@@ -47,6 +47,12 @@ your phone at the gym. Every account gets its own private diary.
   goal date, goal change). For existing users, every past day (up to 3 years, from the first meal or
   weigh-in) is rebuilt the way the app calculated it that day, so Progress › Calorie balance can show how
   far over or under target you were across a week, month or year.
+- **How we got your number** (Goal page, linked from Food): the calorie target step by step with your own
+  numbers: body (weight, body fat, lean mass), BMR with the equation used (Katch-McArdle with body fat, else
+  Mifflin-St Jeor), daily burn (measured from food and weight trend, your watch's average, or BMR × activity
+  level), the deficit or surplus from your pace (kg/week × 7,700 ÷ 7), the safety floor when it applies, the
+  result, and the locked target if it differs. Macros show their rule (protein per kg, fat at least 25%,
+  carbs the rest) and a split bar (`lib/plan-explain.ts`).
 - **Weekly (or monthly) target reviews**: the daily target never moves day to day. Each Monday (or the 1st,
   if you pick monthly on the Goal page) a review compares your target with a suggestion built from averages:
   the weight trend line, the average burn and the intake on fully logged days. Steady targets show *Keep* or

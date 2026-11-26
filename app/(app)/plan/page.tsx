@@ -8,6 +8,8 @@ import { getEnergyContext } from "@/lib/energy-data";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { TargetModeCard } from "@/components/plan/TargetModeCard";
 import { ReviewCard } from "@/components/plan/ReviewCard";
+import { WhyCard } from "@/components/plan/WhyCard";
+import { explainPlan } from "@/lib/plan-explain";
 import { cadenceOf, nextReviewDate, recentReviews } from "@/lib/review";
 import { requireUserId } from "@/lib/session";
 import { TargetChangeNote } from "@/components/food/TargetChangeNote";
@@ -29,6 +31,11 @@ export default async function PlanPage() {
     getBodyScans(),
     recentReviews(userId, 9),
   ]);
+  const why = explainPlan(energy.livePlan, energy.planInput, {
+    measured: energy.measured,
+    watch: energy.garminMaint,
+    locked: energy.targets,
+  });
   const cadence = cadenceOf(energy.goals);
   const nextReview = nextReviewDate(today, cadence);
   const latestScan = scans[scans.length - 1] ?? null;
@@ -43,7 +50,7 @@ export default async function PlanPage() {
   for (const g of energy.garminDays) {
     if (!energy.intake.some((d) => d.date === g.date)) energyRows.push({ date: g.date, eaten: 0, meals: 0, skipped: 0, burned: g.totalKcal });
   }
-  const { goals, body, plan, measured, garminMaint } = energy;
+  const { goals, body, plan } = energy;
 
   const weights = stats
     .filter((s) => s.weight != null && s.date >= addDaysStr(today, -90))
@@ -122,35 +129,16 @@ export default async function PlanPage() {
                 <MacroTile label="Fat" value={plan.fat} color="text-rose-300" />
               </div>
             )}
+            <WhyCard
+              steps={why.steps}
+              macros={why.macros}
+              target={plan.calorieTarget}
+              direction={plan.direction}
+            />
             <Card className="space-y-1.5 text-sm">
-              {plan.tdee != null && (
-                <Row
-                  label={
-                    plan.maintenanceSource === "measured"
-                      ? "Maintenance · measured"
-                      : plan.maintenanceSource === "garmin"
-                        ? "Maintenance · your average burn (watch)"
-                        : "Maintenance · formula"
-                  }
-                  value={`${plan.tdee.toLocaleString("en-US")} kcal`}
-                />
-              )}
-              {plan.maintenanceSource !== "formula" && plan.formulaTdee != null && (
-                <Row
-                  label="Formula estimate (for reference)"
-                  value={`${plan.formulaTdee.toLocaleString("en-US")} kcal`}
-                />
-              )}
-              {plan.bmr != null && (
-                <Row
-                  label={`BMR · ${plan.bmrMethod === "katch-mcardle" ? "lean-mass formula" : "Mifflin-St Jeor"}`}
-                  value={`${plan.bmr.toLocaleString("en-US")} kcal`}
-                />
-              )}
               {latestScan?.bmr != null && (
                 <Row label={`BMR · measured (InBody, ${formatShort(latestScan.date)})`} value={`${Math.round(latestScan.bmr).toLocaleString("en-US")} kcal`} />
               )}
-              {plan.leanMass != null && <Row label="Lean mass" value={`${kg(plan.leanMass)} kg`} />}
               {body.weight != null && (
                 <Row
                   label="Current"
@@ -173,12 +161,6 @@ export default async function PlanPage() {
               )}
             </Card>
             <Notes plan={plan} goals={goals} />
-            <MaintenanceNote
-              source={plan.maintenanceSource}
-              measured={measured}
-              garminDays={garminMaint?.days ?? null}
-              garminConnected={energy.wearable}
-            />
           </div>
         ) : (
           <Card className="text-sm text-zinc-400">
@@ -374,53 +356,3 @@ function MacroTile({
   );
 }
 
-function MaintenanceNote({
-  source,
-  measured,
-  garminDays,
-  garminConnected,
-}: {
-  source: Plan["maintenanceSource"];
-  measured: Awaited<ReturnType<typeof getEnergyContext>>["measured"];
-  garminDays: number | null;
-  garminConnected: boolean;
-}) {
-  let text: React.ReactNode;
-  if (source === "measured" && measured) {
-    text = (
-      <>
-        <b className="text-zinc-200">From your own data:</b>{" "}
-        {Math.round(measured.avgIntake).toLocaleString("en-US")} kcal a day over {measured.loggedDays} logged days,
-        with weight changing {measured.trendKgPerWeek >= 0 ? "+" : "−"}
-        {kg(Math.abs(measured.trendKgPerWeek))} kg a week. It updates as you log.
-      </>
-    );
-  } else if (source === "garmin") {
-    text = (
-      <>
-        <b className="text-zinc-200">From your watch:</b> your average daily burn over {garminDays} days. Log
-        food for 10 days and weigh in regularly to get a number measured from your own results.
-      </>
-    );
-  } else {
-    text = (
-      <>
-        <b className="text-zinc-200">Formula estimate.</b>{" "}
-        {garminConnected
-          ? "After 5 days of watch data, your real burn replaces it."
-          : (
-            <>
-              <Link href="/garmin" transitionTypes={["nav-forward"]} className="underline">Connect Garmin</Link>,{" "}
-              <Link href="/apple-health" transitionTypes={["nav-forward"]} className="underline">import Apple Health</Link>, or log food
-              for 10 days and weigh in regularly, to get your real number.
-            </>
-          )}
-      </>
-    );
-  }
-  return (
-    <p className="rounded-xl border border-zinc-800 bg-zinc-900/30 px-3 py-2.5 text-xs text-zinc-400">
-      {text}
-    </p>
-  );
-}

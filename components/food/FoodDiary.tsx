@@ -26,6 +26,7 @@ import {
   ArrowUpIcon,
   LockIcon,
   BarsIcon,
+  InfoIcon,
 } from "@/components/icons";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import type { Meal, SavedMeal } from "@/db/schema";
@@ -314,6 +315,11 @@ export function FoodDiary({
       <Card>
         <MacroSummary totals={totals} targets={dayTarget} />
         {isToday && targetChange && today && <TargetChangeNote change={targetChange} today={today} />}
+        {isToday && !planMissing && dayTarget && (
+          <Link href="/plan#why" className="mt-2 inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300">
+            <InfoIcon className="h-3.5 w-3.5" /> How is {Math.round(dayTarget.calories).toLocaleString("en-US")} worked out?
+          </Link>
+        )}
         {!isToday && today && date < today && baseTarget && (
           <p className="mt-3 flex items-center gap-1.5 text-[11px] text-zinc-400" title="Past days keep the target they had">
             <LockIcon className="h-3.5 w-3.5" /> Target that day: {Math.round(baseTarget.calories).toLocaleString("en-US")} kcal
