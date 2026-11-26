@@ -50,11 +50,13 @@ import { deleteOuraData, syncOuraForUser } from "@/lib/oura/sync";
 import {
   ACTIVITY_LEVELS,
   MEAL_TYPES,
+  parseItems,
   sumMacros,
   type MealItem,
   SKIPPABLE_MEALS,
 } from "@/lib/nutrition";
-import { requireUserId, userToday } from "@/lib/session";
+import { requireUserId, userNowMinutes, userToday } from "@/lib/session";
+import { qualityFromItems, SLOT_MINUTES } from "@/lib/meal-quality";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
 import { addDaysStr, estimate1RM, todayStr } from "@/lib/utils";
 
@@ -582,6 +584,31 @@ function cleanEaten(v: unknown): number | null {
   return Math.max(0, Math.min(10, Math.round(n * 100) / 100));
 }
 
+/** Optional grams, 0 to 500, one decimal. */
+function grams(v: unknown): number | null {
+  const n = numOrNull(v);
+  return n == null || !Number.isFinite(n) ? null : Math.max(0, Math.min(500, Math.round(n * 10) / 10));
+}
+function proc(v: unknown): number | null {
+  const n = numOrNull(v);
+  return n != null && [1, 2, 3, 4].includes(Math.round(n)) ? Math.round(n) : null;
+}
+
+/** Minutes after midnight, 0 to 1439. */
+function clockMinutes(v: unknown): number | null {
+  const n = numOrNull(v);
+  return n == null || !Number.isFinite(n) ? null : Math.max(0, Math.min(1439, Math.round(n)));
+}
+
+/** When a meal was eaten if not given: now for today, else the slot's usual time. */
+async function defaultEatenAt(date: string, mealType: string): Promise<number> {
+  if (date === (await userToday())) {
+    const now = await userNowMinutes();
+    if (now != null) return now;
+  }
+  return SLOT_MINUTES[mealType] ?? SLOT_MINUTES.snack;
+}
+
 function cleanItems(items: unknown): MealItem[] {
   if (!Array.isArray(items)) return [];
   return items.slice(0, 40).flatMap((raw) => {
@@ -610,6 +637,9 @@ function cleanItems(items: unknown): MealItem[] {
         base: cleanBase(it.base),
         eaten: cleanEaten(it.eaten),
         drink: typeof it.drink === "boolean" ? it.drink : null,
+        fiber: grams(it.fiber),
+        sugar: grams(it.sugar),
+        processing: proc(it.processing),
       },
     ];
   });
@@ -628,6 +658,10 @@ export type MealInput = {
   notes?: string | null;
   photo?: string | null;
   aiEstimated?: boolean;
+  /** Minutes after local midnight. Omitted: now (today) or the slot's usual time. */
+  eatenAt?: number | null;
+  /** AI note on the meal; undefined keeps the current one when editing. */
+  advisor?: string | null;
 };
 
 function mealValues(input: MealInput) {
@@ -652,6 +686,8 @@ function mealValues(input: MealInput) {
     items: items.length ? JSON.stringify(items) : null,
     notes: input.notes?.trim().slice(0, 1000) || null,
     aiEstimated: !!input.aiEstimated,
+    ...qualityFromItems(items),
+    ...(input.advisor !== undefined ? { advisor: cleanText(input.advisor, 400) || null } : {}),
   };
 }
 
@@ -666,9 +702,10 @@ export async function saveMeal(input: MealInput): Promise<{ id: number }> {
     }
     photo = input.photo;
   }
+  const eatenAt = clockMinutes(input.eatenAt) ?? (await defaultEatenAt(vals.date, vals.mealType));
   const [row] = await db
     .insert(meals)
-    .values({ userId, ...vals, photo })
+    .values({ userId, ...vals, photo, eatenAt })
     .returning({ id: meals.id });
   await clearSkip(userId, vals.date, vals.mealType);
   revalidateAll();
@@ -678,9 +715,10 @@ export async function saveMeal(input: MealInput): Promise<{ id: number }> {
 export async function updateMeal(id: number, input: MealInput): Promise<void> {
   const userId = await requireUserId();
   const vals = mealValues(input);
+  const eatenAt = clockMinutes(input.eatenAt);
   await db
     .update(meals)
-    .set(vals)
+    .set(eatenAt != null ? { ...vals, eatenAt } : vals)
     .where(and(eq(meals.id, id), eq(meals.userId, userId)));
   await clearSkip(userId, vals.date, vals.mealType);
   revalidateAll();
@@ -716,6 +754,11 @@ export async function relogMeal(input: {
     notes: src.notes,
     photo: src.photo,
     aiEstimated: src.aiEstimated,
+    fiber: src.fiber,
+    sugar: src.sugar,
+    processing: src.processing,
+    advisor: src.advisor,
+    eatenAt: await defaultEatenAt(input.date, mealType),
   });
   await clearSkip(userId, input.date, mealType);
   revalidateAll();
@@ -847,6 +890,8 @@ export async function logMenuItem(input: { id: number; date: string; mealType: s
     items: src.items,
     photo: src.photo,
     aiEstimated: src.aiEstimated,
+    ...qualityFromItems(parseItems(src.items)),
+    eatenAt: await defaultEatenAt(input.date, mealType),
   });
   await clearSkip(userId, input.date, mealType);
   revalidateAll();
@@ -1564,4 +1609,18 @@ export async function startRecommendedWorkout(): Promise<{ id: number } | { erro
   );
   revalidateAll();
   return { id: w.id };
+}
+
+/** Changes when a meal was eaten (and its meal type). */
+export async function setMealTime(input: { id: number; minutes: number; mealType?: string }): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const minutes = clockMinutes(input.minutes);
+  if (!Number.isInteger(input.id) || minutes == null) return { error: "Pick a valid time." };
+  const mealType = input.mealType && (MEAL_TYPES as readonly string[]).includes(input.mealType) ? input.mealType : undefined;
+  await db
+    .update(meals)
+    .set(mealType ? { eatenAt: minutes, mealType } : { eatenAt: minutes })
+    .where(and(eq(meals.id, input.id), eq(meals.userId, userId)));
+  revalidateAll();
+  return { ok: true };
 }

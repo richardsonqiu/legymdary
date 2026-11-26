@@ -198,6 +198,16 @@ export const meals = sqliteTable(
     aiEstimated: integer("ai_estimated", { mode: "boolean" })
       .notNull()
       .default(false),
+    /** When it was eaten, minutes after local midnight (0 to 1439). */
+    eatenAt: integer("eaten_at"),
+    /** Grams; null when unknown (older or hand-entered meals). */
+    fiber: real("fiber"),
+    /** Added sugars in grams; null when unknown. */
+    sugar: real("sugar"),
+    /** 1 whole foods, 2 simply prepared, 3 processed, 4 ultra-processed. */
+    processing: integer("processing"),
+    /** Short AI note on what the meal does for you. */
+    advisor: text("advisor"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),

@@ -16,6 +16,39 @@ export async function requireUserId(): Promise<string> {
 
 const TZ_RE = /^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){0,2}$/;
 
+/** The user's time zone from the `tz` cookie, if valid. */
+export const userTimeZone = cache(async (): Promise<string | null> => {
+  try {
+    const { cookies } = await import("next/headers");
+    const tz = (await cookies()).get("tz")?.value;
+    if (tz && TZ_RE.test(tz)) {
+      new Intl.DateTimeFormat("en-US", { timeZone: tz }); // throws on an unknown zone
+      return tz;
+    }
+  } catch {}
+  return null;
+});
+
+/** Minutes after midnight in the user's time zone (null when unknown). */
+export async function userNowMinutes(at: Date = new Date()): Promise<number | null> {
+  const tz = await userTimeZone();
+  if (!tz) return null;
+  return localMinutes(at, tz);
+}
+
+/** Local date (YYYY-MM-DD) and minutes after midnight of an instant in a zone. */
+export function localDateMinutes(at: Date, tz: string): { date: string; minutes: number } {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(at)
+      .map((x) => [x.type, x.value]),
+  );
+  return { date: `${p.year}-${p.month}-${p.day}`, minutes: Number(p.hour) * 60 + Number(p.minute) };
+}
+function localMinutes(at: Date, tz: string) {
+  return localDateMinutes(at, tz).minutes;
+}
+
 /**
  * Today's date (YYYY-MM-DD) where the user is. The browser stores its time
  * zone in a `tz` cookie (see TimezoneSync); without it we fall back to the

@@ -31,6 +31,8 @@ export type ComposerInit = {
   /** Thumbnail for display + storage. */
   thumb?: string | null;
   aiEstimated?: boolean;
+  /** AI note on the meal (kept when editing). */
+  advisor?: string | null;
   /** Save to My menu instead of logging a meal. */
   toMenu?: boolean;
 };
@@ -65,6 +67,7 @@ export function MealComposer({
   const [notes, setNotes] = useState(init.notes);
   const [hint, setHint] = useState("");
   const [aiEstimated, setAiEstimated] = useState(!!init.aiEstimated);
+  const [advisor, setAdvisor] = useState<string | null>(init.advisor ?? null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
@@ -93,6 +96,7 @@ export function MealComposer({
         setName(res.name);
         setItems(res.items);
         setAiEstimated(true);
+        setAdvisor(res.advisor);
       }
     } catch {
       setStatus({
@@ -139,6 +143,7 @@ export function MealComposer({
         items: validItems,
         notes,
         aiEstimated,
+        advisor,
       };
       try {
         if (init.toMenu) {

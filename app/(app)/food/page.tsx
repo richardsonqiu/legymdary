@@ -11,6 +11,7 @@ import { nudgeFrom } from "@/lib/nudge-data";
 import { requireUserId, userToday } from "@/lib/session";
 import {
   getAiUsageSince,
+  getTimedMeals,
   getGarminDaily,
   getMeals,
   getRecentMeals,
@@ -18,6 +19,8 @@ import {
   getMenu,
 } from "@/lib/queries";
 import { addDaysStr } from "@/lib/utils";
+import { MealRhythm } from "@/components/meal/MealRhythm";
+import { mealRegularity } from "@/lib/meal-quality";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Food" };
@@ -48,6 +51,8 @@ export default async function FoodPage({
     getSkippedMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getMenu(),
   ]);
+  const timed = await getTimedMeals(addDaysStr(center, -13), center);
+  const regularity = mealRegularity(timed);
   const garminSyncing = [scheduleGarminSync(userId, energy.garmin), scheduleOuraSync(userId, energy.oura)].some(Boolean);
   const plan = energy.plan;
   const adjust = !!energy.garmin?.adjustForActivity && !!energy.targets && !plan.usingOverride;
@@ -89,6 +94,13 @@ export default async function FoodPage({
         garminByDate={energy.wearable ? garminByDate : null}
         planMissing={plan.calorieTarget == null}
         macroSplitNote={plan.macroBasis === "percent"}
+        editId={typeof sp.edit === "string" && /^\d{1,9}$/.test(sp.edit) ? Number(sp.edit) : null}
+      />
+      <MealRhythm
+        date={center}
+        meals={timed.filter((m) => m.date === center)}
+        week={timed.filter((m) => m.date >= addDaysStr(center, -6))}
+        regularity={regularity}
       />
     </PageTransition>
   );

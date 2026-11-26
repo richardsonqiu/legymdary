@@ -84,6 +84,12 @@ export type MealItem = {
   eaten?: number | null;
   /** A drink rather than food (set by the AI; guessed from the name otherwise). */
   drink?: boolean | null;
+  /** Fiber in grams (AI estimate). */
+  fiber?: number | null;
+  /** Added sugars in grams (AI estimate). */
+  sugar?: number | null;
+  /** 1 whole foods, 2 simply prepared, 3 processed, 4 ultra-processed. */
+  processing?: number | null;
 };
 
 const DRINK_WORDS =
@@ -117,8 +123,13 @@ export function baseOf(it: MealItem): Macros {
 export function withEaten(it: MealItem, eaten: number): MealItem {
   const e = Math.max(0, Math.min(10, eaten));
   const b = baseOf(it);
+  const prev = it.eaten && it.eaten > 0 ? it.eaten : 1;
+  // Fiber and sugar scale with the amount too (stored for the current amount).
+  const scale = (v: number | null | undefined) => (typeof v === "number" ? Math.round((v / prev) * e * 10) / 10 : v);
   return {
     ...it,
+    fiber: scale(it.fiber),
+    sugar: scale(it.sugar),
     base: b,
     eaten: e,
     calories: Math.round(b.calories * e),
@@ -506,4 +517,15 @@ export function withBonus(t: DailyTargets, bonus: number | undefined): DailyTarg
     calories: t.calories + bonus,
     carbs: t.carbs != null ? t.carbs + Math.round(bonus / 4 / 5) * 5 : null,
   };
+}
+
+/** Items stored as JSON on a meal row. */
+export function parseItems(json: string | null): MealItem[] {
+  if (!json) return [];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
 }
