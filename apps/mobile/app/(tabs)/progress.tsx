@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { deviceToday, useRefreshAll } from "../../src/api/hooks";
 import { useBodyStats, useConsistency, usePlan } from "../../src/api/progress";
+import { HealthSection } from "../../src/health/HealthSection";
 import { ConsistencyCard } from "../../src/progress/Consistency";
 import { GoalSummary, GoalsSheet, PaceCard } from "../../src/progress/Plan";
 import { BodyTrend, WeighInForm, WeighInList } from "../../src/progress/WeighIns";
@@ -57,6 +58,10 @@ export default function Progress() {
             {consistency.data ? <ConsistencyCard data={consistency.data} today={today} /> : null}
           </QueryBoundary>
         )}
+      </Section>
+
+      <Section title="Health sync">
+        <HealthSection />
       </Section>
 
       <Section title="Weigh-ins">

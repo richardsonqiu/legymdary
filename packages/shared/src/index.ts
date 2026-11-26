@@ -31,3 +31,4 @@ export * from "./utils";
 // `Segment` exists in both body-scan and exercise-motion; the exercise one keeps the name.
 export type { Segment } from "./exercise-motion";
 export type { Segment as BodyScanSegment } from "./body-scan";
+export * from "./health/batch";
