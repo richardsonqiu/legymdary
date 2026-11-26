@@ -1,4 +1,5 @@
 export * from "./api/auth";
+export * from "./api/client";
 export * from "./apple-health/parse";
 export * from "./apple-health/types";
 export * from "./balance";
@@ -9,6 +10,7 @@ export * from "./exercise-motion";
 export * from "./exercise-patterns";
 export * from "./glossary";
 export * from "./meal-quality";
+export * from "./nav";
 export * from "./nudges";
 export * from "./nutrient-info";
 export * from "./nutrition";

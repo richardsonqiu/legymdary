@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navGroupFor } from "@/lib/nav";
+import { navGroupFor } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /** Sub-tabs for the current bottom tab (e.g. Train → Workout · History · Exercises). */
