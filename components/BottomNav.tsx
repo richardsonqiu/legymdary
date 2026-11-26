@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarsIcon, DumbbellIcon, ForkIcon, HomeIcon, SparkIcon } from "@/components/icons";
-import { NAV, navGroupFor } from "@/lib/nav";
+import { NAV, navGroupFor } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 const ICONS = { home: HomeIcon, train: DumbbellIcon, food: ForkIcon, progress: BarsIcon, insights: SparkIcon } as const;
