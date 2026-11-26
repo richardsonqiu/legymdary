@@ -45,7 +45,7 @@ export function CalorieBalance({
             onClick={() => setPeriod(p)}
             className={cn(
               "press flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors",
-              period === p ? "bg-zinc-100 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",
+              period === p ? "bg-citron text-carbon" : "text-zinc-400 hover:text-zinc-200",
             )}
           >
             {LABEL[p]}

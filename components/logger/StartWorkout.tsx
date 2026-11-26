@@ -69,7 +69,7 @@ export function StartWorkout({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Workout" subtitle="Today's plan, or start your own" />
+      <PageHeader title="Train" eyebrow="Workout" subtitle="Today's plan, or start your own" image="pullup" imagePosition="center 30%" />
       {recommended}
 
       {templates.length > 0 && (

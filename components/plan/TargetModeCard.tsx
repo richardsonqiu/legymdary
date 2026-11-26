@@ -103,7 +103,7 @@ export function TargetModeCard({
               onClick={() => cadence !== c && run(() => setReviewCadence(c))}
               className={cn(
                 "press flex-1 rounded-lg py-1.5 text-xs font-medium",
-                cadence === c ? "bg-zinc-100 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",
+                cadence === c ? "bg-citron text-carbon" : "text-zinc-400 hover:text-zinc-200",
               )}
             >
               {c === "weekly" ? "Weekly" : "Monthly"}

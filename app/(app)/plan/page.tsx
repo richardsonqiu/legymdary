@@ -81,7 +81,9 @@ export default async function PlanPage() {
     <PageTransition className="space-y-7">
       <PageHeader
         title="Goal"
-        subtitle="Where you are heading, and what to eat each day"
+        eyebrow="Plan"
+        subtitle="Where you are heading, and what to eat"
+        image="ridge"
       />
 
       {staleDays != null && staleDays > 21 && (

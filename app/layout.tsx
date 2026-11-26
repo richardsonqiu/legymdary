@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "LeGYMdary: the Legendary Gym Diary",
-    template: "%s · LeGYMdary",
+    default: "One Up: one better than yesterday",
+    template: "%s · One Up",
   },
   description:
-    "Log workouts, track personal records, body stats and progress over time.",
-  applicationName: "LeGYMdary",
+    "One more rep, one better than yesterday. Training, food and recovery in one place.",
+  applicationName: "One Up",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -31,12 +31,18 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "LeGYMdary",
+    title: "One Up",
   },
 };
 
+/** Picks light or dark before first paint: saved choice, else the system's. */
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("oneup.theme");var m=window.matchMedia("(prefers-color-scheme: light)");function a(){var v=t==="light"||t==="dark"?t:(m.matches?"light":"dark");document.documentElement.dataset.theme=v;}a();m.addEventListener("change",function(){t=localStorage.getItem("oneup.theme");a();});}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+
 export const viewport: Viewport = {
-  themeColor: "#0a0f1c",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f5f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#191919" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -51,7 +57,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // The theme script below sets data-theme before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh">{children}</body>
     </html>
   );

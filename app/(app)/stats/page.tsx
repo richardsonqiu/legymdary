@@ -63,7 +63,7 @@ export default async function StatsPage() {
 
   return (
     <PageTransition className="space-y-7">
-      <PageHeader title="Progress" subtitle="Body and training over time" />
+      <PageHeader title="Progress" eyebrow="Trends" subtitle="Body and training over time" image="runner" imagePosition="center 35%" />
 
       <section>
         <SectionTitle>Recaps</SectionTitle>

@@ -80,7 +80,7 @@ export function OuraConnect({
           {configured ? (
             <a
               href="/api/oura/connect"
-              className="press flex h-12 w-full items-center justify-center rounded-xl bg-zinc-100 text-sm font-semibold text-zinc-950 hover:bg-white"
+              className="press flex h-12 w-full items-center justify-center rounded-xl bg-citron text-sm font-semibold text-carbon hover:bg-citron-deep"
             >
               Connect Oura
             </a>
@@ -129,7 +129,7 @@ export function OuraConnect({
               <RefreshIcon className={cn("h-4 w-4", pending && "animate-spin")} /> {pending ? "Syncing…" : "Sync now"}
             </Button>
           ) : (
-            <a href="/api/oura/connect" className="press flex h-11 items-center justify-center rounded-xl bg-zinc-100 text-sm font-semibold text-zinc-950">
+            <a href="/api/oura/connect" className="press flex h-11 items-center justify-center rounded-xl bg-citron text-sm font-semibold text-carbon">
               Connect again
             </a>
           )}

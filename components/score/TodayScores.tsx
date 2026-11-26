@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArcGauge, ScoreRing, toneWord } from "@/components/score/Score";
+import { ScoreRing, toneWord } from "@/components/score/Score";
 import type { Readiness } from "@/lib/analysis/metrics";
 import { cn } from "@/lib/utils";
 
@@ -61,33 +61,33 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
         <ScoreRing value={s.battery} label="Battery" href="/insights" />
       </div>
 
-      {/* Hero */}
+      {/* Readiness (or today's food) card: big number, tick bar, top factors. */}
       <Link
         href={r ? "/insights" : "/food"}
-        className="glass press relative block overflow-hidden rounded-[28px] border border-white/15 px-5 pb-5 pt-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)]"
+        className="glass press relative block overflow-hidden rounded-[28px] border border-zinc-800/70 px-5 pb-5 pt-5"
       >
-        <div className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300/80">
-          {r ? "Readiness" : "Today's food"}
-        </div>
-        <div className="relative mx-auto mt-1 flex w-[220px] justify-center">
-          <ArcGauge value={heroValue ?? 0} />
-          <div className="absolute inset-x-0 top-[58px] text-center">
-            <div className="text-6xl font-light leading-none tabular-nums tracking-tight">
-              {heroValue ?? "–"}
-              {!r && heroValue != null && <span className="text-2xl">%</span>}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+              {r ? "Readiness" : "Today's food"}
             </div>
-            <div className="mt-1.5 text-sm font-medium text-zinc-200">
-              {r ? toneWord(r.score) : heroValue == null ? "Set your plan" : `${s.eaten.toLocaleString("en-US")} kcal eaten`}
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className="text-[56px] font-semibold leading-none tracking-tight tabular-nums">{heroValue ?? "–"}</span>
+              {heroValue != null && <span className="text-lg text-zinc-400">{r ? "/100" : "%"}</span>}
             </div>
           </div>
+          <span className="mt-1 rounded-full bg-citron px-3 py-1 text-xs font-semibold text-carbon">
+            {r ? toneWord(r.score) : heroValue == null ? "No plan" : `${s.eaten.toLocaleString("en-US")} kcal`}
+          </span>
         </div>
-        <div className="-mt-6 text-center">
-          <div className="text-lg font-semibold">
+        <TickBar value={heroValue ?? 0} />
+        <div className="mt-3">
+          <div className="text-base font-semibold">
             {r ? r.label : s.kcalTarget ? `of ${s.kcalTarget.toLocaleString("en-US")} kcal today` : "Set a goal to get a target"}
           </div>
-          <p className="mx-auto mt-1 max-w-[30ch] text-sm leading-snug text-zinc-300/90">
+          <p className="mt-0.5 text-sm leading-snug text-zinc-400">
             {r
-              ? ADVICE[r.band]
+              ? r.label === ADVICE[r.band].replace(/\.$/, "") ? null : ADVICE[r.band]
               : s.garminConnected
                 ? "Shows after your watch or ring syncs a night of sleep."
                 : s.appleHealth
@@ -96,23 +96,34 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
           </p>
         </div>
         {top.length > 0 && (
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {top.map((c) => (
-              <div key={c.key} className="rounded-2xl bg-black/25 px-2 py-2 text-center">
-                <div className="text-[10px] uppercase tracking-wide text-zinc-400">{c.label}</div>
-                <div
-                  className={cn(
-                    "text-sm font-semibold tabular-nums",
-                    c.score >= 75 ? "text-teal-200" : c.score >= 50 ? "text-sky-200" : "text-amber-200",
-                  )}
-                >
-                  {toneWord(c.score)}
-                </div>
-              </div>
+              <span key={c.key} className="flex items-center gap-1.5 rounded-full border border-zinc-700/80 px-3 py-1 text-xs">
+                <span className={cn("h-1.5 w-1.5 rounded-full", c.score >= 75 ? "bg-teal-300" : c.score >= 50 ? "bg-zinc-400" : "bg-amber-400")} />
+                <span className="text-zinc-400">{c.label}</span>
+                <span className="font-semibold">{toneWord(c.score)}</span>
+              </span>
             ))}
           </div>
         )}
       </Link>
     </section>
+  );
+}
+
+/** 40 thin ticks, filled in Citron up to the score. */
+function TickBar({ value }: { value: number }) {
+  const n = 40;
+  const on = Math.round((Math.max(0, Math.min(100, value)) / 100) * n);
+  return (
+    <div className="mt-4 flex h-7 items-end gap-[3px]" aria-hidden="true">
+      {Array.from({ length: n }, (_, i) => (
+        <span
+          key={i}
+          className={cn("flex-1 rounded-full", i < on ? "bg-citron" : "bg-zinc-700/70")}
+          style={{ height: i % 5 === 0 ? "100%" : "62%" }}
+        />
+      ))}
+    </div>
   );
 }

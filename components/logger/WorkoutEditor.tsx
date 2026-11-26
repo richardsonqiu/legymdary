@@ -220,7 +220,7 @@ export function WorkoutEditor({
               className={cn(
                 "animate-pr-pop flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium shadow-lg",
                 toast.pr
-                  ? "bg-zinc-50 text-zinc-950"
+                  ? "bg-citron text-carbon"
                   : "border border-zinc-700 bg-zinc-900 text-zinc-100",
               )}
             >
@@ -418,7 +418,7 @@ export function WorkoutEditor({
                       className={cn(
                         "h-12 shrink-0 rounded-xl px-4 text-sm font-medium transition-colors",
                         inp.warmup
-                          ? "bg-zinc-200 text-zinc-900"
+                          ? "bg-citron text-carbon"
                           : "border border-zinc-700 text-zinc-400 hover:bg-zinc-800",
                       )}
                     >
@@ -486,7 +486,7 @@ export function WorkoutEditor({
           <div className="animate-backdrop fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center">
             <div role="dialog" aria-label="Workout done" className="animate-sheet pb-safe w-full max-w-md space-y-4 rounded-t-3xl border border-zinc-800 bg-zinc-950 px-5 pb-5 pt-7 text-center sm:rounded-3xl">
               <div className="badge-pop mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-teal-300 to-emerald-500">
-                <TrophyIcon className="h-8 w-8 text-white" />
+                <TrophyIcon className="h-8 w-8 text-paper" />
               </div>
               <div>
                 <div className="text-sm uppercase tracking-wider text-teal-200">{summary.planned > 0 && summary.done >= summary.planned ? "Every set done" : "Great session"}</div>

@@ -23,7 +23,7 @@ export function ReadinessHero({ r }: { r: DayCard["readiness"] }) {
   }
   const tone = toneFor(r.score);
   const sky: Record<string, [string, string]> = {
-    great: ["rgba(94,234,212,0.38)", "rgba(129,140,248,0.32)"],
+    great: ["rgba(222,217,122,0.32)", "rgba(165,165,161,0.22)"],
     good: ["rgba(125,211,252,0.32)", "rgba(165,180,252,0.30)"],
     low: ["rgba(252,211,77,0.30)", "rgba(244,114,182,0.22)"],
     none: ["rgba(125,211,252,0.18)", "rgba(129,140,248,0.18)"],

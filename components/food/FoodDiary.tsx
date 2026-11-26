@@ -470,7 +470,7 @@ export function FoodDiary({
                 <button
                   onClick={() => removeFromMenu(m)}
                   aria-label={`Remove ${m.name} from My menu`}
-                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-200 text-zinc-950"
+                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-citron text-carbon"
                 >
                   <XIcon className="h-3.5 w-3.5" />
                 </button>

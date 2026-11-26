@@ -128,7 +128,7 @@ function Chip({
       className={cn(
         "shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
         active
-          ? "border-zinc-100 bg-zinc-100 text-zinc-950"
+          ? "border-zinc-100 bg-citron text-carbon"
           : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800",
       )}
     >

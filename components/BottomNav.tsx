@@ -14,7 +14,7 @@ export function BottomNav() {
   const currentIdx = current ? NAV.indexOf(current) : -1;
 
   return (
-    <nav className="vt-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-lg">
+    <nav className="vt-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800/70 bg-zinc-950/90 backdrop-blur-xl">
       <div className="pb-safe mx-auto flex max-w-2xl items-stretch">
         {NAV.map((g, idx) => {
           const active = g === current;
@@ -33,9 +33,9 @@ export function BottomNav() {
                 active ? "text-zinc-50" : "text-zinc-500 active:text-zinc-300",
               )}
             >
-              <span className="relative flex h-9 w-12 items-center justify-center">
-                {active && <span className="animate-pill absolute inset-0 rounded-full bg-zinc-100/10" />}
-                <Icon className="h-[22px] w-[22px]" />
+              <span className={cn("relative flex h-9 w-12 items-center justify-center", active && "text-carbon")}>
+                {active && <span className="animate-pill absolute inset-0 rounded-full bg-citron" />}
+                <Icon className="relative h-[22px] w-[22px]" />
               </span>
               {g.label}
             </Link>

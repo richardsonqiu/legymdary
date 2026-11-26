@@ -30,14 +30,12 @@ export function DashboardHeading({ firstName }: { firstName: string | null }) {
 
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-100/80 [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]">
-        LeGYMdary
-      </p>
-      <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight [text-shadow:0_1px_12px_rgba(0,0,0,0.4)]">
+      <p className="wordmark text-lg text-zinc-50">one up</p>
+      <h1 className="mt-3 text-[30px] font-semibold leading-[1.1] tracking-tight">
         {greet}
-        {firstName ? `, ${firstName}` : ""}
+        {firstName ? `, ${firstName}.` : "."}
       </h1>
-      <p className="min-h-[1.25rem] text-sm text-zinc-100/85 [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]">{date}</p>
+      <p className="mt-1 min-h-[1.25rem] text-sm text-zinc-300">{date}</p>
     </div>
   );
 }

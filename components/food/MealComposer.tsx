@@ -293,7 +293,7 @@ export function MealComposer({
                   className={cn(
                     "h-9 rounded-lg text-xs font-medium capitalize transition-colors",
                     mealType === t
-                      ? "bg-zinc-100 text-zinc-950"
+                      ? "bg-citron text-carbon"
                       : "text-zinc-400",
                   )}
                 >

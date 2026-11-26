@@ -14,6 +14,7 @@ export default async function PRsPage() {
     <PageTransition className="space-y-5">
       <PageHeader
         title="Personal records"
+        image="stack"
         subtitle={
           prs.length
             ? `${prs.length} exercise${prs.length === 1 ? "" : "s"} · estimated 1RM`
@@ -37,7 +38,7 @@ export default async function PRsPage() {
               <div
                 className={
                   i === 0
-                    ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-950"
+                    ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-citron text-carbon"
                     : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-zinc-400"
                 }
               >

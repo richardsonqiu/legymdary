@@ -50,10 +50,8 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-6 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-500">
-          LeGYMdary
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+        <p className="wordmark text-2xl">one up</p>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight">
           {mode === "signin" ? "Welcome back" : "Create your account"}
         </h1>
         <p className="mt-1 text-sm text-zinc-500">

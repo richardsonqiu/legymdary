@@ -70,7 +70,10 @@ export default async function FoodPage({
       {!requested && <NudgePopup nudge={nudgeFrom(energy, serverToday)} />}
       <PageHeader
         title="Food"
-        subtitle="Take a photo and get the calories"
+        eyebrow="Fuel"
+        subtitle="Snap a meal or describe it"
+        image="salmon"
+        imagePosition="center 55%"
       />
       <FoodDiary
         meals={meals}

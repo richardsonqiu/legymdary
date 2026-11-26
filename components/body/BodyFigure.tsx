@@ -14,8 +14,8 @@ function band(pct: number | null): "under" | "normal" | "over" | "none" {
 }
 // For lean mass more is better; for fat, "over" is the warning.
 const FILL: Record<Kind, Record<ReturnType<typeof band>, string>> = {
-  lean: { under: "#fbbf24", normal: "#2dd4bf", over: "#38bdf8", none: "#333d55" },
-  fat: { under: "#38bdf8", normal: "#2dd4bf", over: "#fb7185", none: "#333d55" },
+  lean: { under: "#fbbf24", normal: "#ded97a", over: "#38bdf8", none: "var(--color-zinc-700)" },
+  fat: { under: "#38bdf8", normal: "#ded97a", over: "#fb7185", none: "var(--color-zinc-700)" },
 };
 const WORD = { under: "Under", normal: "Normal", over: "Over", none: "–" } as const;
 
@@ -86,7 +86,7 @@ export function BodyFigure({ lean, fat }: { lean: SegValues | null; fat: SegValu
               </feMerge>
             </filter>
           </defs>
-          <g filter="url(#bf-glow)" stroke="#0a0f1c" strokeWidth="1.6" strokeLinejoin="round">
+          <g filter="url(#bf-glow)" stroke="#191919" strokeWidth="1.6" strokeLinejoin="round">
             {/* legs first, so the pelvis sits over their tops */}
             <path d={LEG_L} fill={fill("leftLeg")} />
             <path d={mirror(LEG_L)} fill={fill("rightLeg")} />
@@ -106,7 +106,7 @@ export function BodyFigure({ lean, fat }: { lean: SegValues | null; fat: SegValu
             <path d={TRUNK} />
           </g>
           {/* subtle anatomy lines */}
-          <g fill="none" stroke="#0a0f1c" strokeOpacity="0.22" strokeWidth="1.2" strokeLinecap="round">
+          <g fill="none" stroke="#191919" strokeOpacity="0.22" strokeWidth="1.2" strokeLinecap="round">
             <path d="M80 96 Q100 104 120 96" />
             <path d="M100 108 L100 170" />
             <path d="M84 150 Q100 156 116 150" />

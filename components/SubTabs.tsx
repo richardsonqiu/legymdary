@@ -26,7 +26,7 @@ export function SubTabs() {
             transitionTypes={active ? undefined : [i < idx ? "nav-back" : "nav-forward"]}
             className={cn(
               "press flex-1 rounded-lg px-2 py-2 text-center text-sm font-medium transition-colors",
-              active ? "bg-zinc-100 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",
+              active ? "bg-citron text-carbon" : "text-zinc-400 hover:text-zinc-200",
             )}
           >
             {t.label}

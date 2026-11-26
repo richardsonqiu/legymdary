@@ -3,15 +3,15 @@ import type { MetadataRoute } from "next";
 /** Installable PWA: "Add to Home Screen" opens full-screen on the dashboard. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LeGYMdary: the Legendary Gym Diary",
-    short_name: "LeGYMdary",
-    description: "Log workouts, meals and body stats; track PRs and progress.",
+    name: "One Up",
+    short_name: "One Up",
+    description: "One more rep, one better than yesterday. Training, food and recovery in one place.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0a0f1c",
-    theme_color: "#0a0f1c",
+    background_color: "#191919",
+    theme_color: "#191919",
     categories: ["health", "fitness", "lifestyle"],
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

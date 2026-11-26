@@ -164,7 +164,7 @@ function RestTimerInner({ ref }: { ref?: Ref<RestTimerHandle> }) {
                   className={cn(
                     "h-9 rounded-lg px-2.5 text-xs font-medium tabular-nums",
                     p === duration
-                      ? "bg-zinc-100 text-zinc-950"
+                      ? "bg-citron text-carbon"
                       : "text-zinc-300 hover:bg-zinc-800",
                   )}
                 >
