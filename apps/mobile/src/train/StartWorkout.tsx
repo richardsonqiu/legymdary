@@ -1,6 +1,6 @@
 import { formatPretty, kg, type TemplateDto } from "@legymdary/shared";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { deviceToday, useLastWorkouts, useMutation, useTemplates, useWorkoutActions } from "../api/hooks";
 import { Button, Card, EmptyState, ListRow, QueryBoundary, Section, SkeletonRows, StaleBanner, Text, TextField } from "../ui";
 
@@ -10,11 +10,24 @@ const templateLine = (t: TemplateDto) => t.exercises.map((e) => (e.targetSets ? 
 export function StartWorkout({ history, templates }: { history: ReturnType<typeof useLastWorkouts>; templates: ReturnType<typeof useTemplates> }) {
   const router = useRouter();
   const actions = useWorkoutActions();
-  const { run, isBusy } = useMutation();
+  const { run: runMutation, isBusy } = useMutation();
+  // Sync lock: isBusy lags a render, so a fast second tap could start a second workout.
+  const locked = useRef(false);
+  const run = async <T,>(key: string, fn: () => Promise<T>) => {
+    if (locked.current) return undefined;
+    locked.current = true;
+    try {
+      return await runMutation(key, fn);
+    } finally {
+      locked.current = false;
+    }
+  };
   const [name, setName] = useState("Workout");
 
   const open = (id: number) => router.push({ pathname: "/train/workout/[id]", params: { id: String(id) } });
   const list = history.data?.workouts ?? [];
+  // One start at a time: a second would fail ("finish the workout in progress") or start twice.
+  const starting = ["rec", "new", ...(templates.data?.templates ?? []).map((t) => `t${t.id}`)].some(isBusy);
 
   return (
     <>
@@ -23,7 +36,7 @@ export function StartWorkout({ history, templates }: { history: ReturnType<typeo
         <Text variant="body" tone="muted">
           A session built from your training days and last results.
         </Text>
-        <Button title="Start recommended workout" loading={isBusy("rec")} onPress={() => void run("rec", () => actions.startRecommended())} />
+        <Button title="Start recommended workout" loading={isBusy("rec")} disabled={starting} onPress={() => void run("rec", () => actions.startRecommended())} />
       </Card>
 
       <Section title="Your templates">
@@ -34,7 +47,7 @@ export function StartWorkout({ history, templates }: { history: ReturnType<typeo
                 key={t.id}
                 title={t.name}
                 subtitle={templateLine(t)}
-                trailing={<Button title="Start" accessibilityLabel={`Start ${t.name}`} small loading={isBusy(`t${t.id}`)} onPress={() => void run(`t${t.id}`, () => actions.startFromTemplate(t.id, deviceToday()))} />}
+                trailing={<Button title="Start" accessibilityLabel={`Start ${t.name}`} small loading={isBusy(`t${t.id}`)} disabled={starting} onPress={() => void run(`t${t.id}`, () => actions.startFromTemplate(t.id, deviceToday()))} />}
               />
             ))
           ) : (
@@ -46,7 +59,7 @@ export function StartWorkout({ history, templates }: { history: ReturnType<typeo
       <Card>
         <Text variant="heading">Blank workout</Text>
         <TextField label="Workout name" value={name} onChangeText={setName} placeholder="e.g. Push day" maxLength={200} />
-        <Button title="Start workout" variant="secondary" loading={isBusy("new")} onPress={() => void run("new", () => actions.createWorkout(name.trim() || "Workout", deviceToday()))} />
+        <Button title="Start workout" variant="secondary" loading={isBusy("new")} disabled={starting} onPress={() => void run("new", () => actions.createWorkout(name.trim() || "Workout", deviceToday()))} />
       </Card>
 
       <Section title="History">

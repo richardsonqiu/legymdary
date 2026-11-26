@@ -37,7 +37,20 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
   const actions = useWorkoutActions();
   const { run, isBusy } = useMutation();
   const toast = useToast(3600);
-  const [inputs, setInputs] = useState<Record<number, Input>>({});
+  const [, rerender] = useState(0);
+  // Inputs live in a ref so a tap right after a stepper edit reads the latest value, not a stale render.
+  const inputs = useRef<Record<number, Input>>({});
+  // Synchronous re-entry guards: state-based isBusy lags a render behind a fast second tap.
+  const inFlight = useRef(new Set<string>());
+  const once = async <T,>(key: string, fn: () => Promise<T>): Promise<T | undefined> => {
+    if (inFlight.current.has(key)) return undefined;
+    inFlight.current.add(key);
+    try {
+      return await fn();
+    } finally {
+      inFlight.current.delete(key);
+    }
+  };
   const [pickerOpen, setPickerOpen] = useState(false);
   const [summary, setSummary] = useState<ReturnType<typeof sessionSummary> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,15 +59,19 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
     const d = nextSetDefault(ex);
     return { weight: Number(d.weight) || 0, reps: Number(d.reps) || 0, warmup: false };
   };
-  const inputOf = (ex: WorkoutDto["exercises"][number]) => inputs[ex.workoutExerciseId] ?? def(ex);
-  const patch = (ex: WorkoutDto["exercises"][number], p: Partial<Input>) => setInputs((prev) => ({ ...prev, [ex.workoutExerciseId]: { ...(prev[ex.workoutExerciseId] ?? def(ex)), ...p } }));
+  const inputOf = (ex: WorkoutDto["exercises"][number]) => inputs.current[ex.workoutExerciseId] ?? def(ex);
+  const patch = (ex: WorkoutDto["exercises"][number], p: Partial<Input>) => {
+    inputs.current[ex.workoutExerciseId] = { ...inputOf(ex), ...p };
+    rerender((n) => n + 1);
+  };
 
   const addSet = async (ex: WorkoutDto["exercises"][number]) => {
     const inp = inputOf(ex);
     setError(null);
     if (!Number.isInteger(inp.reps) || inp.reps < 1) return setError("Enter the number of reps.");
     if (!(inp.weight >= 0)) return setError("Enter a weight (kg).");
-    const res = await run(`set${ex.workoutExerciseId}`, () => actions.logSet(ex.workoutExerciseId, { reps: inp.reps, weight: inp.weight, isWarmup: inp.warmup }));
+    const key = `set${ex.workoutExerciseId}`;
+    const res = await once(key, () => run(key, () => actions.logSet(ex.workoutExerciseId, { reps: inp.reps, weight: inp.weight, isWarmup: inp.warmup })));
     if (!res) return;
     patch(ex, { warmup: false });
     if (res.isPR) toast.show(`New PR · ${ex.name} · est. 1RM ${kg(res.e1rm)} kg`);
@@ -76,14 +93,16 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
     await run(`re${ex.workoutExerciseId}`, () => actions.removeExercise(ex.workoutExerciseId));
   };
   const addExercise = async (e: ExerciseDto) => {
-    if (await run("add", () => actions.addExercise(workout.id, e.id))) setPickerOpen(false);
+    if (await once("add", () => run("add", () => actions.addExercise(workout.id, e.id)))) setPickerOpen(false);
   };
   const createAndAdd = async (input: { name: string; muscleGroup: string; equipment: string }) => {
-    const ok = await run("add", async () => {
-      const c = await actions.createExercise(input);
-      await actions.addExercise(workout.id, c.id);
-      return true;
-    });
+    const ok = await once("add", () =>
+      run("add", async () => {
+        const c = await actions.createExercise(input);
+        await actions.addExercise(workout.id, c.id);
+        return true;
+      }),
+    );
     if (ok) setPickerOpen(false);
   };
   const finish = async () => {

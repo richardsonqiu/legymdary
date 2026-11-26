@@ -44,7 +44,7 @@ export function ExercisePicker({
             key={e.id}
             title={e.name}
             subtitle={`${e.muscleGroup} · ${e.equipment}${existingIds.includes(e.id) ? " · already added" : ""}`}
-            onPress={() => onPick(e)}
+            onPress={busy ? undefined : () => onPick(e)}
           />
         ))}
         {list.length > SHOWN ? (
