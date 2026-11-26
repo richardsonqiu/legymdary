@@ -62,6 +62,7 @@ export function FoodDiary({
   targets,
   targetsByDate,
   targetChange,
+  targetMode,
   skipped,
   menu,
   planMissing,
@@ -78,6 +79,8 @@ export function FoodDiary({
   targets: DailyTargets;
   /** The target each past day had (locked once the day is over). */
   targetsByDate?: Record<string, NonNullable<DailyTargets>>;
+  /** "steady" targets don't grow with exercise. */
+  targetMode?: "steady" | "adaptive";
   /** Why today's target differs from the previous day's. */
   targetChange?: { from: number; to: number; since: string; reasons: string[] } | null;
   /** Meals marked as skipped (a window of days around the one shown). */
@@ -320,12 +323,22 @@ export function FoodDiary({
                   : "–"}
               </b>
               {garminByDate[date]?.burned != null && (
-                <span className="text-zinc-500">
-                  {" "}· eaten minus burned {totals.calories - garminByDate[date]!.burned! > 0 ? "+" : ""}
-                  {Math.round(totals.calories - garminByDate[date]!.burned!).toLocaleString("en-US")}
+                <span className="text-zinc-400">
+                  {" "}·{" "}
+                  {totals.calories - garminByDate[date]!.burned! <= 0 ? "deficit" : "surplus"}
+                  {isToday ? " so far" : ""}{" "}
+                  <b className="tabular-nums text-zinc-200">
+                    {Math.abs(Math.round(totals.calories - garminByDate[date]!.burned!)).toLocaleString("en-US")} kcal
+                  </b>
                 </span>
               )}
-              <span className="block text-[11px] text-zinc-500">Data from Garmin</span>
+              <span className="block text-[11px] text-zinc-500">
+                Burn from your watch or ring.{" "}
+                {targetMode === "steady" && isToday && "Your target stays the same when you exercise, so extra burn adds to your deficit. "}
+                <Link href="/stats#balance" className="underline underline-offset-2">
+                  Your week
+                </Link>
+              </span>
             </span>
             {!!garminByDate[date]?.bonus && (
               <span className="text-emerald-300/80">

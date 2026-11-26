@@ -25,7 +25,10 @@ export const CAL_STEP = 50;
 const PROTEIN_STEP = 10;
 const BACKFILL_DAYS = 35;
 
-type GoalRow = Parameters<typeof planInputFrom>[0];
+type GoalRow = (NonNullable<Parameters<typeof planInputFrom>[0]> & { targetMode?: string | null; relockedAt?: Date | null }) | null;
+
+/** "steady" (default): only changes when you change your goal or update it. "adaptive": follows burn and weight. */
+export const targetModeOf = (g: GoalRow): "steady" | "adaptive" => (g?.targetMode === "adaptive" ? "adaptive" : "steady");
 
 /** Fingerprint of the settings a user changes on purpose. */
 export function goalKey(g: GoalRow): string {
@@ -40,6 +43,7 @@ export function goalKey(g: GoalRow): string {
     g.weeklyRate,
     g.targetDate ?? null,
     g.calorieOverride,
+    g.relockedAt ? new Date(g.relockedAt).getTime() : null,
   ]);
 }
 
@@ -65,7 +69,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
 function reasonsFor(prev: DailyTarget, cur: { maintenance: number | null; maintenanceSource: string | null; weight: number | null; weeklyRate: number | null; goalKey: string; targetDate: string | null }): string[] {
   const out: string[] = [];
-  if (prev.goalKey && prev.goalKey !== cur.goalKey) out.push("You changed your goal, pace or profile.");
+  if (prev.goalKey && prev.goalKey !== cur.goalKey) out.push("You changed your goal, pace or profile, or updated the target.");
   if (prev.maintenanceSource !== cur.maintenanceSource && cur.maintenanceSource) {
     out.push(
       cur.maintenanceSource === "measured"
@@ -187,11 +191,13 @@ export async function lockTargets(i: Inputs): Promise<LockedTargets> {
     // Keep the last target unless the goal changed or the new one moved enough.
     const base = todayRow ?? prev;
     const goalChanged = !base || base.goalKey !== key;
-    const small =
-      base &&
-      Math.abs(computed.calories - base.calories) < CAL_STEP &&
-      Math.abs((computed.protein ?? 0) - (base.protein ?? 0)) < PROTEIN_STEP;
-    if (!goalChanged && small && base) {
+    // Steady: keep the number until the goal changes. Adaptive: ignore small wobbles only.
+    const keep =
+      targetModeOf(i.goals) === "steady" ||
+      (base &&
+        Math.abs(computed.calories - base.calories) < CAL_STEP &&
+        Math.abs((computed.protein ?? 0) - (base.protein ?? 0)) < PROTEIN_STEP);
+    if (!goalChanged && keep && base) {
       today = { calories: base.calories, protein: base.protein, carbs: base.carbs, fat: base.fat };
     }
     const vals = {

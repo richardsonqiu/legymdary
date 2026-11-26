@@ -78,6 +78,7 @@ export default async function FoodPage({
         targets={energy.targets}
         targetsByDate={energy.targetsByDate}
         targetChange={energy.targetChange}
+        targetMode={energy.targetMode}
         skipped={skipped}
         menu={menu}
         garminByDate={energy.wearable ? garminByDate : null}

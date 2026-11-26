@@ -6,6 +6,7 @@ import { ProjectionChart } from "@/components/plan/ProjectionChart";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
+import { TargetModeCard } from "@/components/plan/TargetModeCard";
 import { paceOptions, weightTrendPerWeek, type Plan } from "@/lib/nutrition";
 import { PaceChooser } from "@/components/plan/PaceChooser";
 import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
@@ -84,8 +85,9 @@ export default async function PlanPage() {
         {plan.calorieTarget != null ? (
           <div className="space-y-3">
             <p className="text-xs leading-relaxed text-zinc-400">
-              Worked out each day from your latest weight, your average daily burn and your goal. To keep it steady, changes
-              under 50 kcal are skipped, and past days keep the target they had.
+              {energy.targetMode === "steady"
+                ? "Steady: this number stays the same until you change your goal or update it below. Past days keep the target they had."
+                : "Worked out each day from your latest weight, your average daily burn and your goal. Changes under 50 kcal are skipped, and past days keep the target they had."}
               {energy.targetChange && (
                 <span className="block pt-1 text-sky-200">
                   Changed from {energy.targetChange.from.toLocaleString("en-US")} to {energy.targetChange.to.toLocaleString("en-US")}{" "}
@@ -236,6 +238,18 @@ export default async function PlanPage() {
               </p>
             )}
           </Card>
+        </section>
+      )}
+
+      {plan.calorieTarget != null && !plan.usingOverride && (
+        <section>
+          <SectionTitle>How your daily target works</SectionTitle>
+          <TargetModeCard
+            mode={energy.targetMode}
+            current={plan.calorieTarget}
+            live={energy.liveTarget}
+            direction={plan.direction}
+          />
         </section>
       )}
 

@@ -261,6 +261,14 @@ export const goals = sqliteTable("goals", {
   weeklyRate: real("weekly_rate"), // kg per week, absolute pace
   targetDate: text("target_date"), // YYYY-MM-DD the user wants to reach the goal by
   calorieOverride: real("calorie_override"),
+  /**
+   * "steady": the daily target stays the same until you change your goal or
+   * update it (extra exercise becomes extra deficit). "adaptive": it follows
+   * your burn and weight (changes of 50 kcal or more).
+   */
+  targetMode: text("target_mode").notNull().default("steady"),
+  /** Set when you tap "Update to the plan's number" in steady mode. */
+  relockedAt: integer("relocked_at", { mode: "timestamp_ms" }),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),

@@ -9,6 +9,8 @@ import {
   getAllExerciseProgress,
   getBodyScans,
   getBodyStats,
+  getDailyTotals,
+  getGarminDaily,
   getGoals,
   getLatestBodyStat,
   getTrainingOverview,
@@ -19,6 +21,10 @@ import { WeeklyCheckin } from "@/components/WeeklyCheckin";
 import { getEnergyContext } from "@/lib/energy-data";
 import { TrainingWeeksChart } from "@/components/charts/TrainingWeeksChart";
 import { RecapTiles } from "@/components/recap/RecapTiles";
+import { CalorieBalance } from "@/components/progress/CalorieBalance";
+import { balanceVerdict, computeBalance, type Balance, type Period } from "@/lib/balance";
+import { userToday } from "@/lib/session";
+import { addDaysStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Progress" };
@@ -35,6 +41,22 @@ export default async function StatsPage() {
     getWeeklyCheckin(),
     getEnergyContext(),
   ]);
+  // Calorie balance: a year of food logs and watch burn, with weigh-ins.
+  const today = await userToday();
+  const [yearTotals, yearBurn] = await Promise.all([
+    getDailyTotals(addDaysStr(today, -366), today),
+    getGarminDaily(addDaysStr(today, -366), today),
+  ]);
+  const burnBy = new Map(yearBurn.map((g) => [g.date, g.totalKcal]));
+  const balanceDays = yearTotals.map((t) => ({ date: t.date, eaten: t.calories, meals: t.count, skipped: t.skipped, burned: burnBy.get(t.date) ?? null }));
+  const weightsAll = bodyStats.filter((s) => s.weight != null).map((s) => ({ date: s.date, weight: s.weight as number }));
+  const fallbackBurn = energy.plan.tdee ?? null;
+  const balance = Object.fromEntries(
+    (["week", "month", "year"] as const).map((p) => [p, computeBalance(p, today, balanceDays, weightsAll, fallbackBurn)]),
+  ) as Record<Period, Balance>;
+  const verdicts = Object.fromEntries(
+    (["week", "month", "year"] as const).map((p) => [p, balanceVerdict(balance[p], energy.plan.direction)]),
+  ) as Record<Period, string | null>;
   const hasGym = weekly.some((w) => w.sets > 0) || progress.exercises.length > 0;
 
   return (
@@ -44,6 +66,16 @@ export default async function StatsPage() {
       <section>
         <SectionTitle>Recaps</SectionTitle>
         <RecapTiles />
+      </section>
+
+      <section id="balance" className="scroll-mt-6">
+        <SectionTitle>Calorie balance</SectionTitle>
+        <CalorieBalance
+          data={balance}
+          direction={energy.plan.direction}
+          planDaily={energy.plan.calorieTarget != null ? energy.plan.dailyDelta : null}
+          verdicts={verdicts}
+        />
       </section>
 
       <section>

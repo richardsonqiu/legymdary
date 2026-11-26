@@ -32,7 +32,7 @@ import {
 } from "@/lib/queries";
 import { addDaysStr } from "@/lib/utils";
 import { requireUserId } from "@/lib/session";
-import { lockTargets, type TargetChange } from "@/lib/targets";
+import { lockTargets, targetModeOf, type TargetChange } from "@/lib/targets";
 
 /**
  * Everything the dashboard / Food / Plan pages need about energy: the plan
@@ -53,6 +53,10 @@ export type EnergyContext = {
   plan: Plan;
   /** Today's target (see lib/targets.ts: past days are locked, small changes ignored). */
   targets: DailyTargets;
+  /** "steady" (fixed until you change it) or "adaptive" (follows burn and weight). */
+  targetMode: "steady" | "adaptive";
+  /** What the plan would say right now from live inputs (to offer an update in steady mode). */
+  liveTarget: number | null;
   /** The target each past day had. */
   targetsByDate: Record<string, NonNullable<DailyTargets>>;
   /** Why today's target differs from the previous day's, if it does. */
@@ -102,7 +106,8 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   for (let i = -2; i <= 1; i++) {
     const date = addDaysStr(today, i);
     const d = byDate.get(date);
-    if (garmin?.adjustForActivity && liveTargets && !livePlan.usingOverride) {
+    // Steady targets never grow with exercise: extra burn is extra deficit.
+    if (garmin?.adjustForActivity && liveTargets && !livePlan.usingOverride && targetModeOf(goals) === "adaptive") {
       bonusByDate[date] = activityBonus(d?.activeKcal ?? null, garminMaint?.avgActive ?? null);
     }
     const prior = garminDays.filter((g) => g.date < date && g.date >= addDaysStr(date, -7) && g.restingHr);
@@ -148,6 +153,8 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   for (const [d, b] of Object.entries(locked.bonusByDate)) if (d < today) bonusByDate[d] = b;
 
   return {
+    targetMode: targetModeOf(goals),
+    liveTarget: liveTargets ? Math.round(liveTargets.calories) : null,
     targetsByDate: locked.byDate,
     targetChange: locked.change,
     garmin,
