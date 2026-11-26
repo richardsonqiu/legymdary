@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OneUpMark } from "@/components/brand/OneUpMark";
 
 const KEY = "oneup.booted";
 
 /**
- * Opening screen, once per app session: the mark draws in, then fades to the
+ * Opening screen, once per app session: "one up." rises in and the full stop
+ * pops, then it fades to the
  * app. Rendered on the server so it shows before JavaScript loads; an inline
  * script hides it (data-booted) when it has already played this session.
  */
@@ -42,9 +42,11 @@ export function LaunchSplash() {
       aria-hidden="true"
       className={`launch-splash fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950 transition-opacity duration-400 ${state === "leaving" ? "pointer-events-none opacity-0" : "opacity-100"}`}
     >
-      <OneUpMark animate className="h-24 w-24 text-zinc-50" />
-      <p className="launch-word wordmark mt-5 text-2xl text-zinc-50">one up</p>
-      <p className="launch-word mt-1 text-sm text-zinc-500">One better than yesterday.</p>
+      <p className="text-5xl font-bold tracking-[-0.035em] text-zinc-50">
+        <span className="launch-w1 inline-block">one</span> <span className="launch-w2 inline-block">up</span>
+        <span className="launch-dot inline-block text-citron">.</span>
+      </p>
+      <p className="launch-tag mt-3 text-sm text-zinc-500">One better than yesterday.</p>
     </div>
   );
 }

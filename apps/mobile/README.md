@@ -20,7 +20,7 @@ From the repo root, `npm ci` once. Then in `apps/mobile`:
 
 ## Icon and splash
 
-`assets/icon.png`, `adaptive-icon.png`, `splash-icon.png` and `favicon.png` are generated with the web icons by `node scripts/gen-icons.mjs` (repo root) from one SVG mark. The splash (`expo-splash-screen` plugin in `app.json`) shows the mark on Paper in light mode and Carbon in dark mode; `app/_layout.tsx` keeps it up until auth is ready. Native config changes need a new dev build.
+`assets/icon.png`, `adaptive-icon.png`, `splash-icon.png`, `splash-icon-dark.png` and `favicon.png` are generated with the web icons by `node scripts/gen-icons.mjs` (repo root) from the "one up." wordmark. The splash (`expo-splash-screen` plugin in `app.json`) shows the wordmark on Paper in light mode and Carbon in dark mode; `app/_layout.tsx` keeps it up until auth is ready. Native config changes need a new dev build.
 
 ## React version
 
