@@ -17,6 +17,7 @@ import {
   type SkipMealRequest,
   type TodayResponse,
 } from "./food";
+import type { HealthBatchRequest } from "./health";
 import { progressMethods } from "./progress-client";
 import {
   exercisesResponseSchema,
@@ -138,6 +139,7 @@ export function createApiClient(opts: ApiClientOptions) {
     removeWorkoutExercise: (workoutExerciseId: number): Promise<OkResponse> => request("DELETE", `/api/v1/workout-exercises/${workoutExerciseId}`, okResponseSchema, {}),
     logSet: (workoutExerciseId: number, body: LogSetRequest): Promise<LogSetResponse> =>
       request("POST", `/api/v1/workout-exercises/${workoutExerciseId}/sets`, logSetResponseSchema, body),
+    syncHealthBatch: (body: HealthBatchRequest): Promise<OkResponse> => request("POST", "/api/v1/health/batch", okResponseSchema, body),
     deleteSet: (id: number): Promise<OkResponse> => request("DELETE", `/api/v1/sets/${id}`, okResponseSchema, {}),
     exercises: (): Promise<ExercisesResponse> => request("GET", "/api/v1/exercises", exercisesResponseSchema),
     createExercise: (body: CreateExerciseRequest): Promise<WorkoutIdResponse> => request("POST", "/api/v1/exercises", workoutIdResponseSchema, body),
