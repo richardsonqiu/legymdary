@@ -196,11 +196,31 @@ export async function getActiveWorkout(): Promise<WorkoutDetail | null> {
   return w ? toDetail(w as RawWorkout) : null;
 }
 
-export async function getWorkoutDetails(): Promise<WorkoutDetail[]> {
+/** One of the user's workouts with its exercises and sets, or null. */
+export async function getWorkout(id: number): Promise<WorkoutDetail | null> {
+  const userId = await requireUserId();
+  const w = await db.query.workouts.findFirst({
+    where: and(eq(workouts.id, id), eq(workouts.userId, userId)),
+    with: {
+      workoutExercises: {
+        orderBy: (f, ops) => ops.asc(f.position),
+        with: {
+          exercise: true,
+          sets: { orderBy: (f, ops) => ops.asc(f.position) },
+        },
+      },
+    },
+  });
+  return w ? toDetail(w as RawWorkout) : null;
+}
+
+/** Newest first; `limit` caps the list (the web history page passes none). */
+export async function getWorkoutDetails(limit?: number): Promise<WorkoutDetail[]> {
   const userId = await requireUserId();
   const ws = await db.query.workouts.findMany({
     where: eq(workouts.userId, userId),
-    orderBy: desc(workouts.date),
+    orderBy: [desc(workouts.date), desc(workouts.id)],
+    limit,
     with: {
       workoutExercises: {
         orderBy: (f, ops) => ops.asc(f.position),

@@ -593,8 +593,8 @@ export async function disconnectGarmin(deleteData: boolean): Promise<void> {
     await db.delete(sourceDaily).where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "garmin")));
     await db
       .delete(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'sheet-%' and ${garminActivities.activityId} not like 'oura-%'`));
-    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'sheet-%' and ${garminRaw.key} not like 'oura-%'`));
+      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'hc-%' and ${garminActivities.activityId} not like 'sheet-%' and ${garminActivities.activityId} not like 'oura-%'`));
+    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'hc-%' and ${garminRaw.key} not like 'sheet-%' and ${garminRaw.key} not like 'oura-%'`));
     await db.delete(garminDatasets).where(eq(garminDatasets.userId, userId));
     await db
       .delete(bodyStats)
@@ -804,7 +804,7 @@ export async function saveBodyScans(scans: ExtractedScan[]): Promise<{ saved: nu
         .onConflictDoUpdate({
           target: [bodyStats.userId, bodyStats.date],
           set: { ...bs, source: "inbody" },
-          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin', 'apple')`,
+          setWhere: sql`${bodyStats.source} in ('inbody', 'garmin', 'apple', 'health_connect')`,
         });
     }
     saved++;
