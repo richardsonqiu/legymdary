@@ -195,6 +195,18 @@ async function main() {
   const leftBody = (await db.select({ s: schema.bodyStats.source }).from(schema.bodyStats)).map((d) => d.s);
   check("disconnect removed only health_connect", left.join() === "apple-CCC" && leftDays.join() === "apple" && leftBody.join() === "apple", { left, leftDays, leftBody });
 
+  // Rate limits answer 429 with Retry-After (limits pre-filled in the throwaway DB)
+  r = await call("health/batch", "POST", { body: batch("apple", "apple-DDD", { workoutRange: { from: day, to: "2000-01-01" } }) });
+  check("POST health workoutRange from after to is 400", r.status === 400, r);
+  r = await call("health/batch", "POST", { body: batch("apple", "apple-DDD", { workoutRange: { from: "2020-01-01", to: day } }) });
+  check("POST health workoutRange over 400 days is 400", r.status === 400, r);
+  const full = { windowStart: Date.now(), count: 1000 };
+  await db.insert(schema.rateLimits).values({ key: `apple:import:${userId}`, ...full }).onConflictDoUpdate({ target: schema.rateLimits.key, set: full });
+  r = await call("health/batch", "POST", { body: batch("apple", "apple-EEE") });
+  check("POST health over the hourly limit is 429 with Retry-After", r.status === 429 && Number(r.res.headers.get("retry-after")) > 0 && typeof r.json?.error === "string", { s: r.status, j: r.json });
+  await db.insert(schema.rateLimits).values({ key: `ai:min:${userId}`, ...full }).onConflictDoUpdate({ target: schema.rateLimits.key, set: full });
+  r = await call("meals/analyze", "POST", { body: { hint: "chicken rice with soup" } });
+  check("POST analyze over the burst limit is 429 with Retry-After", r.status === 429 && Number(r.res.headers.get("retry-after")) > 0, { s: r.status, j: r.json });
   console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
   process.exit(failures ? 1 : 0);
 }

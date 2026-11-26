@@ -219,7 +219,7 @@ export async function getWorkoutDetails(limit?: number): Promise<WorkoutDetail[]
   const userId = await requireUserId();
   const ws = await db.query.workouts.findMany({
     where: eq(workouts.userId, userId),
-    orderBy: [desc(workouts.date), desc(workouts.id)],
+    orderBy: limit == null ? [desc(workouts.date)] : [desc(workouts.date), desc(workouts.id)], // id tiebreak only when paging by limit
     limit,
     with: {
       workoutExercises: {

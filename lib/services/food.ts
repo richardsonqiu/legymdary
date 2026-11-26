@@ -6,7 +6,7 @@ import { MEAL_TYPES, qualityFromItems, SKIPPABLE_MEALS, SLOT_MINUTES, sumMacros,
 import { cleanText } from "@/lib/sheet-import/format";
 import { rateLimit } from "@/lib/rate-limit";
 import { userNowMinutes, userToday } from "@/lib/session";
-import { DATE_RE, DAY, IMAGE_DATA_URL_RE, clockMinutes, numOrNull, UserError } from "./util";
+import { DATE_RE, DAY, IMAGE_DATA_URL_RE, clockMinutes, numOrNull, UserError, RateLimitError } from "./util";
 
 export function cleanBase(v: unknown): MealItem["base"] {
   if (!v || typeof v !== "object") return null;
@@ -137,7 +137,7 @@ export async function clearSkip(userId: string, date: string, mealType: string) 
 export async function analyzeMeal(userId: string, input: {
   image?: string | null;
   hint?: string | null;
-}): Promise<MealAnalysis | { error: string }> {  const hint = cleanText(input.hint, 500);
+}): Promise<MealAnalysis | { error: string }> {  const hint = cleanText(input.hint, 500);
   const hasImage = !!input.image;
   const m = hasImage ? IMAGE_DATA_URL_RE.exec(input.image ?? "") : null;
   if (hasImage && !m) return { error: "Unsupported image. Please use a JPEG or PNG photo." };
@@ -149,9 +149,9 @@ export async function analyzeMeal(userId: string, input: {
     rateLimit(`ai:min:${userId}`, 8, 60 * 1000),
     rateLimit(`ai:day:${userId}`, daily, DAY),
   ]);
-  if (!burst.ok) return { error: "Too many estimates at once. Wait a moment and try again." };
+  if (!burst.ok) throw new RateLimitError("Too many estimates at once. Wait a moment and try again.", burst.retryAfterSec);
   if (!perDay.ok) {
-    return { error: `Daily AI estimate limit reached (${daily}). You can still enter meals yourself.` };
+    throw new RateLimitError(`Daily AI estimate limit reached (${daily}). You can still enter meals yourself.`, perDay.retryAfterSec);
   }
   const res = await analyzeMealImage({
     base64: m?.[2] ?? null,
@@ -177,7 +177,7 @@ export async function analyzeMeal(userId: string, input: {
   return res.ok ? res.analysis : { error: res.error };
 }
 
-export async function saveMeal(userId: string, input: MealInput): Promise<{ id: number }> {  const vals = mealValues(input);
+export async function saveMeal(userId: string, input: MealInput): Promise<{ id: number }> {  const vals = mealValues(input);
   let photo: string | null = null;
   if (input.photo) {
     // Thumbnails only — keep rows small.
@@ -191,23 +191,23 @@ export async function saveMeal(userId: string, input: MealInput): Promise<{ id: 
     .insert(meals)
     .values({ userId, ...vals, photo, eatenAt })
     .returning({ id: meals.id });
-  await clearSkip(userId, vals.date, vals.mealType);  return { id: row.id };
+  await clearSkip(userId, vals.date, vals.mealType);  return { id: row.id };
 }
 
-export async function updateMeal(userId: string, id: number, input: MealInput): Promise<void> {  const vals = mealValues(input);
+export async function updateMeal(userId: string, id: number, input: MealInput): Promise<void> {  const vals = mealValues(input);
   const eatenAt = clockMinutes(input.eatenAt);
   await db
     .update(meals)
     .set(eatenAt != null ? { ...vals, eatenAt } : vals)
     .where(and(eq(meals.id, id), eq(meals.userId, userId)));
-  await clearSkip(userId, vals.date, vals.mealType);}
+  await clearSkip(userId, vals.date, vals.mealType);}
 
 /** "Eat again": copies an earlier meal (incl. photo) onto another day — no AI call. */
 export async function relogMeal(userId: string, input: {
   mealId: number;
   date: string;
   mealType?: string;
-}): Promise<void> {  if (!DATE_RE.test(input.date ?? "")) throw new UserError("Invalid date.");
+}): Promise<void> {  if (!DATE_RE.test(input.date ?? "")) throw new UserError("Invalid date.");
   const [src] = await db
     .select()
     .from(meals)
@@ -236,24 +236,24 @@ export async function relogMeal(userId: string, input: {
     advisor: src.advisor,
     eatenAt: await defaultEatenAt(input.date, mealType),
   });
-  await clearSkip(userId, input.date, mealType);}
+  await clearSkip(userId, input.date, mealType);}
 
 const SKIPPABLE = SKIPPABLE_MEALS as readonly string[];
 
 /** Marks a meal as skipped for a day (e.g. no breakfast). Its calories stay free for your other meals. */
-export async function skipMeal(userId: string, input: { date: string; mealType: string }): Promise<{ ok: true } | { error: string }> {  if (!DATE_RE.test(input.date ?? "") || !SKIPPABLE.includes(input.mealType)) return { error: "That meal can't be skipped." };
+export async function skipMeal(userId: string, input: { date: string; mealType: string }): Promise<{ ok: true } | { error: string }> {  if (!DATE_RE.test(input.date ?? "") || !SKIPPABLE.includes(input.mealType)) return { error: "That meal can't be skipped." };
   const existing = await db
     .select({ id: meals.id })
     .from(meals)
     .where(and(eq(meals.userId, userId), eq(meals.date, input.date), eq(meals.mealType, input.mealType)))
     .limit(1);
   if (existing.length) return { error: "You already logged food for this meal." };
-  await db.insert(skippedMeals).values({ userId, date: input.date, mealType: input.mealType }).onConflictDoNothing();  return { ok: true };
+  await db.insert(skippedMeals).values({ userId, date: input.date, mealType: input.mealType }).onConflictDoNothing();  return { ok: true };
 }
 
-export async function unskipMeal(userId: string, input: { date: string; mealType: string }): Promise<void> {  if (!DATE_RE.test(input.date ?? "")) return;
+export async function unskipMeal(userId: string, input: { date: string; mealType: string }): Promise<void> {  if (!DATE_RE.test(input.date ?? "")) return;
   await db
     .delete(skippedMeals)
-    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, input.date), eq(skippedMeals.mealType, input.mealType)));}
+    .where(and(eq(skippedMeals.userId, userId), eq(skippedMeals.date, input.date), eq(skippedMeals.mealType, input.mealType)));}
 
-export async function deleteMeal(userId: string, id: number): Promise<void> {  await db.delete(meals).where(and(eq(meals.id, id), eq(meals.userId, userId)));}
+export async function deleteMeal(userId: string, id: number): Promise<void> {  await db.delete(meals).where(and(eq(meals.id, id), eq(meals.userId, userId)));}

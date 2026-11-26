@@ -8,7 +8,7 @@ export async function logBodyStat(userId: string, input: {
   weight?: number | string | null;
   waist?: number | string | null;
   bodyFat?: number | string | null;
-}): Promise<{ error?: string }> {  const date = safeDate(input.date);
+}): Promise<{ error?: string }> {  const date = safeDate(input.date);
   const bad = (v: number | null, lo: number, hi: number) => v != null && (v < lo || v > hi);
   const weight = numOrNull(input.weight);
   const waist = numOrNull(input.waist);
@@ -34,9 +34,9 @@ export async function logBodyStat(userId: string, input: {
         bodyFat: vals.bodyFat,
         source: "manual", // a manual edit takes ownership from a Garmin import
       },
-    });  return {};
+    });  return {};
 }
 
-export async function deleteBodyStat(userId: string, id: number): Promise<void> {  await db
+export async function deleteBodyStat(userId: string, id: number): Promise<void> {  await db
     .delete(bodyStats)
-    .where(and(eq(bodyStats.id, id), eq(bodyStats.userId, userId)));}
+    .where(and(eq(bodyStats.id, id), eq(bodyStats.userId, userId)));}
