@@ -82,8 +82,16 @@ export const MealEstimate = z.object({
       protein_g: z.number(),
       carbs_g: z.number(),
       fat_g: z.number(),
+      fiber_g: z.number().describe("Dietary fiber in grams for this item"),
+      added_sugar_g: z.number().describe("Added sugars in grams (sugar, syrup, honey, sweetened sauces or drinks); 0 for natural sugars in whole fruit, milk or vegetables"),
+      processing: z
+        .enum(["whole", "simply_prepared", "processed", "ultra_processed"])
+        .describe("NOVA-style: whole = fresh or minimally processed (fruit, eggs, plain rice, fresh meat); simply_prepared = home or hawker cooking from whole ingredients; processed = cured, canned, cheese, white bread; ultra_processed = packaged snacks, soda, instant noodles, nuggets, sweets"),
     }),
   ),
+  advisor: z
+    .string()
+    .describe("One or two short sentences on what this meal does for the body (e.g. protein for muscle repair, fiber for fullness) and one easy tweak if useful. Plain, warm, no em dashes. Empty string if is_food is false."),
   confidence: z.enum(["low", "medium", "high"]),
   notes: z
     .string()
@@ -92,9 +100,12 @@ export const MealEstimate = z.object({
     ),
 });
 
+const PROCESSING: Record<string, number> = { whole: 1, simply_prepared: 2, processed: 3, ultra_processed: 4 };
+
 export type MealAnalysis = {
   isFood: boolean;
   name: string;
+  advisor: string | null;
   items: MealItem[];
   confidence: "low" | "medium" | "high";
   notes: string;
@@ -128,6 +139,7 @@ How to estimate:
 - If the photo is a nutrition label or menu item, use the stated values.
 - If the image does not show food or drink, set is_food to false and return an empty items list.
 - Sometimes there is no photo, only a written description. Then estimate from the description alone: use the amounts it gives, assume a typical single serving where it gives none (say so in assumptions, e.g. "1 standard hawker plate assumed"), and use "medium" or "low" confidence unless the amounts are exact. If the text does not describe anything eaten or drunk, set is_food to false and return an empty items list.
+Meal quality, per item: fiber_g (dietary fiber), added_sugar_g (only sugar that was added, not the natural sugar in whole fruit, milk or vegetables) and processing (whole, simply_prepared, processed or ultra_processed). Then write advisor: one or two short sentences on what the meal does for the body and, if useful, one easy tweak (e.g. "Add greens for fiber").
 Be realistic rather than optimistic: people usually under-estimate, so do not round portions down.
 Write notes and assumptions in short plain phrases. No em dashes.`;
 
@@ -218,6 +230,7 @@ async function attempt(
         name: out.meal_name,
         confidence: out.confidence,
         notes: out.notes,
+        advisor: out.advisor?.trim() || null,
         items: out.items.map((it) => ({
           name: it.name,
           portion: it.portion,
@@ -231,6 +244,9 @@ async function attempt(
           protein: Math.max(0, Math.round(it.protein_g)),
           carbs: Math.max(0, Math.round(it.carbs_g)),
           fat: Math.max(0, Math.round(it.fat_g)),
+          fiber: Math.max(0, Math.round(it.fiber_g * 10) / 10),
+          sugar: Math.max(0, Math.round(it.added_sugar_g * 10) / 10),
+          processing: PROCESSING[it.processing] ?? null,
         })),
       },
     };

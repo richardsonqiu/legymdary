@@ -6,6 +6,8 @@ import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation";
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
+import { BAND_DOT, BandPill } from "@/components/meal/QualityParts";
+import { bandLabel, mealQuality } from "@/lib/meal-quality";
 import { amountWords } from "@/components/food/AmountPicker";
 import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
 import { TargetChangeNote, type TargetChangeInfo } from "@/components/food/TargetChangeNote";
@@ -13,6 +15,7 @@ import {
   CameraIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  SparkIcon,
   ForkIcon,
   ImageIcon,
   PencilIcon,
@@ -34,6 +37,7 @@ import { deleteMeal, logMenuItem, pinMeal, relogMeal, removeMenuItem, skipMeal, 
 import { prepareMealPhoto } from "@/lib/image";
 import {
   isDrink,
+  parseItems,
   MEAL_TYPES,
   mealBudgets,
   SKIPPABLE_MEALS,
@@ -41,7 +45,6 @@ import {
   sumMacros,
   type DailyTargets,
   withBonus,
-  type MealItem,
   type MealType,
 } from "@/lib/nutrition";
 import { addDaysStr, cn, formatPretty, todayStr } from "@/lib/utils";
@@ -51,14 +54,34 @@ function useMounted() {
   return useSyncExternalStore(noop, () => true, () => false);
 }
 
-function parseItems(json: string | null): MealItem[] {
-  if (!json) return [];
-  try {
-    const v = JSON.parse(json);
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
+
+/** The composer pre-filled to edit a logged meal. */
+function editInit(m: Meal): ComposerInit {
+  const items = parseItems(m.items);
+  return {
+      id: m.id,
+      date: m.date,
+      mealType: (MEAL_TYPES as readonly string[]).includes(m.mealType)
+        ? (m.mealType as MealType)
+        : "snack",
+      name: m.name,
+      items: items.length
+        ? items
+        : [
+            {
+              name: m.name,
+              portion: "",
+              calories: m.calories,
+              protein: m.protein,
+              carbs: m.carbs,
+              fat: m.fat,
+            },
+          ],
+      notes: m.notes ?? "",
+      thumb: m.photo,
+      aiEstimated: m.aiEstimated,
+      advisor: m.advisor,
+    };
 }
 
 export function FoodDiary({
@@ -75,7 +98,10 @@ export function FoodDiary({
   planMissing,
   garminByDate,
   macroSplitNote,
+  editId,
 }: {
+  /** Open the editor for this meal on load (from the meal page). */
+  editId?: number | null;
   meals: Meal[];
   /** Distinct recent meals, newest first: the first few are "Eat again", all of them feed the My menu picker. */
   recentMeals: Meal[];
@@ -107,7 +133,10 @@ export function FoodDiary({
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
-  const [composer, setComposer] = useState<ComposerInit | null>(null);
+  const [composer, setComposer] = useState<ComposerInit | null>(() => {
+    const m = editId ? meals.find((x) => x.id === editId) : null;
+    return m ? editInit(m) : null;
+  });
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [deleting, startDelete] = useTransition();
@@ -242,30 +271,7 @@ export function FoodDiary({
   }
 
   function openEdit(m: Meal) {
-    const items = parseItems(m.items);
-    setComposer({
-      id: m.id,
-      date: m.date,
-      mealType: (MEAL_TYPES as readonly string[]).includes(m.mealType)
-        ? (m.mealType as MealType)
-        : "snack",
-      name: m.name,
-      items: items.length
-        ? items
-        : [
-            {
-              name: m.name,
-              portion: "",
-              calories: m.calories,
-              protein: m.protein,
-              carbs: m.carbs,
-              fat: m.fat,
-            },
-          ],
-      notes: m.notes ?? "",
-      thumb: m.photo,
-      aiEstimated: m.aiEstimated,
-    });
+    setComposer(editInit(m));
   }
 
   function onDelete(m: Meal) {
@@ -624,9 +630,13 @@ export function FoodDiary({
         <MealComposer
           key={composer.id ?? composer.thumb ?? "manual"}
           init={composer}
-          onClose={() => setComposer(null)}
+          onClose={() => {
+            setComposer(null);
+            if (editId) router.replace(`/food?date=${date}`, { scroll: false });
+          }}
           onSaved={() => {
             setComposer(null);
+            if (editId) router.replace(`/food?date=${date}`, { scroll: false });
             router.refresh();
           }}
         />
@@ -653,6 +663,7 @@ function MealRow({
   const [pinning, startPin] = useTransition();
   const [pinMsg, setPinMsg] = useState<string | null>(null);
   const items = parseItems(meal.items);
+  const quality = mealQuality(meal);
   return (
     <li className="animate-item-in overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
       <button
@@ -669,7 +680,10 @@ function MealRow({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{meal.name}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-medium">{meal.name}</span>
+            {quality.band && <span title={bandLabel(quality.band)} className={cn("h-1.5 w-1.5 shrink-0 rounded-full", BAND_DOT[quality.band])} />}
+          </div>
           <div className="text-xs tabular-nums text-zinc-500">
             P {Math.round(meal.protein)} · C {Math.round(meal.carbs)} · F {Math.round(meal.fat)}
             {items.some((i) => i.eaten != null && i.eaten !== 1) && <span className="ml-1.5 text-teal-300/80">· amount adjusted</span>}
@@ -720,6 +734,16 @@ function MealRow({
             </div>
           )}
           {meal.notes && <p className="mb-2 text-xs text-zinc-500">{meal.notes}</p>}
+          <Link
+            href={`/food/meal/${meal.id}`}
+            transitionTypes={["nav-forward"]}
+            className="press mb-2 flex items-center gap-2 rounded-xl bg-white/[0.05] px-3 py-2.5 text-sm hover:bg-white/[0.08]"
+          >
+            <SparkIcon className="h-4 w-4 text-teal-300" />
+            <span className="flex-1 font-medium">Meal insights</span>
+            <BandPill band={quality.band} />
+            <ChevronRightIcon className="h-4 w-4 text-zinc-500" />
+          </Link>
           <div className="flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="secondary" onClick={onEdit}>
               <PencilIcon className="h-4 w-4" /> How much did you eat?

@@ -141,6 +141,13 @@
       "when": 1795672493225,
       "tag": "0019_workout_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1795689936337,
+      "tag": "0020_meal_quality",
+      "breakpoints": true
     }
   ]
 }

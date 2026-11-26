@@ -47,7 +47,8 @@ import {
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
 import { getPrefs } from "@/lib/sources";
-import { requireUserId, userToday } from "@/lib/session";
+import { localDateMinutes, requireUserId, userTimeZone, userToday } from "@/lib/session";
+import { mealQuality, SLOT_MINUTES, type TimedMeal } from "@/lib/meal-quality";
 import {
   addDaysStr,
   estimate1RM,
@@ -607,6 +608,11 @@ const mealCols = {
   items: meals.items,
   notes: meals.notes,
   aiEstimated: meals.aiEstimated,
+  eatenAt: meals.eatenAt,
+  fiber: meals.fiber,
+  sugar: meals.sugar,
+  processing: meals.processing,
+  advisor: meals.advisor,
   createdAt: meals.createdAt,
   hasPhoto: sql<number>`${meals.photo} is not null`,
 };
@@ -624,6 +630,61 @@ export async function getMeals(from: string, to: string): Promise<Meal[]> {
     .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
     .orderBy(asc(meals.date), asc(meals.createdAt));
   return rows.map(withPhotoUrl);
+}
+
+/** One meal (with its photo URL), or null if it isn't yours. */
+export async function getMeal(id: number): Promise<Meal | null> {
+  const userId = await requireUserId();
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const [row] = await db
+    .select(mealCols)
+    .from(meals)
+    .where(and(eq(meals.id, id), eq(meals.userId, userId)))
+    .limit(1);
+  return row ? withPhotoUrl(row) : null;
+}
+
+/**
+ * When a meal was eaten, in minutes after midnight. Older meals have no time
+ * saved: use when it was logged if that was the same day, else the slot's
+ * usual time.
+ */
+export function mealMinutes(m: Pick<Meal, "eatenAt" | "createdAt" | "date" | "mealType">, tz: string | null): { minutes: number; estimated: boolean } {
+  if (m.eatenAt != null) return { minutes: m.eatenAt, estimated: false };
+  if (tz && m.createdAt) {
+    const local = localDateMinutes(new Date(m.createdAt), tz);
+    if (local.date === m.date) return { minutes: local.minutes, estimated: true };
+  }
+  return { minutes: SLOT_MINUTES[m.mealType] ?? SLOT_MINUTES.snack, estimated: true };
+}
+
+/** Meals with their time and quality band, for the timing clock and charts. */
+export async function getTimedMeals(from: string, to: string): Promise<(TimedMeal & { id: number; name: string; mealType: string; estimated: boolean })[]> {
+  const userId = await requireUserId();
+  const tz = await userTimeZone();
+  const rows = await db
+    .select({
+      id: meals.id,
+      date: meals.date,
+      name: meals.name,
+      mealType: meals.mealType,
+      calories: meals.calories,
+      protein: meals.protein,
+      carbs: meals.carbs,
+      fat: meals.fat,
+      fiber: meals.fiber,
+      sugar: meals.sugar,
+      processing: meals.processing,
+      eatenAt: meals.eatenAt,
+      createdAt: meals.createdAt,
+    })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), between(meals.date, from, to)))
+    .orderBy(asc(meals.date), asc(meals.createdAt));
+  return rows.map((r) => {
+    const t = mealMinutes(r, tz);
+    return { id: r.id, date: r.date, name: r.name, mealType: r.mealType, calories: r.calories, minutes: t.minutes, estimated: t.estimated, band: mealQuality(r).band };
+  });
 }
 
 export type DayTotals = {
