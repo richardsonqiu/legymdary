@@ -47,6 +47,13 @@ your phone at the gym. Every account gets its own private diary.
   goal date, goal change). For existing users, every past day (up to 3 years, from the first meal or
   weigh-in) is rebuilt the way the app calculated it that day, so Progress › Calorie balance can show how
   far over or under target you were across a week, month or year.
+- **Weekly (or monthly) target reviews**: the daily target never moves day to day. Each Monday (or the 1st,
+  if you pick monthly on the Goal page) a review compares your target with a suggestion built from averages:
+  the weight trend line, the average burn and the intake on fully logged days. Steady targets show *Keep* or
+  *Use* (Home shows "Weekly review ready"); Adaptive targets move automatically, at most 100 kcal per review.
+  No change within 50 kcal, in the first 2 weeks after a goal change, or with fewer than 4 logged days in
+  the week (14 in the month). Changing your goal or pace still applies at once. Past reviews are listed on
+  the Goal page (`target_reviews`, `lib/review.ts`).
 - **Nudges (popups, shown once)**: 🔥 *Big burn day* when today's activity is 250+ kcal above your usual,
   with confetti, a "Nth this month" badge and, on a Steady target, a choice: *Eat +X today* (half the extra,
   max 600, added to today's target only) or *Keep as deficit*. 🎯 *Right direction* once a week when the

@@ -267,6 +267,8 @@ export const goals = sqliteTable("goals", {
    * your burn and weight (changes of 50 kcal or more).
    */
   targetMode: text("target_mode").notNull().default("steady"),
+  /** How often the target is reviewed: "weekly" (Mondays) or "monthly" (the 1st). */
+  reviewCadence: text("review_cadence").notNull().default("weekly"),
   /** Set when you tap "Update to the plan's number" in steady mode. */
   relockedAt: integer("relocked_at", { mode: "timestamp_ms" }),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
@@ -308,6 +310,42 @@ export const dailyTargets = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (t) => [uniqueIndex("daily_targets_user_date_unique").on(t.userId, t.date)],
+);
+
+/**
+ * Target reviews (weekly or monthly). The target only moves at a review:
+ * the suggestion uses averaged inputs (weight trend line, average burn and
+ * intake), and a steady target waits for the user to accept it.
+ */
+export const targetReviews = sqliteTable(
+  "target_reviews",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Monday (weekly) or the 1st (monthly) the review belongs to. */
+    periodStart: text("period_start").notNull(),
+    cadence: text("cadence").notNull(),
+    current: integer("current").notNull(),
+    suggested: integer("suggested"),
+    suggestedProtein: integer("suggested_protein"),
+    suggestedCarbs: integer("suggested_carbs"),
+    suggestedFat: integer("suggested_fat"),
+    /** What was applied (adaptive steps are capped at 100 kcal). */
+    applied: integer("applied"),
+    /** pending | updated | kept | auto | no_change | not_enough_data | too_early */
+    decision: text("decision").notNull(),
+    trendKgWeek: real("trend_kg_week"),
+    loggedDays: integer("logged_days").notNull().default(0),
+    avgIntake: integer("avg_intake"),
+    avgBurn: integer("avg_burn"),
+    decidedAt: integer("decided_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("target_reviews_user_period_unique").on(t.userId, t.periodStart)],
 );
 
 /** One row per AI call (meal photo analysis) — powers the in-app spend view. */
@@ -746,6 +784,7 @@ export type SheetImport = typeof sheetImports.$inferSelect;
 export type SourceDaily = typeof sourceDaily.$inferSelect;
 export type SourcePrefs = typeof sourcePrefs.$inferSelect;
 export type DailyTarget = typeof dailyTargets.$inferSelect;
+export type TargetReview = typeof targetReviews.$inferSelect;
 export type Goals = typeof goals.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type GarminDaily = typeof garminDaily.$inferSelect;

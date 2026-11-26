@@ -25,6 +25,7 @@ import {
   sourceDaily,
   ouraConnections,
   dailyTargets,
+  targetReviews,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
@@ -1408,6 +1409,34 @@ export async function claimBurnBonus(amount: number): Promise<{ ok: true } | { e
     .set({ bonus, updatedAt: new Date() })
     .where(and(eq(dailyTargets.userId, userId), eq(dailyTargets.date, today)));
   if (!res.rowsAffected) return { error: "Open the Food page once today first." };
+  revalidateAll();
+  return { ok: true };
+}
+
+/** Weekly or monthly target review. */
+export async function setReviewCadence(cadence: string): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (cadence !== "weekly" && cadence !== "monthly") return { error: "Unknown option." };
+  const res = await db.update(goals).set({ reviewCadence: cadence, updatedAt: new Date() }).where(eq(goals.userId, userId));
+  if (!res.rowsAffected) return { error: "Set your goal first." };
+  revalidateAll();
+  return { ok: true };
+}
+
+/** Answer a pending review: take the suggested target, or keep the current one. */
+export async function decideReview(id: number, choice: string): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (!Number.isInteger(id) || (choice !== "updated" && choice !== "kept")) return { error: "Unknown option." };
+  const [r] = await db
+    .select()
+    .from(targetReviews)
+    .where(and(eq(targetReviews.id, id), eq(targetReviews.userId, userId)))
+    .limit(1);
+  if (!r || r.decision !== "pending" || r.suggested == null) return { error: "This review was already answered." };
+  await db
+    .update(targetReviews)
+    .set({ decision: choice, applied: choice === "updated" ? r.suggested : null, decidedAt: new Date() })
+    .where(eq(targetReviews.id, id));
   revalidateAll();
   return { ok: true };
 }

@@ -4,10 +4,10 @@ import { useState } from "react";
 import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, FlameIcon, InfoIcon, LockIcon, ScaleIcon, TargetIcon } from "@/components/icons";
 import { cn, formatPretty } from "@/lib/utils";
 
-export type ChangeReason = { kind: "goal" | "source" | "burn" | "weight" | "pace" | "other"; text: string; from?: number; to?: number };
+export type ChangeReason = { kind: "goal" | "source" | "burn" | "weight" | "pace" | "review" | "other"; text: string; from?: number; to?: number };
 export type TargetChangeInfo = { from: number; to: number; since: string; reasons: ChangeReason[] };
 
-const ICON = { goal: TargetIcon, source: InfoIcon, burn: FlameIcon, weight: ScaleIcon, pace: CalendarIcon, other: InfoIcon } as const;
+const ICON = { goal: TargetIcon, source: InfoIcon, burn: FlameIcon, weight: ScaleIcon, pace: CalendarIcon, review: CalendarIcon, other: InfoIcon } as const;
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
 /** "↓ 160 kcal  1,640 → 1,480" with tap-to-show reason chips. */

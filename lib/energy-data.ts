@@ -33,6 +33,7 @@ import {
 import { addDaysStr } from "@/lib/utils";
 import { requireUserId } from "@/lib/session";
 import { lockTargets, targetModeOf, type TargetChange } from "@/lib/targets";
+import type { TargetReview } from "@/db/schema";
 
 /**
  * Everything the dashboard / Food / Plan pages need about energy: the plan
@@ -53,6 +54,8 @@ export type EnergyContext = {
   plan: Plan;
   /** Today's target (see lib/targets.ts: past days are locked, small changes ignored). */
   targets: DailyTargets;
+  /** This week's (or month's) target review. */
+  review: TargetReview | null;
   /** Weigh-ins of the last 5 weeks. */
   weights: { date: string; weight: number }[];
   /** "steady" (fixed until you change it) or "adaptive" (follows burn and weight). */
@@ -137,6 +140,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
     maintenance,
     weight: body.weight,
     bonusToday: bonusByDate[today] ?? 0,
+    bodyFat: body.bodyFat,
     history: { intake, weights, burn: garminDays.map((d) => ({ date: d.date, totalKcal: d.totalKcal, activeKcal: d.activeKcal })) },
   });
   const targets = locked.today;
@@ -158,6 +162,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
 
   return {
     targetMode: targetModeOf(goals),
+    review: locked.review,
     weights,
     liveTarget: liveTargets ? Math.round(liveTargets.calories) : null,
     targetsByDate: locked.byDate,
