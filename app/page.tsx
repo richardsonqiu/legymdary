@@ -17,7 +17,7 @@ export default function LandingPage() {
   return (
     <div className="mx-auto min-h-dvh max-w-5xl">
       <header className="flex items-center justify-between px-5 py-5">
-        <span className="wordmark text-xl">legymdari</span>
+        <span className="wordmark text-xl">one up</span>
         <Link href="/login" className="text-sm font-medium text-zinc-300 transition-colors hover:text-zinc-50">
           Sign in
         </Link>
@@ -29,11 +29,11 @@ export default function LandingPage() {
           className="banner-photo editorial-photo relative flex min-h-[62dvh] flex-col justify-end overflow-hidden rounded-[32px] px-6 pb-7 pt-24 sm:min-h-[520px]"
           style={{ ["--banner" as string]: 'url("/editorial/breathing.webp")', ["--banner-pos" as string]: "center 30%" }}
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-paper/75">Train · Eat · Recover</p>
-          <h1 className="mt-3 max-w-md text-[44px] font-semibold leading-[1.02] tracking-tight text-paper sm:text-6xl">
-            Human,
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-paper/75">1% better every day</p>
+          <h1 className="mt-3 max-w-md text-[40px] font-semibold leading-[1.04] tracking-tight text-paper sm:text-6xl">
+            One more rep.
             <br />
-            in progress.
+            One better than yesterday.
           </h1>
           <p className="mt-4 max-w-sm text-base text-paper/80">
             Your training, food and recovery in one calm daily view.
@@ -69,7 +69,8 @@ export default function LandingPage() {
       </section>
 
       <footer className="px-5 pb-10 text-center text-xs text-zinc-500">
-        <span className="wordmark text-zinc-300">legymdari</span>
+        <span className="wordmark text-zinc-300">one up</span>
+        <p className="mt-1">One more rep, one better than yesterday.</p>
       </footer>
     </div>
   );

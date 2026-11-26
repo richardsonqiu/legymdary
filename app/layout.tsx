@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "legymdari. Train, eat, recover",
-    template: "%s · legymdari.",
+    default: "One Up: one better than yesterday",
+    template: "%s · One Up",
   },
   description:
-    "Training, food and recovery in one calm daily view.",
-  applicationName: "legymdari.",
+    "One more rep, one better than yesterday. Training, food and recovery in one place.",
+  applicationName: "One Up",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -31,12 +31,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "legymdari.",
+    title: "One Up",
   },
 };
 
 /** Picks light or dark before first paint: saved choice, else the system's. */
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("legymdari.theme");var m=window.matchMedia("(prefers-color-scheme: light)");function a(){var v=t==="light"||t==="dark"?t:(m.matches?"light":"dark");document.documentElement.dataset.theme=v;}a();m.addEventListener("change",function(){t=localStorage.getItem("legymdari.theme");a();});}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("oneup.theme");var m=window.matchMedia("(prefers-color-scheme: light)");function a(){var v=t==="light"||t==="dark"?t:(m.matches?"light":"dark");document.documentElement.dataset.theme=v;}a();m.addEventListener("change",function(){t=localStorage.getItem("oneup.theme");a();});}catch(e){document.documentElement.dataset.theme="dark";}})();`;
 
 export const viewport: Viewport = {
   themeColor: [

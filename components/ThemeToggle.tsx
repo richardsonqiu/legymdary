@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { MoonIcon, SunIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
-const KEY = "legymdari.theme";
+const KEY = "oneup.theme";
 type Choice = "system" | "light" | "dark";
 
 function read(): Choice {

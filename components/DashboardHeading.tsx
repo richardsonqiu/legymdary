@@ -30,7 +30,7 @@ export function DashboardHeading({ firstName }: { firstName: string | null }) {
 
   return (
     <div className="min-w-0">
-      <p className="wordmark text-lg text-zinc-50">legymdari</p>
+      <p className="wordmark text-lg text-zinc-50">one up</p>
       <h1 className="mt-3 text-[30px] font-semibold leading-[1.1] tracking-tight">
         {greet}
         {firstName ? `, ${firstName}.` : "."}

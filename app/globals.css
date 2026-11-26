@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * legymdari. editorial theme: Carbon / Citron / Paper.
+ * One Up editorial theme: Carbon / Citron / Paper.
  * The neutral scale is still called "zinc" in class names. Every surface,
  * border and text tone reads it, so dark and light mode only swap these
  * variables (see [data-theme="light"] below). Accent "teal" is now Citron.

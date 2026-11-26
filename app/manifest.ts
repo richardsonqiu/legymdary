@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 /** Installable PWA: "Add to Home Screen" opens full-screen on the dashboard. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "legymdari.",
-    short_name: "legymdari",
-    description: "Training, food and recovery in one calm daily view.",
+    name: "One Up",
+    short_name: "One Up",
+    description: "One more rep, one better than yesterday. Training, food and recovery in one place.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
