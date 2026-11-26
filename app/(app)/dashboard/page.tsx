@@ -34,6 +34,7 @@ import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
+import { scheduleOuraSync } from "@/lib/oura/background";
 import { getSessionUser, userToday } from "@/lib/session";
 import {
   addDaysStr,
@@ -97,8 +98,8 @@ export default async function DashboardPage() {
     steps: todayGarmin?.steps ?? null,
     stepGoal: 8000,
     battery: card?.bodyBattery?.wake ?? null,
-    garminConnected: !!energy.garmin,
-    appleHealth: !energy.garmin && !!energy.appleHealth,
+    garminConnected: !!energy.garmin || !!energy.oura,
+    appleHealth: !energy.garmin && !energy.oura && !!energy.appleHealth,
   };
 
   // ---- Inputs for the plain-language "Today" guide ----
@@ -168,7 +169,7 @@ export default async function DashboardPage() {
     hasScan: scans.length > 0,
   };
   const garminSyncing = user?.id
-    ? scheduleGarminSync(user.id, energy.garmin)
+    ? [scheduleGarminSync(user.id, energy.garmin), scheduleOuraSync(user.id, energy.oura)].some(Boolean)
     : false;
   const firstName = user?.name?.split(" ")[0] ?? null;
 

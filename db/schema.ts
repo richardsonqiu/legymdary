@@ -348,7 +348,86 @@ export const garminConnections = sqliteTable("garmin_connections", {
     .$defaultFn(() => new Date()),
 });
 
-/** One row per user per local calendar day, merged from several Garmin feeds. */
+/**
+ * Oura Ring connection (OAuth). Tokens are encrypted like the Garmin key.
+ * Oura rotates refresh tokens: every refresh stores the new one.
+ */
+export const ouraConnections = sqliteTable("oura_connections", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accessTokenEnc: text("access_token_enc").notNull(),
+  refreshTokenEnc: text("refresh_token_enc").notNull(),
+  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  scopes: text("scopes").notNull().default(""),
+  status: text("status").notNull().default("ok"), // "ok" | "error"
+  lastError: text("last_error"),
+  lastSyncAt: integer("last_sync_at", { mode: "timestamp_ms" }),
+  /** Oldest day fetched so far (the first sync backfills 90 days). */
+  backfilledFrom: text("backfilled_from"),
+  connectedAt: integer("connected_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+/**
+ * Daily numbers per device, before preferences are applied. garmin_daily
+ * holds the result (one row per day) that the rest of the app reads; it is
+ * rebuilt from these rows by resolveDays() in lib/sources.ts.
+ */
+export const sourceDaily = sqliteTable(
+  "source_daily",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    /** "garmin" | "apple" | "oura" */
+    source: text("source").notNull(),
+    totalKcal: real("total_kcal"),
+    activeKcal: real("active_kcal"),
+    bmrKcal: real("bmr_kcal"),
+    consumedKcal: real("consumed_kcal"),
+    steps: integer("steps"),
+    intensityMinutes: integer("intensity_minutes"),
+    restingHr: integer("resting_hr"),
+    stressAvg: integer("stress_avg"),
+    bodyBatteryHigh: integer("body_battery_high"),
+    bodyBatteryLow: integer("body_battery_low"),
+    bodyBatteryCharged: integer("body_battery_charged"),
+    bodyBatteryDrained: integer("body_battery_drained"),
+    sleepSeconds: integer("sleep_seconds"),
+    sleepScore: integer("sleep_score"),
+    hrvLastNight: integer("hrv_last_night"),
+    hrvWeeklyAvg: integer("hrv_weekly_avg"),
+    hrvStatus: text("hrv_status"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("source_daily_user_date_source_unique").on(t.userId, t.date, t.source)],
+);
+
+/**
+ * Which device to use for what. Each value is a device ("garmin", "apple",
+ * "oura") or "auto" (Garmin, then Oura, then Apple). Days the chosen device
+ * has no data for fall back to the others.
+ */
+export const sourcePrefs = sqliteTable("source_prefs", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  sleep: text("sleep").notNull().default("auto"),
+  recovery: text("recovery").notNull().default("auto"),
+  activity: text("activity").notNull().default("auto"),
+  workouts: text("workouts").notNull().default("auto"),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+/** One row per user per local calendar day: the device numbers after preferences (see source_daily). */
 export const garminDaily = sqliteTable(
   "garmin_daily",
   {
@@ -374,7 +453,7 @@ export const garminDaily = sqliteTable(
     hrvLastNight: integer("hrv_last_night"),
     hrvWeeklyAvg: integer("hrv_weekly_avg"),
     hrvStatus: text("hrv_status"),
-    /** "garmin" (Personal API sync) or "apple" (Apple Health export upload). */
+    /** Device the day's activity numbers came from: "garmin", "apple" or "oura". */
     source: text("source").notNull().default("garmin"),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
@@ -401,6 +480,11 @@ export const garminActivities = sqliteTable(
     avgHr: real("avg_hr"),
     distanceM: real("distance_m"),
     trainingLoad: real("training_load"),
+    /**
+     * Hidden because another device is preferred for workouts on that day
+     * (see lib/sources.ts). Kept so changing the preference brings it back.
+     */
+    excluded: integer("excluded", { mode: "boolean" }).notNull().default(false),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -615,6 +699,8 @@ export type BodyStat = typeof bodyStats.$inferSelect;
 export type Meal = typeof meals.$inferSelect;
 export type SavedMeal = typeof savedMeals.$inferSelect;
 export type SheetImport = typeof sheetImports.$inferSelect;
+export type SourceDaily = typeof sourceDaily.$inferSelect;
+export type SourcePrefs = typeof sourcePrefs.$inferSelect;
 export type Goals = typeof goals.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type GarminDaily = typeof garminDaily.$inferSelect;

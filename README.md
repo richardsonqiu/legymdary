@@ -284,6 +284,53 @@ many users — see Garmin's FAQ before opening this app to the public.
   most 100 new exercises. Cardio rows get ids `sheet-<hash>` in the watch
   activity tables; disconnecting Garmin or removing Apple data leaves them.
 
+## Oura Ring, and choosing which device for what
+
+**Connect (Connections → Oura, `/oura`).** Oura retired personal access tokens
+in December 2025, so the app uses OAuth: the owner registers one Oura app at
+cloud.ouraring.com/oauth/applications (redirect URI
+`<site>/api/oura/callback`) and sets `OURA_CLIENT_ID` / `OURA_CLIENT_SECRET`.
+Each user taps *Connect Oura*, signs in on Oura's site and approves. A new Oura
+app can connect 10 users until Oura approves it, and Gen3 and newer rings need an
+Oura Membership for API access.
+
+- **Security.** The sign-in uses a one-time `state` bound to the signed-in user
+  (httpOnly cookie, 10 minutes, checked in constant time). Tokens are stored
+  encrypted (same key as Garmin). Oura's refresh tokens are single use, so each
+  refresh stores the new one, with a short lock so two requests never refresh at
+  once. Disconnecting revokes the token and can delete the imported data.
+- **What is imported** (first sync: 90 days; then every page visit after 30
+  minutes, and the daily cron): sleep periods (main sleep per night: stages,
+  bedtime, heart rate, HRV, breathing, restlessness), daily sleep / readiness /
+  activity scores, steps and calories, workouts, SpO2, daytime stress,
+  resilience, VO2 max and cardiovascular age when available. Missing permissions
+  or plan features are noted and skipped, not fatal.
+- **Where it goes.** Like Apple Health, Oura writes into the shared tables with
+  keys `oura-…` (sleep in Garmin's field names, so the sleep report, readiness,
+  Recaps and the AI brief work unchanged). Oura-only measures (readiness score,
+  temperature deviation, SpO2, stress, resilience) are shown on Insights as
+  "From your Oura Ring" and on the Oura page.
+
+**Which device for what (Connections, when 2+ devices are connected).** For
+Sleep, Recovery (HRV, resting heart rate), Daily activity (steps, calories) and
+Workouts, pick Auto, Garmin, Oura or Apple Health. Example: Garmin for daily
+activity and workouts, Oura for sleep and recovery.
+
+- Every device's daily numbers are kept separately in `source_daily`;
+  `garmin_daily` (read across the app) is rebuilt from them by
+  `resolveDays()` in `lib/sources.ts` after each sync, upload, disconnect or
+  preference change. Raw rows are picked per day by the same rules in the
+  analysis (`lib/analysis/extract.ts`).
+- If the chosen device has nothing for a day (not worn), the next one fills in.
+  Auto is Garmin, then Oura, then Apple Health.
+- Workouts: per day only the chosen device's activities count, so a walk logged
+  by both the watch and the ring isn't counted twice (`garmin_activities.excluded`);
+  spreadsheet imports always count. Each device's page still lists all of its own.
+- Stress and Body Battery only exist on Garmin; temperature, SpO2 and Oura's
+  readiness only on Oura, so those always come from that device.
+- Migration `0015_oura_sources.sql` adds `oura_connections`, `source_daily`
+  (back-filled from `garmin_daily`), `source_prefs` and `garmin_activities.excluded`.
+
 ## Apple Health (Apple Watch, no Garmin)
 
 People with an Apple Watch upload their Health export instead of connecting

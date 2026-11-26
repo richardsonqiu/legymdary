@@ -59,10 +59,11 @@ export const CONNECT: NavGroup = {
   key: "connect",
   label: "Connections",
   href: "/connect",
-  match: ["/connect", "/garmin", "/apple-health"],
+  match: ["/connect", "/garmin", "/oura", "/apple-health"],
   tabs: [
     { href: "/connect", label: "All" },
     { href: "/garmin", label: "Garmin" },
+    { href: "/oura", label: "Oura" },
     { href: "/apple-health", label: "Apple" },
     { href: "/connect/import", label: "File" },
   ],

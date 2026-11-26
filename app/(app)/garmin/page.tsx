@@ -5,6 +5,7 @@ import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { GarminConnect } from "@/components/garmin/GarminConnect";
 import { PageHeader, SectionTitle } from "@/components/ui";
 import { getGarminActivities, getGarminStatus } from "@/lib/queries";
+import { sourceOfKey } from "@/lib/sources";
 import { addDaysStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function GarminPage() {
   const today = (await userToday());
   const [status, activities] = await Promise.all([
     getGarminStatus(),
-    getGarminActivities(addDaysStr(today, -30), addDaysStr(today, 1)),
+    getGarminActivities(addDaysStr(today, -30), addDaysStr(today, 1), { all: true }).then((xs) => xs.filter((x) => sourceOfKey(x.activityId) === "garmin")),
   ]);
   return (
     <PageTransition className="space-y-7">

@@ -9,7 +9,6 @@ import {
   bodyStats,
   garminActivities,
   garminConnections,
-  garminDaily,
   garminDatasets,
   garminRaw,
   exercises,
@@ -23,10 +22,12 @@ import {
   skippedMeals,
   savedMeals,
   sheetImports,
+  sourceDaily,
+  ouraConnections,
 } from "@/db/schema";
 import { analyzeMealImage, type MealAnalysis } from "@/lib/food-ai";
 import { exchangeKey, GarminError } from "@/lib/garmin/client";
-import { encryptSecret } from "@/lib/garmin/crypto";
+import { decryptSecret, encryptSecret } from "@/lib/garmin/crypto";
 import { askAboutDay, generateDailyReport, type Report } from "@/lib/analysis/report";
 import { extractBodyScans, type ExtractedScan } from "@/lib/body-scan-ai";
 import { runGarminImport, type ImportStatus } from "@/lib/garmin/raw-import";
@@ -40,6 +41,9 @@ import { z } from "zod";
 import { cleanText } from "@/lib/sheet-import/format";
 import { batchSchema, ImportError, storeBatch, undoImport, type BatchResult } from "@/lib/sheet-import/store";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
+import { cleanPrefs, resolveDays, savePrefs } from "@/lib/sources";
+import { revokeToken } from "@/lib/oura/client";
+import { deleteOuraData, syncOuraForUser } from "@/lib/oura/sync";
 import {
   ACTIVITY_LEVELS,
   MEAL_TYPES,
@@ -65,6 +69,7 @@ function revalidateAll() {
     "/apple-health",
     "/insights",
     "/connect",
+    "/oura",
   ]) {
     revalidatePath(p);
   }
@@ -1016,16 +1021,17 @@ export async function disconnectGarmin(deleteData: boolean): Promise<void> {
   const userId = await requireUserId();
   await db.delete(garminConnections).where(eq(garminConnections.userId, userId));
   if (deleteData) {
-    // Apple Health uploads share these tables; keep them.
-    await db.delete(garminDaily).where(and(eq(garminDaily.userId, userId), eq(garminDaily.source, "garmin")));
+    // Other devices (Apple, Oura) and spreadsheet imports share these tables; keep them.
+    await db.delete(sourceDaily).where(and(eq(sourceDaily.userId, userId), eq(sourceDaily.source, "garmin")));
     await db
       .delete(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'sheet-%'`));
-    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'sheet-%'`));
+      .where(and(eq(garminActivities.userId, userId), sql`${garminActivities.activityId} not like 'apple-%' and ${garminActivities.activityId} not like 'sheet-%' and ${garminActivities.activityId} not like 'oura-%'`));
+    await db.delete(garminRaw).where(and(eq(garminRaw.userId, userId), sql`${garminRaw.key} not like 'apple-%' and ${garminRaw.key} not like 'sheet-%' and ${garminRaw.key} not like 'oura-%'`));
     await db.delete(garminDatasets).where(eq(garminDatasets.userId, userId));
     await db
       .delete(bodyStats)
       .where(and(eq(bodyStats.userId, userId), eq(bodyStats.source, "garmin")));
+    await resolveDays(userId);
   }
   revalidateAll();
 }
@@ -1324,5 +1330,45 @@ export async function removeSheetImport(importId: number): Promise<{ ok: true } 
   revalidateAll();
   revalidatePath("/connect");
   revalidatePath("/connect/import");
+  return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* Oura Ring + "which device for what"                                 */
+/* ------------------------------------------------------------------ */
+
+export async function syncOuraNow(): Promise<{ ok: true; days: number; nights: number; workouts: number } | { error: string }> {
+  const userId = await requireUserId();
+  const limit = await rateLimit(`oura:manual:${userId}`, 6, HOUR);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
+  const r = await syncOuraForUser(userId, { days: 10 });
+  revalidateAll();
+  return r.ok ? { ok: true, days: r.days, nights: r.nights, workouts: r.workouts } : { error: r.error ?? "Oura sync failed." };
+}
+
+/** Disconnects Oura (revoking the token) and optionally removes its data. */
+export async function disconnectOura(deleteData: boolean): Promise<void> {
+  const userId = await requireUserId();
+  const [c] = await db.select().from(ouraConnections).where(eq(ouraConnections.userId, userId)).limit(1);
+  if (c) {
+    try {
+      await revokeToken(decryptSecret(c.accessTokenEnc));
+    } catch {
+      /* best effort */
+    }
+  }
+  await db.delete(ouraConnections).where(eq(ouraConnections.userId, userId));
+  if (deleteData) await deleteOuraData(userId);
+  revalidateAll();
+}
+
+/** Saves which device to use for sleep, recovery, daily activity and workouts, and re-applies it. */
+export async function setSourcePrefs(input: unknown): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const limit = await rateLimit(`sources:prefs:${userId}`, 30, HOUR);
+  if (!limit.ok) return { error: tooMany(limit.retryAfterSec) };
+  await savePrefs(userId, cleanPrefs(input));
+  await resolveDays(userId);
+  revalidateAll();
   return { ok: true };
 }

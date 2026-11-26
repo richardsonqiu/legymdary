@@ -89,10 +89,10 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
             {r
               ? ADVICE[r.band]
               : s.garminConnected
-                ? "Shows after your watch syncs a night of sleep."
+                ? "Shows after your watch or ring syncs a night of sleep."
                 : s.appleHealth
                   ? "Upload a fresh Apple Health export to see last night."
-                  : "Connect Garmin or import Apple Health to see your recovery here."}
+                  : "Connect Garmin or Oura, or import Apple Health, to see your recovery here."}
           </p>
         </div>
         {top.length > 0 && (

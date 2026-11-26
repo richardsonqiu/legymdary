@@ -5,6 +5,7 @@ import { activityBonus } from "@/lib/energy";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
+import { scheduleOuraSync } from "@/lib/oura/background";
 import { requireUserId, userToday } from "@/lib/session";
 import {
   getAiUsageSince,
@@ -44,7 +45,7 @@ export default async function FoodPage({
     getSkippedMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getMenu(),
   ]);
-  const garminSyncing = scheduleGarminSync(userId, energy.garmin);
+  const garminSyncing = [scheduleGarminSync(userId, energy.garmin), scheduleOuraSync(userId, energy.oura)].some(Boolean);
   const plan = energy.plan;
   const adjust = !!energy.garmin?.adjustForActivity && !!energy.targets && !plan.usingOverride;
   const garminByDate: Record<string, { burned: number | null; bonus: number }> = {};

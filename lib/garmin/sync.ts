@@ -4,12 +4,13 @@ import {
   bodyStats,
   garminActivities,
   garminConnections,
-  garminDaily,
+  sourceDaily,
   type GarminConnection,
 } from "@/db/schema";
 import * as api from "@/lib/garmin/client";
 import { GarminError } from "@/lib/garmin/client";
 import { decryptSecret, encryptSecret } from "@/lib/garmin/crypto";
+import { resolveDays } from "@/lib/sources";
 import { addDaysStr, todayStr } from "@/lib/utils";
 
 /**
@@ -19,7 +20,7 @@ import { addDaysStr, todayStr } from "@/lib/utils";
  * overwritten).
  */
 
-type DailyPatch = Partial<Omit<typeof garminDaily.$inferInsert, "id" | "userId" | "date">>;
+type DailyPatch = Partial<Omit<typeof sourceDaily.$inferInsert, "id" | "userId" | "date" | "source">>;
 
 export type SyncResult = {
   ok: boolean;
@@ -179,13 +180,13 @@ export async function syncGarminForUser(
     // Skip keys that are null so a missing feed never wipes stored values.
     const set = Object.fromEntries(Object.entries(p).filter(([, v]) => v != null)) as DailyPatch;
     if (!Object.keys(set).length) continue;
+    // Garmin's own numbers; garmin_daily is rebuilt from every device below.
     await db
-      .insert(garminDaily)
+      .insert(sourceDaily)
       .values({ userId, date, ...set, source: "garmin", updatedAt: now })
       .onConflictDoUpdate({
-        target: [garminDaily.userId, garminDaily.date],
-        // Garmin's live feed takes a day over from an Apple Health upload.
-        set: { ...set, source: "garmin", updatedAt: now },
+        target: [sourceDaily.userId, sourceDaily.date, sourceDaily.source],
+        set: { ...set, updatedAt: now },
       });
   }
 
@@ -214,6 +215,10 @@ export async function syncGarminForUser(
       });
     actCount++;
   }
+
+  // Apply "which device for what" to the days this sync touched.
+  const touched = [...byDate.keys(), ...(data.acts ?? []).map((x) => x.startTimeLocal?.slice(0, 10)).filter((x): x is string => !!x)].sort();
+  if (touched.length) await resolveDays(userId, { from: touched[0], to: touched[touched.length - 1] });
 
   /* ---- scale weigh-ins → body stats (never overwrite manual entries) ---- */
   let weighIns = 0;

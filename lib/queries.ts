@@ -40,9 +40,12 @@ import {
   skippedMeals,
   savedMeals,
   sheetImports,
+  ouraConnections,
+  garminRaw,
   type SavedMeal,
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
+import { getPrefs } from "@/lib/sources";
 import { requireUserId, userToday } from "@/lib/session";
 import {
   addDaysStr,
@@ -495,7 +498,7 @@ export async function getTrainingOverview(weeks = 12): Promise<{
         calories: garminActivities.calories,
       })
       .from(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), gte(garminActivities.date, addDaysStr(today, -90)))),
+      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), gte(garminActivities.date, addDaysStr(today, -90)))),
   ]);
   const byWeek = new Map<string, TrainingWeek>();
   let cur = from;
@@ -868,7 +871,7 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
     db
       .select({ date: garminActivities.date, durationSec: garminActivities.durationSec })
       .from(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, lastStart, end))),
+      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), between(garminActivities.date, lastStart, end))),
   ]);
 
   function stats(from: string, to: string): WeekStats {
@@ -968,18 +971,29 @@ export async function getLatestGarminActivity(): Promise<GarminActivity | null> 
   const [row] = await db
     .select()
     .from(garminActivities)
-    .where(eq(garminActivities.userId, userId))
+    .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false)))
     .orderBy(desc(garminActivities.date), desc(garminActivities.startTimeLocal))
     .limit(1);
   return row ?? null;
 }
 
-export async function getGarminActivities(from: string, to: string): Promise<GarminActivity[]> {
+/**
+ * Watch / ring activities in a date range. By default only those that count
+ * under the user's "workouts" device choice; `all` includes hidden ones (for a
+ * device's own page).
+ */
+export async function getGarminActivities(from: string, to: string, opts?: { all?: boolean }): Promise<GarminActivity[]> {
   const userId = await requireUserId();
   return db
     .select()
     .from(garminActivities)
-    .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, from, to)))
+    .where(
+      and(
+        eq(garminActivities.userId, userId),
+        between(garminActivities.date, from, to),
+        opts?.all ? undefined : eq(garminActivities.excluded, false),
+      ),
+    )
     .orderBy(desc(garminActivities.date), desc(garminActivities.startTimeLocal));
 }
 
@@ -1021,7 +1035,7 @@ export const getConsistencyDays = cache(async function getConsistencyDays(
         sec: sql<number>`coalesce(sum(${garminActivities.durationSec}), 0)`,
       })
       .from(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), between(garminActivities.date, from, to)))
+      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), between(garminActivities.date, from, to)))
       .groupBy(garminActivities.date),
     db
       .select({ date: meals.date, n: sql<number>`count(*)`, kcal: sql<number>`coalesce(sum(${meals.calories}), 0)` })
@@ -1073,4 +1087,90 @@ export async function getSheetImports() {
     .where(eq(sheetImports.userId, userId))
     .orderBy(desc(sheetImports.createdAt))
     .limit(50);
+}
+
+export type OuraStatus = {
+  status: string;
+  lastError: string | null;
+  lastSyncAt: Date | null;
+  connectedAt: Date;
+  backfilledFrom: string | null;
+  scopes: string;
+};
+
+/** Oura connection status without tokens. Cached per request. */
+export const getOuraStatus = cache(async function getOuraStatus(): Promise<OuraStatus | null> {
+  const userId = await requireUserId();
+  const [row] = await db
+    .select({
+      status: ouraConnections.status,
+      lastError: ouraConnections.lastError,
+      lastSyncAt: ouraConnections.lastSyncAt,
+      connectedAt: ouraConnections.connectedAt,
+      backfilledFrom: ouraConnections.backfilledFrom,
+      scopes: ouraConnections.scopes,
+    })
+    .from(ouraConnections)
+    .where(eq(ouraConnections.userId, userId))
+    .limit(1);
+  return row ?? null;
+});
+
+export type OuraExtras = {
+  date: string;
+  readinessScore: number | null;
+  temperatureDeviation: number | null;
+  temperatureTrendDeviation: number | null;
+  sleepScore: number | null;
+  activityScore: number | null;
+  spo2Avg: number | null;
+  breathingDisturbanceIndex: number | null;
+  stressHighMin: number | null;
+  recoveryHighMin: number | null;
+  stressSummary: string | null;
+  resilienceLevel: string | null;
+  vo2Max: number | null;
+  vascularAge: number | null;
+};
+
+/** Oura-only measures (readiness, temperature, SpO2, stress, resilience…) per day. */
+export async function getOuraExtras(from: string, to: string): Promise<OuraExtras[]> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({ date: garminRaw.date, payload: garminRaw.payload })
+    .from(garminRaw)
+    .where(and(eq(garminRaw.userId, userId), eq(garminRaw.dataset, "oura_daily"), between(garminRaw.date, from, to)))
+    .orderBy(asc(garminRaw.date));
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const t = (v: unknown) => (typeof v === "string" && v ? v.slice(0, 40) : null);
+  return rows.flatMap((r) => {
+    try {
+      const p = JSON.parse(r.payload) as Record<string, unknown>;
+      return [
+        {
+          date: r.date ?? "",
+          readinessScore: n(p.readinessScore),
+          temperatureDeviation: n(p.temperatureDeviation),
+          temperatureTrendDeviation: n(p.temperatureTrendDeviation),
+          sleepScore: n(p.sleepScore),
+          activityScore: n(p.activityScore),
+          spo2Avg: n(p.spo2Avg),
+          breathingDisturbanceIndex: n(p.breathingDisturbanceIndex),
+          stressHighMin: n(p.stressHighMin),
+          recoveryHighMin: n(p.recoveryHighMin),
+          stressSummary: t(p.stressSummary),
+          resilienceLevel: t(p.resilienceLevel),
+          vo2Max: n(p.vo2Max),
+          vascularAge: n(p.vascularAge),
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/** The user's "which device for what" choices. */
+export async function getSourcePrefs() {
+  return getPrefs(await requireUserId());
 }

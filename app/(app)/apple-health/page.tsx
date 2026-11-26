@@ -13,7 +13,7 @@ export default async function AppleHealthPage() {
   const [status, garmin] = await Promise.all([getAppleHealthStatus(), getGarminStatus()]);
   const to = status?.lastDate ?? (await userToday());
   const activities = status
-    ? (await getGarminActivities(addDaysStr(to, -90), addDaysStr(to, 1))).filter((a) => a.activityId.startsWith("apple-"))
+    ? (await getGarminActivities(addDaysStr(to, -90), addDaysStr(to, 1), { all: true })).filter((a) => a.activityId.startsWith("apple-"))
     : [];
 
   return (
