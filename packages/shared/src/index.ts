@@ -23,6 +23,7 @@ export * from "./scenes";
 export * from "./sources-shared";
 export * from "./streaks";
 export * from "./training/program";
+export * from "./training/session";
 export * from "./utils";
 // `Segment` exists in both body-scan and exercise-motion; the exercise one keeps the name.
 export type { Segment } from "./exercise-motion";
