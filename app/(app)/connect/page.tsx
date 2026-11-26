@@ -2,11 +2,11 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { SourcePrefsCard } from "@/components/connect/SourcePrefsCard";
-import type { Device } from "@/lib/sources-shared";
+import { type Device, formatPretty } from "@legymdary/shared";
 import { AppleIcon, ChevronRightIcon, DownloadIcon, ScaleIcon, SheetIcon, WatchIcon, RingIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
 import { getAppleHealthStatus, getGarminStatus, getSheetImports, getOuraStatus, getSourcePrefs } from "@/lib/queries";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Connections" };

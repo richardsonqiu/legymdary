@@ -6,7 +6,7 @@ import { useEffect, useState, useSyncExternalStore, useTransition } from "react"
 import { ArrowDownIcon, ArrowUpIcon, BarsIcon, FlameIcon, ForkIcon, TargetIcon, TrophyIcon, XIcon } from "@/components/icons";
 import { Portal } from "@/components/Portal";
 import { claimBurnBonus } from "@/lib/actions";
-import type { Nudge } from "@/lib/nudges";
+import type { Nudge } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 const fmt = (n: number) => Math.round(Math.abs(n)).toLocaleString("en-US");

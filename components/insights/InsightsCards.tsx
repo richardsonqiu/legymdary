@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ArcGauge, RangeBar, toneFor, toneWord } from "@/components/score/Score";
-import { sceneFor, sceneStyle } from "@/lib/scenes";
+import { sceneFor, sceneStyle, formatMedium, todayStr } from "@legymdary/shared";
 import { Explain } from "@/components/Explain";
 import { Card } from "@/components/ui";
 import type { DayCard } from "@/lib/analysis/service";
-import { cn, formatMedium, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 /** Server-safe presentational cards for the Insights page. */
 

@@ -1,5 +1,5 @@
 import { CountUp } from "@/components/CountUp";
-import type { DailyTargets, Macros } from "@/lib/nutrition";
+import type { DailyTargets, Macros } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /** Calorie ring + macro bars for one day. Safe in server or client trees. */

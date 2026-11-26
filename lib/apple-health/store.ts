@@ -8,7 +8,7 @@ import {
   sourceDaily,
 } from "@/db/schema";
 import { resolveDays } from "@/lib/sources";
-import type { AhBatch } from "@/lib/apple-health/types";
+import type { AhBatch } from "@legymdary/shared";
 
 /**
  * Server-only. Writes a parsed Apple Health batch into the same tables the

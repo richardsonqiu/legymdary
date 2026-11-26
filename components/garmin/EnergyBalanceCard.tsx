@@ -13,9 +13,8 @@ import {
 import { CHART, ChartFrame, tooltipLabelStyle, tooltipStyle } from "@/components/charts/common";
 import { GarminAttribution } from "@/components/garmin/GarminAttribution";
 import { Card } from "@/components/ui";
-import { isFullyLogged } from "@/lib/energy";
-import { KCAL_PER_KG } from "@/lib/nutrition";
-import { addDaysStr, cn, formatShort, kg, todayStr } from "@/lib/utils";
+import { isFullyLogged, KCAL_PER_KG, addDaysStr, formatShort, kg, todayStr } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");

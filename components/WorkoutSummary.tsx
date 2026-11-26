@@ -1,6 +1,6 @@
 import type { WorkoutDetail } from "@/lib/queries";
 import { Tag } from "@/components/ui";
-import { formatPretty, kg } from "@/lib/utils";
+import { formatPretty, kg } from "@legymdary/shared";
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (

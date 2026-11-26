@@ -1,3 +1,4 @@
+import { orderFor, pickActivities, pickBySource, type Category } from "@legymdary/shared";
 import { and, between, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -10,8 +11,8 @@ import {
   workouts,
   skippedMeals,
 } from "@/db/schema";
-import { getPrefs, orderFor, pickActivities, pickBySource, type Category } from "@/lib/sources";
-import { addDaysStr } from "@/lib/utils";
+import { getPrefs } from "@/lib/sources";
+import { addDaysStr } from "@legymdary/shared";
 
 /**
  * Server-only. Flattens everything we know about each calendar day — Garmin

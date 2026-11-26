@@ -15,7 +15,7 @@
  * - Total fats: share of calories (25% and 40%).
  * - Total carbs: share of calories (35% and 55%).
  */
-import type { MealItem } from "@/lib/nutrition";
+import type { MealItem } from "./nutrition";
 
 export type NutrientKey = "protein" | "fiber" | "processing" | "sugar" | "fat" | "carbs";
 export type Level = "low" | "moderate" | "high";

@@ -4,9 +4,9 @@
  * change (7,700 kcal ≈ 1 kg) and set against what the scale did.
  * Pure functions (no database), shared by the server page and tests.
  */
-import { isFullyLogged } from "@/lib/energy";
-import { KCAL_PER_KG } from "@/lib/nutrition";
-import { addDaysStr } from "@/lib/utils";
+import { isFullyLogged } from "./energy";
+import { KCAL_PER_KG } from "./nutrition";
+import { addDaysStr } from "./utils";
 
 export type BalanceDay = { date: string; eaten: number; meals: number; skipped: number; burned: number | null };
 export type Period = "week" | "month" | "year";

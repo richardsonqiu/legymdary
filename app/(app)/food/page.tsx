@@ -1,7 +1,7 @@
 import { PageTransition } from "@/components/PageTransition";
 import { FoodDiary } from "@/components/food/FoodDiary";
 import { PageHeader } from "@/components/ui";
-import { activityBonus } from "@/lib/energy";
+import { activityBonus, addDaysStr, mealRegularity } from "@legymdary/shared";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
@@ -17,9 +17,7 @@ import {
   getSkippedMeals,
   getMenu,
 } from "@/lib/queries";
-import { addDaysStr } from "@/lib/utils";
 import { MealRhythm } from "@/components/meal/MealRhythm";
-import { mealRegularity } from "@/lib/meal-quality";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Food" };

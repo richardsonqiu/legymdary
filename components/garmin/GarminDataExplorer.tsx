@@ -1,12 +1,13 @@
 "use client";
 
+import { todayStr } from "@legymdary/shared";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { RefreshIcon } from "@/components/icons";
 import { Button, Card, inputClass } from "@/components/ui";
 import { retryGarminDataset, runGarminImportStep, setGarminHistoryDays } from "@/lib/actions";
 import type { ImportStatus } from "@/lib/garmin/raw-import";
-import { cn, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Status = Omit<ImportStatus, "calls" | "rowsWritten">;
 

@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui";
-import type { DailyTargets } from "@/lib/nutrition";
+import { type DailyTargets, kg } from "@legymdary/shared";
 import type { WeeklyCheckin as Data } from "@/lib/queries";
-import { cn, kg } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 /** This week vs last week: training, nutrition and weight in one glance. */
 export function WeeklyCheckin({

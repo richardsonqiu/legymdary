@@ -6,8 +6,7 @@ import { Card, PageHeader, SectionTitle } from "@/components/ui";
 import { ouraConfigured } from "@/lib/oura/client";
 import { getGarminActivities, getOuraExtras, getOuraStatus } from "@/lib/queries";
 import { userToday } from "@/lib/session";
-import { sourceOfKey } from "@/lib/sources-shared";
-import { addDaysStr } from "@/lib/utils";
+import { sourceOfKey, addDaysStr } from "@legymdary/shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Oura" };

@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Button, Card, Field, inputClass } from "@/components/ui";
 import type { BodyStat } from "@/db/schema";
 import { logBodyStat } from "@/lib/actions";
-import { kg, todayStr } from "@/lib/utils";
+import { kg, todayStr } from "@legymdary/shared";
 
 export function BodyStatForm({ latest }: { latest: BodyStat | null }) {
   const router = useRouter();

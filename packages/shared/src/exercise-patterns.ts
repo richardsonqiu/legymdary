@@ -2,7 +2,7 @@
  * Keyframes for each movement pattern: pose A (start) and pose B (the other
  * end of the rep). See lib/exercise-motion.ts for the coordinate system.
  */
-import type { FrontPose, Limb, Pattern, SidePose, Target } from "@/lib/exercise-motion";
+import type { FrontPose, Limb, Pattern, SidePose, Target } from "./exercise-motion";
 
 const A = (x: number, y: number): Target => ({ ref: "abs", d: [x, y] });
 const S = (x: number, y: number): Target => ({ ref: "shoulder", d: [x, y] });

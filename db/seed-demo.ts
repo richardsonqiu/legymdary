@@ -9,7 +9,7 @@ import {
   workoutExercises,
   workouts,
 } from "./schema";
-import { addDaysStr, round, todayStr } from "../lib/utils";
+import { addDaysStr, round, todayStr } from "@legymdary/shared";
 
 /**
  * Optional sample data for exploring charts, history and PRs. It attaches to an

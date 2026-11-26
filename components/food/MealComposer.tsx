@@ -7,15 +7,7 @@ import { ItemExplanation } from "@/components/food/ItemExplanation";
 import { Portal } from "@/components/Portal";
 import { Button, Field, inputClass } from "@/components/ui";
 import { analyzeMeal, saveMeal, saveMenuItem, updateMeal } from "@/lib/actions";
-import {
-  baseOf,
-  isDrink,
-  MEAL_TYPES,
-  sumMacros,
-  withEaten,
-  type MealItem,
-  type MealType,
-} from "@/lib/nutrition";
+import { baseOf, isDrink, MEAL_TYPES, sumMacros, withEaten, type MealItem, type MealType } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 export type ComposerInit = {

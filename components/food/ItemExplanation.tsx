@@ -1,4 +1,4 @@
-import type { MealItem } from "@/lib/nutrition";
+import type { MealItem } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /** "How it was estimated" for one food component: reference → amount → maths → assumptions. */

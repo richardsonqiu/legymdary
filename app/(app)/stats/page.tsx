@@ -23,9 +23,8 @@ import { getEnergyContext } from "@/lib/energy-data";
 import { TrainingWeeksChart } from "@/components/charts/TrainingWeeksChart";
 import { RecapTiles } from "@/components/recap/RecapTiles";
 import { CalorieBalance } from "@/components/progress/CalorieBalance";
-import { balanceVerdict, computeBalance, type Balance, type Period } from "@/lib/balance";
+import { balanceVerdict, computeBalance, type Balance, type Period, addDaysStr } from "@legymdary/shared";
 import { userToday } from "@/lib/session";
-import { addDaysStr } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Progress" };

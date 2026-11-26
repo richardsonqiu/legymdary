@@ -12,7 +12,7 @@ import {
   type SnapshotDataset,
 } from "@/lib/garmin/datasets";
 import { bearerToken } from "@/lib/garmin/sync";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr, todayStr } from "@legymdary/shared";
 
 /**
  * Server-only, resumable "import everything" engine. Each call does as much

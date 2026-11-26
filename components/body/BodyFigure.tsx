@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Segmented } from "@/components/charts/common";
-import type { Segment, SegValues } from "@/lib/body-scan";
+import type { BodyScanSegment as Segment, SegValues } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 type Kind = "lean" | "fat";

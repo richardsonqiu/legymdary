@@ -19,7 +19,7 @@ import {
   tooltipStyle,
 } from "@/components/charts/common";
 import type { BodyStat } from "@/db/schema";
-import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
+import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@legymdary/shared";
 
 type Metric = "weight" | "waist" | "bodyFat";
 

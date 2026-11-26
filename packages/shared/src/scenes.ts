@@ -19,7 +19,7 @@ export function sceneFor(date: string): Scene {
 }
 
 /** Inline CSS variables consumed by .home-backdrop / .hero-photo. */
-export function sceneStyle(s: Scene): React.CSSProperties {
+export function sceneStyle(s: Scene): Record<string, string> {
   return {
     ["--scene" as string]: `url("${s.full}")`,
     ["--scene-hero" as string]: `url("${s.hero}")`,

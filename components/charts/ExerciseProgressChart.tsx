@@ -21,7 +21,7 @@ import {
 import { EmptyState } from "@/components/ui";
 import { BarsIcon } from "@/components/icons";
 import type { ProgressPoint } from "@/lib/queries";
-import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@/lib/utils";
+import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@legymdary/shared";
 
 type Metric = "topWeight" | "volume" | "bestE1rm";
 

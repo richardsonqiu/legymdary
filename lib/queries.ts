@@ -46,13 +46,8 @@ import {
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
 import { getPrefs } from "@/lib/sources";
-import { localDateMinutes, requireUserId, userTimeZone, userToday } from "@/lib/session";
-import { mealQuality, SLOT_MINUTES, type TimedMeal } from "@/lib/meal-quality";
-import {
-  addDaysStr,
-  estimate1RM,
-  startOfWeekStr,
-} from "@/lib/utils";
+import { requireUserId, userTimeZone, userToday } from "@/lib/session";
+import { localDateMinutes, type ConsistencyDay, mealQuality, SLOT_MINUTES, type TimedMeal, addDaysStr, estimate1RM, startOfWeekStr } from "@legymdary/shared";
 
 /* ------------------------------------------------------------------ */
 /* Shared shapes                                                       */
@@ -1047,17 +1042,6 @@ export const getBodyScans = cache(async function getBodyScans(): Promise<BodySca
   const userId = await requireUserId();
   return db.select().from(bodyScans).where(eq(bodyScans.userId, userId)).orderBy(asc(bodyScans.date));
 });
-
-export type ConsistencyDay = {
-  date: string;
-  sets: number; // working sets logged in the app
-  garmin: number; // Garmin activities
-  garminMin: number; // their total minutes
-  meals: number;
-  /** Meals marked as skipped. */
-  skipped: number;
-  kcal: number;
-};
 
 /** Per-day exercise + food logging counts (grouped in SQL, tiny payload). */
 export const getConsistencyDays = cache(async function getConsistencyDays(

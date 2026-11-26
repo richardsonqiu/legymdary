@@ -13,7 +13,7 @@
  * range-checked before it gets anywhere near the database.
  */
 
-import { MUSCLE_GROUPS } from "@/lib/utils";
+import { MUSCLE_GROUPS } from "@legymdary/shared";
 
 export type Cell = string | number | boolean | null;
 export type Sheet = { name: string; rows: Cell[][] };

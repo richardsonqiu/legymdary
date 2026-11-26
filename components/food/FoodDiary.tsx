@@ -7,7 +7,7 @@ import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation"
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
 import { BAND_DOT, BandPill } from "@/components/meal/QualityParts";
-import { bandLabel, mealQuality } from "@/lib/meal-quality";
+import { bandLabel, mealQuality, isDrink, parseItems, MEAL_TYPES, mealBudgets, SKIPPABLE_MEALS, mealTypeForHour, sumMacros, type DailyTargets, withBonus, type MealType, addDaysStr, formatPretty, todayStr } from "@legymdary/shared";
 import { amountWords } from "@/components/food/AmountPicker";
 import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
 import { TargetChangeNote, type TargetChangeInfo } from "@/components/food/TargetChangeNote";
@@ -35,19 +35,7 @@ import { Button, Card, SectionTitle } from "@/components/ui";
 import type { Meal, SavedMeal } from "@/db/schema";
 import { deleteMeal, logMenuItem, pinMeal, relogMeal, removeMenuItem, skipMeal, unskipMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
-import {
-  isDrink,
-  parseItems,
-  MEAL_TYPES,
-  mealBudgets,
-  SKIPPABLE_MEALS,
-  mealTypeForHour,
-  sumMacros,
-  type DailyTargets,
-  withBonus,
-  type MealType,
-} from "@/lib/nutrition";
-import { addDaysStr, cn, formatPretty, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 function useMounted() {

@@ -1,11 +1,12 @@
 "use client";
 
+import { EQUIPMENT, MUSCLE_GROUPS } from "@legymdary/shared";
 import { Portal } from "@/components/Portal";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { CheckIcon, PlusIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Button, Field, inputClass, Tag } from "@/components/ui";
 import type { Exercise } from "@/db/schema";
-import { cn, EQUIPMENT, MUSCLE_GROUPS } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const selectClass =
   "h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950/60 px-3 text-base text-zinc-100 outline-none focus:border-zinc-500";

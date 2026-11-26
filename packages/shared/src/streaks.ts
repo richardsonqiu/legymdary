@@ -1,5 +1,15 @@
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
-import type { ConsistencyDay } from "@/lib/queries";
+
+export type ConsistencyDay = {
+  date: string;
+  sets: number; // working sets logged in the app
+  garmin: number; // Garmin activities
+  garminMin: number; // their total minutes
+  meals: number;
+  /** Meals marked as skipped. */
+  skipped: number;
+  kcal: number;
+};
 
 /** Pure streak + milestone logic for the consistency calendar (client-safe). */
 

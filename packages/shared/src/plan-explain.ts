@@ -2,7 +2,7 @@
  * Turns a plan into the steps behind it, with the user's own numbers, for
  * the "How we got your number" card. Mirrors computePlan in lib/nutrition.ts.
  */
-import { ACTIVITY_LEVELS, KCAL_PER_KG, type Plan, type PlanInput } from "@/lib/nutrition";
+import { ACTIVITY_LEVELS, KCAL_PER_KG, type Plan, type PlanInput } from "./nutrition";
 
 export type ExplainStep = {
   key: "body" | "bmr" | "maintenance" | "goal" | "floor" | "target" | "locked";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
+import { GLOSSARY, type GlossaryKey } from "@legymdary/shared";
 
 /** A small "?" that expands a plain-language explanation. */
 export function Explain({ k }: { k: GlossaryKey }) {

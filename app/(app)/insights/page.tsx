@@ -22,7 +22,7 @@ import { scheduleOuraSync } from "@/lib/oura/background";
 import { getAppleHealthStatus, getGarminStatus, getOuraExtras, getOuraStatus } from "@/lib/queries";
 import { OuraExtrasCard } from "@/components/oura/OuraExtrasCard";
 import { requireUserId, userToday } from "@/lib/session";
-import { addDaysStr, formatPretty } from "@/lib/utils";
+import { addDaysStr, formatPretty } from "@legymdary/shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Insights" };

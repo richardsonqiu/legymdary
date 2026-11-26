@@ -5,11 +5,9 @@ import { ChevronLeftIcon, ChevronRightIcon, PencilIcon, SparkIcon } from "@/comp
 import { MealActions, MealTimeEditor } from "@/components/meal/MealControls";
 import { BandPill, LevelBar, LevelWord, QualityScale } from "@/components/meal/QualityParts";
 import { Card, SectionTitle } from "@/components/ui";
-import { advisorFallback, mealQuality } from "@/lib/meal-quality";
-import { parseItems } from "@/lib/nutrition";
+import { advisorFallback, mealQuality, parseItems, formatPretty } from "@legymdary/shared";
 import { getMeal, mealMinutes } from "@/lib/queries";
 import { userTimeZone } from "@/lib/session";
-import { formatPretty } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Meal" };
