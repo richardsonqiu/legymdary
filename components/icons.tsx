@@ -258,3 +258,35 @@ export const RingIcon = (p: IconProps) => (
     <path d="M9.5 6.8 10.5 4.5h3l1 2.3" />
   </Base>
 );
+
+export const LockIcon = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+    <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+  </Base>
+);
+
+export const WaveIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M3 14c2.5 0 2.5-5 5-5s2.5 7 5 7 2.5-9 5-9c1.3 0 2 1 3 2" />
+  </Base>
+);
+
+export const InfoIcon = (p: IconProps) => (
+  <Base {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </Base>
+);
+
+export const ArrowDownIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Base>
+);
+
+export const ArrowUpIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Base>
+);

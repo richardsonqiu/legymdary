@@ -6,6 +6,8 @@ import { ProjectionChart } from "@/components/plan/ProjectionChart";
 import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
+import { TargetModeCard } from "@/components/plan/TargetModeCard";
+import { TargetChangeNote } from "@/components/food/TargetChangeNote";
 import { paceOptions, weightTrendPerWeek, type Plan } from "@/lib/nutrition";
 import { PaceChooser } from "@/components/plan/PaceChooser";
 import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
@@ -83,6 +85,7 @@ export default async function PlanPage() {
         <SectionTitle help="maintenance">Daily targets</SectionTitle>
         {plan.calorieTarget != null ? (
           <div className="space-y-3">
+            {energy.targetChange && <TargetChangeNote change={energy.targetChange} today={today} />}
             <div className="grid grid-cols-2 gap-3">
               <Stat
                 label="Calories"
@@ -226,6 +229,18 @@ export default async function PlanPage() {
               </p>
             )}
           </Card>
+        </section>
+      )}
+
+      {plan.calorieTarget != null && !plan.usingOverride && (
+        <section>
+          <SectionTitle>How your daily target works</SectionTitle>
+          <TargetModeCard
+            mode={energy.targetMode}
+            current={plan.calorieTarget}
+            live={energy.liveTarget}
+            direction={plan.direction}
+          />
         </section>
       )}
 

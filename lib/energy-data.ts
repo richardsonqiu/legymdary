@@ -31,6 +31,8 @@ import {
   type OuraStatus,
 } from "@/lib/queries";
 import { addDaysStr } from "@/lib/utils";
+import { requireUserId } from "@/lib/session";
+import { lockTargets, targetModeOf, type TargetChange } from "@/lib/targets";
 
 /**
  * Everything the dashboard / Food / Plan pages need about energy: the plan
@@ -49,7 +51,16 @@ export type EnergyContext = {
   goals: Goals | null;
   body: Awaited<ReturnType<typeof getLatestBodyValues>>;
   plan: Plan;
+  /** Today's target (see lib/targets.ts: past days are locked, small changes ignored). */
   targets: DailyTargets;
+  /** "steady" (fixed until you change it) or "adaptive" (follows burn and weight). */
+  targetMode: "steady" | "adaptive";
+  /** What the plan would say right now from live inputs (to offer an update in steady mode). */
+  liveTarget: number | null;
+  /** The target each past day had. */
+  targetsByDate: Record<string, NonNullable<DailyTargets>>;
+  /** Why today's target differs from the previous day's, if it does. */
+  targetChange: TargetChange | null;
   measured: MeasuredMaintenance | null;
   garminMaint: { kcal: number; avgActive: number; days: number } | null;
   intake: DayTotals[];
@@ -86,8 +97,8 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   );
   const maintenance = chooseMaintenance(measured, garminMaint);
   const planInput = planInputFrom(goals, body, undefined, maintenance, today);
-  const plan = computePlan(planInput);
-  const targets = targetsFromPlan(plan);
+  const livePlan = computePlan(planInput);
+  const liveTargets = targetsFromPlan(livePlan);
 
   const bonusByDate: Record<string, number> = {};
   const readinessByDate: Record<string, Readiness | null> = {};
@@ -95,7 +106,8 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   for (let i = -2; i <= 1; i++) {
     const date = addDaysStr(today, i);
     const d = byDate.get(date);
-    if (garmin?.adjustForActivity && targets && !plan.usingOverride) {
+    // Steady targets never grow with exercise: extra burn is extra deficit.
+    if (garmin?.adjustForActivity && liveTargets && !livePlan.usingOverride && targetModeOf(goals) === "adaptive") {
       bonusByDate[date] = activityBonus(d?.activeKcal ?? null, garminMaint?.avgActive ?? null);
     }
     const prior = garminDays.filter((g) => g.date < date && g.date >= addDaysStr(date, -7) && g.restingHr);
@@ -113,7 +125,38 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
       : null;
   }
 
+  // Lock the day's target: past days keep theirs; today ignores small wobbles.
+  const userId = await requireUserId();
+  const locked = await lockTargets({
+    userId,
+    today,
+    goals,
+    plan: livePlan,
+    maintenance,
+    weight: body.weight,
+    bonusToday: bonusByDate[today] ?? 0,
+    history: { intake, weights, burn: garminDays.map((d) => ({ date: d.date, totalKcal: d.totalKcal, activeKcal: d.activeKcal })) },
+  });
+  const targets = locked.today;
+  const plan: Plan =
+    targets && livePlan.calorieTarget != null
+      ? {
+          ...livePlan,
+          calorieTarget: Math.round(targets.calories),
+          protein: targets.protein,
+          carbs: targets.carbs,
+          fat: targets.fat,
+          dailyDelta: livePlan.tdee != null ? Math.round(targets.calories) - livePlan.tdee : livePlan.dailyDelta,
+        }
+      : livePlan;
+  // Past days use the activity bonus they had.
+  for (const [d, b] of Object.entries(locked.bonusByDate)) if (d < today) bonusByDate[d] = b;
+
   return {
+    targetMode: targetModeOf(goals),
+    liveTarget: liveTargets ? Math.round(liveTargets.calories) : null,
+    targetsByDate: locked.byDate,
+    targetChange: locked.change,
     garmin,
     appleHealth,
     oura,

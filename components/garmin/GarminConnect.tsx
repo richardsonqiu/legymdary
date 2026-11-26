@@ -138,7 +138,8 @@ export function GarminConnect({ status }: { status: GarminStatus | null }) {
               <span className="font-medium">Eat back extra activity</span>
               <span className="block text-xs text-zinc-500">
                 On days you burn more than usual, add half of the extra to that day&apos;s
-                calorie target (max +600 kcal).
+                calorie target (max +600 kcal). Only when your daily target is set to
+                &quot;Adapts to my burn&quot; on the Goal page; a Steady target keeps the extra as deficit.
               </span>
             </span>
           </label>

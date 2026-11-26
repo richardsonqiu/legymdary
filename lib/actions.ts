@@ -1372,3 +1372,26 @@ export async function setSourcePrefs(input: unknown): Promise<{ ok: true } | { e
   revalidateAll();
   return { ok: true };
 }
+
+/* ------------------------------------------------------------------ */
+/* Daily target mode                                                   */
+/* ------------------------------------------------------------------ */
+
+/** "steady": the daily target stays put (extra exercise = extra deficit). "adaptive": it follows burn and weight. */
+export async function setTargetMode(mode: string): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  if (mode !== "steady" && mode !== "adaptive") return { error: "Unknown option." };
+  const res = await db.update(goals).set({ targetMode: mode, updatedAt: new Date() }).where(eq(goals.userId, userId));
+  if (!res.rowsAffected) return { error: "Set your goal first." };
+  revalidateAll();
+  return { ok: true };
+}
+
+/** Steady mode: take the plan's current number as the new target (from today). */
+export async function relockTarget(): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const res = await db.update(goals).set({ relockedAt: new Date(), updatedAt: new Date() }).where(eq(goals.userId, userId));
+  if (!res.rowsAffected) return { error: "Set your goal first." };
+  revalidateAll();
+  return { ok: true };
+}

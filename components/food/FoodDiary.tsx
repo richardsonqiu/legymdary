@@ -8,6 +8,7 @@ import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
 import { amountWords } from "@/components/food/AmountPicker";
 import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
+import { TargetChangeNote, type TargetChangeInfo } from "@/components/food/TargetChangeNote";
 import {
   CameraIcon,
   ChevronLeftIcon,
@@ -20,6 +21,11 @@ import {
   XIcon,
   TargetIcon,
   TrashIcon,
+  FlameIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  LockIcon,
+  BarsIcon,
 } from "@/components/icons";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import type { Meal, SavedMeal } from "@/db/schema";
@@ -37,7 +43,7 @@ import {
   type MealItem,
   type MealType,
 } from "@/lib/nutrition";
-import { addDaysStr, formatPretty, todayStr } from "@/lib/utils";
+import { addDaysStr, cn, formatPretty, todayStr } from "@/lib/utils";
 
 const noop = () => () => {};
 function useMounted() {
@@ -60,6 +66,9 @@ export function FoodDiary({
   aiSpend,
   requestedDate,
   targets,
+  targetsByDate,
+  targetChange,
+  targetMode,
   skipped,
   menu,
   planMissing,
@@ -74,6 +83,12 @@ export function FoodDiary({
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
   targets: DailyTargets;
+  /** The target each past day had (locked once the day is over). */
+  targetsByDate?: Record<string, NonNullable<DailyTargets>>;
+  /** "steady" targets don't grow with exercise. */
+  targetMode?: "steady" | "adaptive";
+  /** Why today's target differs from the previous day's. */
+  targetChange?: TargetChangeInfo | null;
   /** Meals marked as skipped (a window of days around the one shown). */
   skipped: { date: string; mealType: string }[];
   /** "My menu": pinned and custom meals. */
@@ -114,7 +129,9 @@ export function FoodDiary({
   const totals = sumMacros(dayMeals);
   const isToday = date === today;
   const skippedTypes = skipped.filter((s) => s.date === date).map((s) => s.mealType as MealType);
-  const dayTarget = withBonus(targets, garminByDate?.[date]?.bonus);
+  // Past days are judged against the target they had, not today's.
+  const baseTarget = !isToday && today && date < today ? targetForDay(date, targets, targetsByDate) : targets;
+  const dayTarget = withBonus(baseTarget, garminByDate?.[date]?.bonus);
   const eatenByType = Object.fromEntries(
     MEAL_TYPES.map((t) => [t, sumMacros(dayMeals.filter((m) => m.mealType === t)).calories]),
   ) as Partial<Record<MealType, number>>;
@@ -295,31 +312,51 @@ export function FoodDiary({
       </div>
 
       <Card>
-        <MacroSummary totals={totals} targets={withBonus(targets, garminByDate?.[date]?.bonus)} />
-        {garminByDate && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
-            <span>
-              You burned{isToday ? " so far" : ""}:{" "}
-              <b className="tabular-nums text-zinc-200">
-                {garminByDate[date]?.burned != null
-                  ? `${Math.round(garminByDate[date]!.burned!).toLocaleString("en-US")} kcal`
-                  : "–"}
-              </b>
-              {garminByDate[date]?.burned != null && (
-                <span className="text-zinc-500">
-                  {" "}· eaten minus burned {totals.calories - garminByDate[date]!.burned! > 0 ? "+" : ""}
-                  {Math.round(totals.calories - garminByDate[date]!.burned!).toLocaleString("en-US")}
+        <MacroSummary totals={totals} targets={dayTarget} />
+        {isToday && targetChange && today && <TargetChangeNote change={targetChange} today={today} />}
+        {!isToday && today && date < today && baseTarget && (
+          <p className="mt-3 flex items-center gap-1.5 text-[11px] text-zinc-400" title="Past days keep the target they had">
+            <LockIcon className="h-3.5 w-3.5" /> Target that day: {Math.round(baseTarget.calories).toLocaleString("en-US")} kcal
+          </p>
+        )}
+        {garminByDate && (() => {
+          const burned = garminByDate[date]?.burned ?? null;
+          const net = burned != null ? Math.round(totals.calories - burned) : null;
+          const bonus = garminByDate[date]?.bonus ?? 0;
+          return (
+            <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-zinc-800/80 pt-3 text-xs">
+              <span className="flex items-center gap-1 rounded-full bg-white/[0.05] px-2.5 py-1 tabular-nums text-zinc-200" title="Burned (watch or ring)">
+                <FlameIcon className="h-3.5 w-3.5 text-orange-300" />
+                {burned != null ? Math.round(burned).toLocaleString("en-US") : "–"}
+                <span className="text-zinc-500">burned</span>
+              </span>
+              {net != null && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2.5 py-1 tabular-nums",
+                    net <= 0 ? "bg-emerald-400/10 text-emerald-200" : "bg-amber-400/10 text-amber-200",
+                  )}
+                  title={net <= 0 ? "Deficit: eaten minus burned" : "Surplus: eaten minus burned"}
+                >
+                  {net <= 0 ? <ArrowDownIcon className="h-3.5 w-3.5" /> : <ArrowUpIcon className="h-3.5 w-3.5" />}
+                  {Math.abs(net).toLocaleString("en-US")}
+                  <span className="opacity-70">{net <= 0 ? "deficit" : "surplus"}</span>
                 </span>
               )}
-              <span className="block text-[11px] text-zinc-500">Data from Garmin</span>
-            </span>
-            {!!garminByDate[date]?.bonus && (
-              <span className="text-emerald-300/80">
-                +{garminByDate[date]!.bonus} kcal activity bonus
-              </span>
-            )}
-          </div>
-        )}
+              {isToday && targetMode === "steady" && (
+                <span className="flex items-center gap-1 rounded-full bg-white/[0.05] px-2.5 py-1 text-zinc-300" title="Steady target: exercise doesn't raise it, so extra burn adds to your deficit">
+                  <LockIcon className="h-3.5 w-3.5" /> steady
+                </span>
+              )}
+              {!!bonus && (
+                <span className="flex items-center gap-1 rounded-full bg-emerald-400/10 px-2.5 py-1 text-emerald-200">+{bonus} activity</span>
+              )}
+              <Link href="/stats#balance" className="ml-auto flex items-center gap-1 rounded-full px-2 py-1 text-zinc-400 hover:text-zinc-200" aria-label="Calorie balance this week">
+                <BarsIcon className="h-3.5 w-3.5" /> week
+              </Link>
+            </div>
+          );
+        })()}
         {macroSplitNote && !planMissing && (
           <Link
             href="/stats"
@@ -704,4 +741,18 @@ function MealRow({
       )}
     </li>
   );
+}
+
+/** The target a past day had: its saved one, else the nearest saved one after it, else today's. */
+function targetForDay(
+  date: string,
+  today: DailyTargets,
+  byDate: Record<string, NonNullable<DailyTargets>> | undefined,
+): DailyTargets {
+  if (!byDate) return today;
+  if (byDate[date]) return byDate[date];
+  const later = Object.keys(byDate)
+    .filter((d) => d > date)
+    .sort()[0];
+  return later ? byDate[later] : today;
 }

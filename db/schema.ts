@@ -261,10 +261,54 @@ export const goals = sqliteTable("goals", {
   weeklyRate: real("weekly_rate"), // kg per week, absolute pace
   targetDate: text("target_date"), // YYYY-MM-DD the user wants to reach the goal by
   calorieOverride: real("calorie_override"),
+  /**
+   * "steady": the daily target stays the same until you change your goal or
+   * update it (extra exercise becomes extra deficit). "adaptive": it follows
+   * your burn and weight (changes of 50 kcal or more).
+   */
+  targetMode: text("target_mode").notNull().default("steady"),
+  /** Set when you tap "Update to the plan's number" in steady mode. */
+  relockedAt: integer("relocked_at", { mode: "timestamp_ms" }),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+/**
+ * The calorie and macro target each day was given. Today's row follows the
+ * plan (with small wobbles ignored); once a day is over its row is final, so
+ * past days are always judged against the target they actually had.
+ * The inputs are kept to explain why the target moved.
+ */
+export const dailyTargets = sqliteTable(
+  "daily_targets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    calories: integer("calories").notNull(),
+    protein: integer("protein"),
+    carbs: integer("carbs"),
+    fat: integer("fat"),
+    /** Activity bonus added that day (when "adjust for activity" is on). */
+    bonus: integer("bonus").notNull().default(0),
+    /** Inputs at the time, for "why did it change?". */
+    maintenance: integer("maintenance"),
+    maintenanceSource: text("maintenance_source"),
+    weight: real("weight"),
+    weeklyRate: real("weekly_rate"),
+    /** Fingerprint of the goal settings (goal, pace or date, custom calories, profile). */
+    goalKey: text("goal_key"),
+    /** Recalculated from history when this feature first ran (not seen live). */
+    backfilled: integer("backfilled", { mode: "boolean" }).notNull().default(false),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("daily_targets_user_date_unique").on(t.userId, t.date)],
+);
 
 /** One row per AI call (meal photo analysis) — powers the in-app spend view. */
 export const aiUsage = sqliteTable(
@@ -701,6 +745,7 @@ export type SavedMeal = typeof savedMeals.$inferSelect;
 export type SheetImport = typeof sheetImports.$inferSelect;
 export type SourceDaily = typeof sourceDaily.$inferSelect;
 export type SourcePrefs = typeof sourcePrefs.$inferSelect;
+export type DailyTarget = typeof dailyTargets.$inferSelect;
 export type Goals = typeof goals.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type GarminDaily = typeof garminDaily.$inferSelect;
