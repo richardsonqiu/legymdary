@@ -35,8 +35,13 @@ export const metadata: Metadata = {
   },
 };
 
-/** Picks light or dark before first paint: saved choice, else the system's. */
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("oneup.theme");var m=window.matchMedia("(prefers-color-scheme: light)");function a(){var v=t==="light"||t==="dark"?t:(m.matches?"light":"dark");document.documentElement.dataset.theme=v;}a();m.addEventListener("change",function(){t=localStorage.getItem("oneup.theme");a();});}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+/**
+ * Picks light or dark before first paint. A saved Light or Dark wins.
+ * Auto is dark when the phone is in dark mode, or at night on the phone's
+ * own clock (7 pm to 7 am). Re-checked every minute and when the app comes
+ * back to the foreground, so it flips at 7 pm without a reload.
+ */
+const THEME_SCRIPT = `(function(){var d=document.documentElement;function pick(){var t=null;try{t=localStorage.getItem("oneup.theme")}catch(e){}if(t==="light"||t==="dark")return t;var h=new Date().getHours();var night=h>=19||h<7;var sys=false;try{sys=window.matchMedia("(prefers-color-scheme: dark)").matches}catch(e){}return sys||night?"dark":"light"}function a(){d.dataset.theme=pick()}a();window.__applyTheme=a;try{window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",a)}catch(e){}setInterval(a,60000);document.addEventListener("visibilitychange",function(){if(!document.hidden)a()})})();`;
 
 export const viewport: Viewport = {
   themeColor: [

@@ -47,7 +47,8 @@ export function AccountMenu({
               <div className="truncate text-xs text-zinc-500">{email}</div>
             )}
           </div>
-          <ThemeToggle className="mx-1 my-1" />
+          <ThemeToggle className="mx-1 mt-1" />
+          <p className="px-2.5 pb-1 pt-1.5 text-[11px] text-zinc-500">Auto: dark from 7 pm to 7 am, or when your phone is dark.</p>
           <div className="my-1 h-px bg-zinc-800" />
           <a
             href="/connect"
