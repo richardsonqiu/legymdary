@@ -422,3 +422,24 @@ input[type="number"] {
 .amount-range:focus-visible::-webkit-slider-thumb {
   box-shadow: 0 0 0 4px rgb(94 234 212 / 0.35);
 }
+
+/* Nudge popups (components/nudge/NudgePopup.tsx) */
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(240px) rotate(540deg); opacity: 0; }
+}
+.confetti-piece {
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+@keyframes badge-pop {
+  0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+  60% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.badge-pop { animation: badge-pop 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece { display: none; }
+  .badge-pop { animation: none; }
+}

@@ -15,17 +15,17 @@
  */
 import { and, asc, between, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { bodyStats, dailyTargets, garminDaily, meals, skippedMeals, type DailyTarget } from "@/db/schema";
+import { bodyStats, dailyTargets, garminDaily, meals, skippedMeals, type DailyTarget, type TargetReview } from "@/db/schema";
+import { ensureReview, reviewTargets } from "@/lib/review";
 import { bodyValuesAsOf } from "@/lib/body-values";
 import { chooseMaintenance, garminMaintenance, measuredMaintenance } from "@/lib/energy";
 import { computePlan, planInputFrom, targetsFromPlan, type DailyTargets, type Plan } from "@/lib/nutrition";
 import { addDaysStr } from "@/lib/utils";
 
 export const CAL_STEP = 50;
-const PROTEIN_STEP = 10;
 const HISTORY_DAYS = 3 * 365;
 
-type GoalRow = (NonNullable<Parameters<typeof planInputFrom>[0]> & { targetMode?: string | null; relockedAt?: Date | null }) | null;
+type GoalRow = (NonNullable<Parameters<typeof planInputFrom>[0]> & { targetMode?: string | null; relockedAt?: Date | null; reviewCadence?: string | null }) | null;
 
 /** "steady" (default): only changes when you change your goal or update it. "adaptive": follows burn and weight. */
 export const targetModeOf = (g: GoalRow): "steady" | "adaptive" => (g?.targetMode === "adaptive" ? "adaptive" : "steady");
@@ -63,11 +63,15 @@ export type LockedTargets = {
   /** Saved activity bonus by date. */
   bonusByDate: Record<string, number>;
   change: TargetChange | null;
+  /** Calories added to today's target (activity bonus, or eaten back after a big burn). */
+  todayBonus: number;
+  /** This week's (or month's) target review. */
+  review: TargetReview | null;
 };
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 
-export type ReasonKind = "goal" | "source" | "burn" | "weight" | "pace" | "other";
+export type ReasonKind = "goal" | "source" | "burn" | "weight" | "pace" | "review" | "other";
 export type Reason = { kind: ReasonKind; text: string; from?: number; to?: number };
 
 function reasonsFor(prev: DailyTarget, cur: { maintenance: number | null; maintenanceSource: string | null; weight: number | null; weeklyRate: number | null; goalKey: string; targetDate: string | null }): Reason[] {
@@ -109,6 +113,7 @@ type Inputs = {
   maintenance: { kcal: number; source: string } | null;
   weight: number | null;
   bonusToday: number;
+  bodyFat?: number | null;
   /** Data for back-filling past days (only used the first time). */
   history: {
     intake: Parameters<typeof measuredMaintenance>[0];
@@ -250,25 +255,53 @@ export async function lockTargets(i: Inputs): Promise<LockedTargets> {
   const key = goalKey(i.goals);
 
   let today: DailyTargets = computed;
+  let review: TargetReview | null = null;
+  let appliedReview = false;
   if (computed) {
-    // Keep the last target unless the goal changed or the new one moved enough.
+    // The target only moves when the goal changes or at a weekly / monthly review.
     const base = todayRow ?? prev;
     const goalChanged = !base || base.goalKey !== key;
-    // Steady: keep the number until the goal changes. Adaptive: ignore small wobbles only.
-    const keep =
-      targetModeOf(i.goals) === "steady" ||
-      (base &&
-        Math.abs(computed.calories - base.calories) < CAL_STEP &&
-        Math.abs((computed.protein ?? 0) - (base.protein ?? 0)) < PROTEIN_STEP);
-    if (!goalChanged && keep && base) {
+    if (!goalChanged && base) {
       today = { calories: base.calories, protein: base.protein, carbs: base.carbs, fat: base.fat };
+    }
+    // First day of the current goal settings (reviews wait 14 days after a change).
+    let goalSince = i.today;
+    if (!goalChanged) {
+      for (let k = saved.length - 1; k >= 0 && saved[k].goalKey === key; k--) goalSince = saved[k].date;
+    }
+    review = await ensureReview({
+      userId: i.userId,
+      today: i.today,
+      goals: i.goals,
+      current: today!,
+      goalSince,
+      bodyFat: i.bodyFat ?? null,
+      maintenance: i.maintenance as Parameters<typeof ensureReview>[0]["maintenance"],
+      intake: i.history.intake,
+      weights: i.history.weights,
+      burn: i.history.burn,
+    });
+    // Apply an accepted (or automatic) review once.
+    if (
+      !goalChanged &&
+      base &&
+      review &&
+      (review.decision === "updated" || review.decision === "auto") &&
+      review.applied != null &&
+      review.decidedAt &&
+      base.updatedAt.getTime() < review.decidedAt.getTime() &&
+      base.calories !== review.applied
+    ) {
+      today = reviewTargets(review, today!);
+      appliedReview = true;
     }
     const vals = {
       calories: Math.round(today!.calories),
       protein: today!.protein,
       carbs: today!.carbs,
       fat: today!.fat,
-      bonus: i.bonusToday,
+      // Steady: no automatic bonus, but keep calories the user chose to eat back today.
+      bonus: targetModeOf(i.goals) === "steady" ? (todayRow?.bonus ?? 0) : i.bonusToday,
       maintenance: i.maintenance?.kcal ?? i.plan.tdee,
       maintenanceSource: i.plan.maintenanceSource,
       weight: i.weight,
@@ -301,11 +334,19 @@ export async function lockTargets(i: Inputs): Promise<LockedTargets> {
 
   let change: TargetChange | null = null;
   if (today && prev && prev.calories !== Math.round(today.calories)) {
+    const fromReview = appliedReview || (review?.applied != null && review.applied === Math.round(today.calories) && prev.goalKey === key);
     change = {
       from: prev.calories,
       to: Math.round(today.calories),
       since: prev.date,
-      reasons: reasonsFor(prev, {
+      reasons: fromReview && review
+        ? [
+            {
+              kind: "review",
+              text: `${review.cadence === "monthly" ? "Monthly" : "Weekly"} review${review.trendKgWeek != null ? `: weight trend ${review.trendKgWeek > 0 ? "+" : ""}${review.trendKgWeek} kg a week` : ""}.`,
+            },
+          ]
+        : reasonsFor(prev, {
         maintenance: i.maintenance?.kcal ?? i.plan.tdee,
         maintenanceSource: i.plan.maintenanceSource,
         weight: i.weight,
@@ -315,7 +356,8 @@ export async function lockTargets(i: Inputs): Promise<LockedTargets> {
       }),
     };
   }
-  return { today, byDate, bonusByDate, change };
+  const todayBonus = targetModeOf(i.goals) === "steady" ? (todayRow?.bonus ?? 0) : i.bonusToday;
+  return { today, byDate, bonusByDate, change, todayBonus, review };
 }
 
 /** The target a past date had: its saved one, else the oldest saved one after it, else today's. */

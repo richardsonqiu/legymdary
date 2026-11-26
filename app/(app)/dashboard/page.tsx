@@ -14,11 +14,7 @@ import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
 import { sceneFor, sceneStyle } from "@/lib/scenes";
 import { compareScans, parseSegments, segmentBalance } from "@/lib/body-scan";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
-import {
-  DumbbellIcon,
-  TrophyIcon,
-  WatchIcon,
-} from "@/components/icons";
+import { DumbbellIcon, TrophyIcon, WatchIcon, CalendarIcon, ChevronRightIcon } from "@/components/icons";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
 import {
   getActiveWorkout,
@@ -35,6 +31,8 @@ import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
 import { scheduleOuraSync } from "@/lib/oura/background";
+import { NudgePopup } from "@/components/nudge/NudgePopup";
+import { nudgeFrom } from "@/lib/nudge-data";
 import { getSessionUser, userToday } from "@/lib/session";
 import {
   addDaysStr,
@@ -204,6 +202,23 @@ export default async function DashboardPage() {
 
       {card?.sleep && <SleepSummaryCard s={card.sleep} compact />}
 
+      <NudgePopup nudge={nudgeFrom(energy, serverToday)} />
+      {energy.review?.decision === "pending" && energy.review.suggested != null && (
+        <Link
+          href="/plan#review"
+          transitionTypes={["nav-forward"]}
+          className="press flex items-center gap-3 rounded-2xl border border-sky-300/25 bg-sky-300/[0.07] px-4 py-3 text-sm"
+        >
+          <CalendarIcon className="h-5 w-5 shrink-0 text-sky-200" />
+          <span className="min-w-0 flex-1">
+            <b>{energy.review.cadence === "monthly" ? "Monthly" : "Weekly"} review ready</b>
+            <span className="block text-xs tabular-nums text-sky-100/80">
+              {energy.review.current.toLocaleString("en-US")} → {energy.review.suggested.toLocaleString("en-US")} kcal suggested
+            </span>
+          </span>
+          <ChevronRightIcon className="h-4 w-4 text-sky-200/70" />
+        </Link>
+      )}
       <TodayGuide g={guide} />
 
       <StreaksCard

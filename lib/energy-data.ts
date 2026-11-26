@@ -33,6 +33,7 @@ import {
 import { addDaysStr } from "@/lib/utils";
 import { requireUserId } from "@/lib/session";
 import { lockTargets, targetModeOf, type TargetChange } from "@/lib/targets";
+import type { TargetReview } from "@/db/schema";
 
 /**
  * Everything the dashboard / Food / Plan pages need about energy: the plan
@@ -53,6 +54,10 @@ export type EnergyContext = {
   plan: Plan;
   /** Today's target (see lib/targets.ts: past days are locked, small changes ignored). */
   targets: DailyTargets;
+  /** This week's (or month's) target review. */
+  review: TargetReview | null;
+  /** Weigh-ins of the last 5 weeks. */
+  weights: { date: string; weight: number }[];
   /** "steady" (fixed until you change it) or "adaptive" (follows burn and weight). */
   targetMode: "steady" | "adaptive";
   /** What the plan would say right now from live inputs (to offer an update in steady mode). */
@@ -135,6 +140,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
     maintenance,
     weight: body.weight,
     bonusToday: bonusByDate[today] ?? 0,
+    bodyFat: body.bodyFat,
     history: { intake, weights, burn: garminDays.map((d) => ({ date: d.date, totalKcal: d.totalKcal, activeKcal: d.activeKcal })) },
   });
   const targets = locked.today;
@@ -151,9 +157,13 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
       : livePlan;
   // Past days use the activity bonus they had.
   for (const [d, b] of Object.entries(locked.bonusByDate)) if (d < today) bonusByDate[d] = b;
+  if (locked.todayBonus) bonusByDate[today] = locked.todayBonus;
+  else if (targetModeOf(goals) === "steady") delete bonusByDate[today];
 
   return {
     targetMode: targetModeOf(goals),
+    review: locked.review,
+    weights,
     liveTarget: liveTargets ? Math.round(liveTargets.calories) : null,
     targetsByDate: locked.byDate,
     targetChange: locked.change,

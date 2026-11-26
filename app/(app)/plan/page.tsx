@@ -7,6 +7,9 @@ import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { TargetModeCard } from "@/components/plan/TargetModeCard";
+import { ReviewCard } from "@/components/plan/ReviewCard";
+import { cadenceOf, nextReviewDate, recentReviews } from "@/lib/review";
+import { requireUserId } from "@/lib/session";
 import { TargetChangeNote } from "@/components/food/TargetChangeNote";
 import { paceOptions, weightTrendPerWeek, type Plan } from "@/lib/nutrition";
 import { PaceChooser } from "@/components/plan/PaceChooser";
@@ -18,12 +21,16 @@ export const metadata = { title: "Goal" };
 
 export default async function PlanPage() {
   const today = (await userToday());
-  const [energy, stats, totals, scans] = await Promise.all([
+  const userId = await requireUserId();
+  const [energy, stats, totals, scans, reviews] = await Promise.all([
     getEnergyContext(),
     getBodyStats(),
     getDailyTotals(addDaysStr(today, -14), today),
     getBodyScans(),
+    recentReviews(userId, 9),
   ]);
+  const cadence = cadenceOf(energy.goals);
+  const nextReview = nextReviewDate(today, cadence);
   const latestScan = scans[scans.length - 1] ?? null;
   const garminByDate = new Map(energy.garminDays.map((d) => [d.date, d]));
   const energyRows = energy.intake.map((d) => ({
@@ -233,15 +240,22 @@ export default async function PlanPage() {
       )}
 
       {plan.calorieTarget != null && !plan.usingOverride && (
-        <section>
-          <SectionTitle>How your daily target works</SectionTitle>
-          <TargetModeCard
-            mode={energy.targetMode}
-            current={plan.calorieTarget}
-            live={energy.liveTarget}
-            direction={plan.direction}
-          />
-        </section>
+        <>
+          <section id="review" className="scroll-mt-6">
+            <SectionTitle>Target review</SectionTitle>
+            <ReviewCard review={energy.review} history={reviews} nextReview={nextReview} />
+          </section>
+          <section>
+            <SectionTitle>How your daily target works</SectionTitle>
+            <TargetModeCard
+              mode={energy.targetMode}
+              current={plan.calorieTarget}
+              direction={plan.direction}
+              cadence={cadence}
+              nextReview={nextReview}
+            />
+          </section>
+        </>
       )}
 
       <section>
