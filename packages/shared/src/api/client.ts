@@ -23,8 +23,8 @@ export type ApiClientOptions = {
   getToken: () => Promise<string | null> | string | null;
   /** Device IANA zone, sent as X-Timezone so the server computes "today" correctly. */
   timeZone: () => string;
-  /** Called when the server answers 401 for a request that carried a token. */
-  onUnauthorized?: () => void;
+  /** Called when the server answers 401 for a request that carried a token. Gets the token that was sent, so the caller can ignore a stale one. */
+  onUnauthorized?: (sentToken: string) => void;
   fetch?: FetchLike;
 };
 
@@ -58,7 +58,7 @@ export function createApiClient(opts: ApiClientOptions) {
 
     const json = await res.json().catch(() => null);
     if (!res.ok) {
-      if (res.status === 401 && token) opts.onUnauthorized?.();
+      if (res.status === 401 && token) opts.onUnauthorized?.(token);
       const err = apiErrorSchema.safeParse(json);
       throw new ApiClientError(res.status, err.success ? err.data.error : `Request failed (${res.status})`);
     }
