@@ -87,7 +87,6 @@ function editInit(m: Meal): ComposerInit {
 export function FoodDiary({
   meals,
   recentMeals,
-  aiSpend,
   requestedDate,
   targets,
   targetsByDate,
@@ -105,8 +104,6 @@ export function FoodDiary({
   meals: Meal[];
   /** Distinct recent meals, newest first: the first few are "Eat again", all of them feed the My menu picker. */
   recentMeals: Meal[];
-  /** AI requests this month (photo and text estimates, reports) and their estimated cost. */
-  aiSpend: { calls: number; costUsd: number };
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
   targets: DailyTargets;
@@ -590,13 +587,6 @@ export function FoodDiary({
           })}
         </div>
       </section>
-
-      {aiSpend.calls > 0 && (
-        <p className="text-center text-[11px] text-zinc-600">
-          AI this month: {aiSpend.calls} {aiSpend.calls === 1 ? "request" : "requests"} · about $
-          {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
-        </p>
-      )}
 
       {adding && (
         <ConfirmAddSheet

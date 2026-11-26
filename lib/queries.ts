@@ -15,7 +15,6 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  aiUsage,
   appleHealthImports,
   bodyScans,
   bodyStats,
@@ -819,43 +818,6 @@ export async function getRecentMeals(limit = 6): Promise<Meal[]> {
     if (out.length >= limit) break;
   }
   return out;
-}
-
-export type AiUsageSummary = {
-  calls: number;
-  costUsd: number;
-  inputTokens: number;
-  outputTokens: number;
-  byModel: { model: string; calls: number; costUsd: number }[];
-};
-
-/** AI calls + estimated spend since a given instant. */
-export async function getAiUsageSince(since: Date): Promise<AiUsageSummary> {
-  const userId = await requireUserId();
-  const rows = await db
-    .select()
-    .from(aiUsage)
-    .where(and(eq(aiUsage.userId, userId), gte(aiUsage.createdAt, since)));
-  const byModel = new Map<string, { model: string; calls: number; costUsd: number }>();
-  let costUsd = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
-  for (const r of rows) {
-    costUsd += r.costUsd;
-    inputTokens += r.inputTokens;
-    outputTokens += r.outputTokens;
-    const m = byModel.get(r.model) ?? { model: r.model, calls: 0, costUsd: 0 };
-    m.calls += 1;
-    m.costUsd += r.costUsd;
-    byModel.set(r.model, m);
-  }
-  return {
-    calls: rows.length,
-    costUsd,
-    inputTokens,
-    outputTokens,
-    byModel: [...byModel.values()].sort((a, b) => b.calls - a.calls),
-  };
 }
 
 export type TemplateSummary = {
