@@ -17,13 +17,16 @@ const listeners = new Set<(prefix: string) => void>();
 const STALE_MS = 20_000;
 
 /** Names for `invalidate`. A query name starts with one of these, so a write refreshes every screen that reads it. */
-export const KEYS = { meals: "meals", today: "today", recent: "recent", workout: "workout" } as const;
+export const KEYS = { meals: "meals", today: "today", recent: "recent", workout: "workout", exercises: "exercises", templates: "templates" } as const;
+
+/** Keys are `${userId}:${name}`; match `prefix` against the name only (empty prefix matches all). */
+const matches = (key: string, prefix: string) => key.slice(key.indexOf(":") + 1).startsWith(prefix);
 
 /** Mark cached entries whose name starts with `prefix` stale and refetch the mounted ones. Keys are `${userId}:${name}`. */
 export function invalidate(prefix = "") {
   // Mark stale instead of deleting, so screens keep showing the old data while the refetch runs.
-  for (const [k, v] of cache) if (k.includes(`:${prefix}`)) v.at = 0;
-  for (const k of inflight.keys()) if (k.includes(`:${prefix}`)) dirty.add(k);
+  for (const [k, v] of cache) if (matches(k, prefix)) v.at = 0;
+  for (const k of inflight.keys()) if (matches(k, prefix)) dirty.add(k);
   listeners.forEach((l) => l(prefix));
 }
 
@@ -67,7 +70,7 @@ export function useApi<T>(name: string, fetcher: (api: ApiClient) => Promise<T>)
       const running = inflight.get(key);
       if (running) return running;
       if (byUser) setManual(true);
-      const p = (async () => {
+      const p = Promise.resolve().then(async () => {
         try {
           const data = await fetcherRef.current(api);
           cache.set(key, { data, at: Date.now() });
@@ -82,7 +85,7 @@ export function useApi<T>(name: string, fetcher: (api: ApiClient) => Promise<T>)
             bump((n) => n + 1);
           }
         }
-      })();
+      });
       inflight.set(key, p);
       return p;
     },
@@ -98,7 +101,7 @@ export function useApi<T>(name: string, fetcher: (api: ApiClient) => Promise<T>)
 
   useEffect(() => {
     const l = (prefix: string) => {
-      if (key.includes(`:${prefix}`)) void load(true);
+      if (matches(key, prefix)) void load(true);
     };
     listeners.add(l);
     return () => void listeners.delete(l);

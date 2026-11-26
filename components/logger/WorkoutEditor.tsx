@@ -1,6 +1,6 @@
 "use client";
 
-import { estimate1RM, formatShort, kg, todayStr } from "@legymdary/shared";
+import { bestSetId, estimate1RM, formatShort, kg, nextSetDefault, sessionSummary, todayStr } from "@legymdary/shared";
 import { ExerciseHowTo } from "@/components/exercise/ExerciseGuide";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -57,31 +57,7 @@ export function WorkoutEditor({
   }, [toast]);
 
   function exDefault(ex: WorkoutExerciseDetail): Input {
-    // Prefill from this session's last set, else from last time's top set.
-    const last = ex.sets[ex.sets.length - 1];
-    if (last) {
-      return {
-        weight: String(last.weight),
-        reps: String(last.reps),
-        warmup: false,
-      };
-    }
-    // A planned session: start from its target weight and the low end of the rep range.
-    if (ex.targetWeight != null || ex.targetReps) {
-      const lo = ex.targetReps ? Number.parseInt(ex.targetReps, 10) : NaN;
-      return {
-        weight: ex.targetWeight != null ? String(ex.targetWeight) : "",
-        reps: Number.isFinite(lo) ? String(lo) : "",
-        warmup: false,
-      };
-    }
-    const prev = lastByExercise[ex.exerciseId]?.sets;
-    const prevLast = prev?.[prev.length - 1];
-    return {
-      weight: prevLast ? String(prevLast.weight) : "",
-      reps: prevLast ? String(prevLast.reps) : "",
-      warmup: false,
-    };
+    return { ...nextSetDefault(ex, lastByExercise[ex.exerciseId]?.sets), warmup: false };
   }
   function getInput(ex: WorkoutExerciseDetail): Input {
     return inputs[ex.workoutExerciseId] ?? exDefault(ex);
@@ -182,11 +158,8 @@ export function WorkoutEditor({
   const [summary, setSummary] = useState<{ minutes: number | null; sets: number; volume: number; planned: number; done: number } | null>(null);
   /** Finish shows the session summary first; it is saved on "Save & finish". */
   function finish() {
-    const planned = workout.exercises.reduce((a, e) => a + (e.targetSets ?? 0), 0);
-    const done = workout.exercises.reduce((a, e) => a + Math.min(e.targetSets ?? 0, e.sets.filter((x) => !x.isWarmup).length), 0);
-    const minutes = workout.startedAt && !workout.garminActivityId ? Math.round((Date.now() - Date.parse(workout.startedAt)) / 60_000) : null;
     navigator.vibrate?.([20, 40, 20]);
-    setSummary({ minutes: minutes != null && minutes < 600 ? minutes : null, sets: workout.totalSets, volume: workout.totalVolume, planned, done });
+    setSummary(sessionSummary(workout, Date.now()));
   }
   function confirmFinish() {
     start(async () => {
@@ -281,17 +254,7 @@ export function WorkoutEditor({
           {workout.exercises.map((ex) => {
             const inp = getInput(ex);
             let workingNo = 0;
-            let bestVal = 0;
-            let bestId = -1;
-            for (const s of ex.sets) {
-              if (!s.isWarmup) {
-                const v = estimate1RM(s.weight, s.reps);
-                if (v > bestVal) {
-                  bestVal = v;
-                  bestId = s.id;
-                }
-              }
-            }
+            const bestId = bestSetId(ex.sets);
             return (
               <Card key={ex.workoutExerciseId} className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
@@ -376,7 +339,7 @@ export function WorkoutEditor({
                             <span className="text-zinc-500"> kg × </span>
                             <span className="font-semibold">{s.reps}</span>
                           </span>
-                          {s.id === bestId && bestVal > 0 && (
+                          {s.id === bestId && (
                             <TrophyIcon className="h-4 w-4 text-zinc-300" />
                           )}
                           {!s.isWarmup && (

@@ -52,7 +52,11 @@ export function NumberStepper({
           onChangeText={setText}
           onEndEditing={() => {
             const n = Number(text.replace(",", "."));
-            if (Number.isFinite(n)) onChange(clamp(n));
+            if (Number.isFinite(n)) {
+              const c = clamp(n);
+              setText(String(c));
+              onChange(c);
+            }
             else setText(String(value));
           }}
           style={{ color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 12, minHeight: 44, minWidth: 72, textAlign: "center", fontSize: 16, fontWeight: "700", backgroundColor: t.page }}
