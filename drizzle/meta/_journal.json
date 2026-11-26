@@ -148,6 +148,13 @@
       "when": 1795689936337,
       "tag": "0020_meal_quality",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1795703913116,
+      "tag": "0021_sloppy_juggernaut",
+      "breakpoints": true
     }
   ]
 }
