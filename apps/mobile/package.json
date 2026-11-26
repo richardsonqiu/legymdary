@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@legymdary/shared": "*",
+    "@react-native-google-signin/google-signin": "^17.0.0",
     "expo": "~58.1.0",
     "expo-build-properties": "~58.0.12",
     "expo-constants": "~58.0.16",
