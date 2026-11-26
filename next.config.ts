@@ -44,6 +44,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Raw TypeScript workspace package.
+  transpilePackages: ["@legymdary/shared"],
   experimental: {
     // Meal photos are downscaled on the client (~100–300 KB) before upload.
     serverActions: { bodySizeLimit: "4mb" },
