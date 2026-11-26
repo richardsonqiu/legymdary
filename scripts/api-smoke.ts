@@ -2,7 +2,7 @@
  * Calls the /api/v1 route handlers directly (no dev server) against a THROWAWAY local SQLite
  * file, with and without a bearer token. Never point DATABASE_URL at a remote database.
  *
- *   npx.cmd tsx --require ./scripts/api-smoke-preload.cjs scripts/api-smoke.ts
+ *   npx.cmd tsx --import ./scripts/api-smoke-preload.mjs scripts/api-smoke.ts
  */
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
