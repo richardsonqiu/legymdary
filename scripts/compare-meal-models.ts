@@ -42,6 +42,8 @@ async function toJpeg(file: string) {
 }
 
 async function child(dir: string) {
+  // stdout carries the JSON result, so send the app's own log lines to stderr.
+  console.info = console.log = (...a: unknown[]) => console.error(...a);
   const { analyzeMealImage } = await import("../lib/food-ai");
   const hints: Record<string, string> = readJson(path.join(dir, "hints.json"));
   const files = fs.readdirSync(dir).filter((f) => IMG.test(f)).sort();
