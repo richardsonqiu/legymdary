@@ -42,20 +42,20 @@ export default function Insights() {
   const q = useInsights(picked);
   const all = useRefreshAll([q]);
   const d = q.data;
+  // The picked day, or the data's day while following the latest. Keeps the navigator on screen while a day loads or fails.
+  const shown = picked ?? d?.date ?? null;
   const bandColor = d?.readiness ? (d.readiness.band === "push" ? tones.good : d.readiness.band === "easy" ? tones.warn : tones.info) : tones.info;
 
   return (
     <Screen title="Insights" eyebrow="Recovery" onRefresh={all.refresh} refreshing={all.refreshing}>
       {q.hasData ? <StaleBanner error={q.error} onRetry={() => void q.refresh()} /> : null}
-      {d ? (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small onPress={() => setPicked(addDaysStr(d.date, -1))} />
-          <Pressable accessibilityRole="button" accessibilityLabel="Jump to the latest day" onPress={() => setPicked(null)} style={{ minHeight: 44, justifyContent: "center" }}>
-            <Text variant="heading">{formatPretty(d.date)}</Text>
-          </Pressable>
-          <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={d.date >= d.latest} onPress={() => setPicked(addDaysStr(d.date, 1) >= d.latest ? null : addDaysStr(d.date, 1))} />
-        </View>
-      ) : null}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small disabled={!shown} onPress={() => shown && setPicked(addDaysStr(shown, -1))} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Jump to the latest day" onPress={() => setPicked(null)} style={{ minHeight: 44, justifyContent: "center" }}>
+          <Text variant="heading">{shown ? formatPretty(shown) : "Latest"}</Text>
+        </Pressable>
+        <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={!shown || (d != null && d.date >= d.latest)} onPress={() => shown && setPicked(addDaysStr(shown, 1) >= (d?.latest ?? "9999") ? null : addDaysStr(shown, 1))} />
+      </View>
 
       {q.loading ? <SkeletonRows count={4} height={96} /> : null}
       <QueryBoundary loading={false} error={q.error} hasData={q.hasData} onRetry={() => void q.refresh()}>
@@ -75,8 +75,8 @@ export default function Insights() {
                   <Text variant="caption" tone="muted">
                     Confidence: {d.readiness.confidence}
                   </Text>
-                  {d.readiness.contributors.map((c) => (
-                    <Row key={c.label} label={c.label} value={String(Math.round(c.score))} sub={c.detail} />
+                  {d.readiness.contributors.map((c, i) => (
+                    <Row key={`${c.label}-${i}`} label={c.label} value={String(Math.round(c.score))} sub={c.detail} />
                   ))}
                 </Card>
               </Section>
@@ -85,8 +85,8 @@ export default function Insights() {
             {d.flags.length > 0 ? (
               <Section title="Heads up">
                 <Card>
-                  {d.flags.map((f) => (
-                    <Text key={f.text} tone={f.level === "warn" ? "warn" : "default"}>
+                  {d.flags.map((f, i) => (
+                    <Text key={`${f.text}-${i}`} tone={f.level === "warn" ? "warn" : "default"}>
                       {f.text}
                     </Text>
                   ))}
@@ -133,8 +133,8 @@ export default function Insights() {
             {d.patterns.length > 0 ? (
               <Section title="Your patterns">
                 <Card>
-                  {d.patterns.map((p) => (
-                    <Text key={p}>{p}</Text>
+                  {d.patterns.map((p, i) => (
+                    <Text key={`${p}-${i}`}>{p}</Text>
                   ))}
                 </Card>
               </Section>

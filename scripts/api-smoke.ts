@@ -66,7 +66,7 @@ async function main() {
     ["workouts/[id]/exercises", "POST"], ["workout-exercises/[id]", "DELETE"], ["workout-exercises/[id]/sets", "POST"],
     ["sets/[id]", "DELETE"], ["exercises", "GET"], ["exercises", "POST"], ["templates", "GET"],
     ["body-stats", "GET"], ["body-stats", "POST"], ["body-stats/[id]", "DELETE"], ["plan", "GET"], ["plan/goals", "PUT"],
-    ["plan/pace", "PUT"], ["plan/mode", "PUT"], ["stats/consistency", "GET"], ["health/batch", "POST"], ["health/data", "DELETE"],
+    ["plan/pace", "PUT"], ["plan/mode", "PUT"], ["stats/consistency", "GET"], ["insights", "GET"], ["health/batch", "POST"], ["health/data", "DELETE"],
   ];
   for (const [mod, method] of routes) {
     for (const t of [null, "not-a-real-token"]) {
@@ -167,6 +167,10 @@ async function main() {
   check("GET today", r.status === 200 && typeof r.json.eaten.calories === "number" && Array.isArray(r.json.logged), r);
   r = await call("stats/consistency", "GET");
   check("GET consistency", r.status === 200 && Array.isArray(r.json.days) && "current" in r.json.foodStreak, r);
+  r = await call("insights", "GET");
+  check("GET insights", r.status === 200 && typeof r.json.date === "string" && Array.isArray(r.json.series) && "yesterday" in r.json, r);
+  r = await call("insights", "GET", { query: "?date=2999-01-01" });
+  check("GET insights future date is 400", r.status === 400, r);
 
   // Health
   const wk = (id: string) => ({ id, date: day, startLocal: `${day} 07:00:00`, type: "running", name: "Run", durationSec: 1800, kcal: 300, distanceM: 5000, avgHr: 150, maxHr: 170, minHr: 100, zonesSec: null });

@@ -62,10 +62,10 @@ export default function Progress() {
       <Section title="Weigh-ins">
         {body.loading ? (
           <SkeletonRows count={3} />
-        ) : stats.length === 0 ? (
-          <EmptyState title="No entries yet" description="Log your first weigh-in above." />
         ) : (
-          <WeighInList stats={stats} />
+          <QueryBoundary loading={false} error={body.error} hasData={body.hasData} onRetry={() => void body.refresh()}>
+            {stats.length === 0 ? <EmptyState title="No entries yet" description="Log your first weigh-in above." /> : <WeighInList stats={stats} />}
+          </QueryBoundary>
         )}
       </Section>
     </Screen>
