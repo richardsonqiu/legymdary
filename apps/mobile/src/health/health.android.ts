@@ -32,12 +32,32 @@ export const isAvailable: HealthApi["isAvailable"] = async () => {
   }
 };
 
+/** Record types the user has allowed us to read. */
+async function grantedTypes(m: HC): Promise<Set<string>> {
+  const granted = await m.getGrantedPermissions();
+  return new Set(granted.filter((p) => p.accessType === "read").map((p) => p.recordType));
+}
+
 export const getPermissionState: HealthApi["getPermissionState"] = async () => {
+  const m = hc();
+  if (!m) return "unavailable";
+  try {
+    // Health Connect is missing (Android 13 and older) or needs an update: send the user to the store.
+    if ((await m.getSdkStatus()) !== m.SdkAvailabilityStatus.SDK_AVAILABLE) return "needs_install";
+  } catch {
+    return "unavailable";
+  }
   if (!(await isAvailable())) return "unavailable";
-  const granted = await hc()!.getGrantedPermissions();
-  return granted.some((p) => p.accessType === "read") ? "granted" : "needed";
+  return (await grantedTypes(m)).size > 0 ? "granted" : "needed";
 };
 
+/** Requested types that are switched off in Health Connect (empty when all 9 are allowed). */
+export const missingPermissions: HealthApi["missingPermissions"] = async () => {
+  const m = hc();
+  if (!m || !(await isAvailable())) return [];
+  const have = await grantedTypes(m);
+  return RECORDS.filter((r) => !have.has(r));
+};
 export const requestPermissions: HealthApi["requestPermissions"] = async () => {
   if (!(await isAvailable())) return false;
   const granted = await hc()!.requestPermission(PERMISSIONS);
@@ -81,17 +101,20 @@ export const read: HealthApi["read"] = async (from, to) => {
     return groups.map((g) => ({ start: g.startTime, value: pick(g.result as never) })).filter((s) => Number.isFinite(s.value) && s.value > 0);
   };
   const out: RawHealth = emptyRawHealth();
+  // A type switched off in Health Connect is skipped (empty) instead of failing the whole sync.
+  const have = await grantedTypes(m);
+  const ifGranted = <T,>(type: (typeof RECORDS)[number], f: () => Promise<T[]>): Promise<T[]> => (have.has(type) ? f() : Promise.resolve([]));
   // Nights start the evening before `from`, so the first night is whole.
   const sleepRange: Range = { ...range, startTime: new Date(start.getTime() - 18 * 3600_000).toISOString() };
   const [steps, active, basal, rhr, sleep, weight, fat, sessions] = await Promise.all([
-    perDay("Steps", (r: { COUNT_TOTAL: number }) => r.COUNT_TOTAL),
-    perDay("ActiveCaloriesBurned", (r: { ACTIVE_CALORIES_TOTAL: { inKilocalories: number } }) => r.ACTIVE_CALORIES_TOTAL.inKilocalories),
-    perDay("BasalMetabolicRate", (r: { BASAL_CALORIES_TOTAL: { inKilocalories: number } }) => r.BASAL_CALORIES_TOTAL.inKilocalories),
-    all(m, "RestingHeartRate", range),
-    all(m, "SleepSession", sleepRange),
-    all(m, "Weight", range),
-    all(m, "BodyFat", range),
-    all(m, "ExerciseSession", range),
+    ifGranted("Steps", () => perDay("Steps", (r: { COUNT_TOTAL: number }) => r.COUNT_TOTAL)),
+    ifGranted("ActiveCaloriesBurned", () => perDay("ActiveCaloriesBurned", (r: { ACTIVE_CALORIES_TOTAL: { inKilocalories: number } }) => r.ACTIVE_CALORIES_TOTAL.inKilocalories)),
+    ifGranted("BasalMetabolicRate", () => perDay("BasalMetabolicRate", (r: { BASAL_CALORIES_TOTAL: { inKilocalories: number } }) => r.BASAL_CALORIES_TOTAL.inKilocalories)),
+    ifGranted("RestingHeartRate", () => all(m, "RestingHeartRate", range)),
+    ifGranted("SleepSession", () => all(m, "SleepSession", sleepRange)),
+    ifGranted("Weight", () => all(m, "Weight", range)),
+    ifGranted("BodyFat", () => all(m, "BodyFat", range)),
+    ifGranted("ExerciseSession", () => all(m, "ExerciseSession", range)),
   ]);
   out.steps = steps;
   out.activeKcal = active;
@@ -106,11 +129,12 @@ export const read: HealthApi["read"] = async (from, to) => {
   );
   const names = Object.fromEntries(Object.entries(m.ExerciseType).map(([name, n]) => [n, name]));
   const energyAndDistance = async (startTime: string, endTime: string) => {
+    const noKcal = !have.has("ActiveCaloriesBurned");
     const timeRangeFilter = { operator: "between", startTime, endTime } as const;
     // A failed lookup leaves the number empty; the workout itself is still synced.
     const [kcal, dist] = await Promise.all([
-      m.aggregateRecord({ recordType: "ActiveCaloriesBurned", timeRangeFilter }).then((r) => r.ACTIVE_CALORIES_TOTAL.inKilocalories, () => null),
-      m.aggregateRecord({ recordType: "Distance", timeRangeFilter }).then((r) => r.DISTANCE.inMeters, () => null),
+      (noKcal ? Promise.reject(new Error("not allowed")) : m.aggregateRecord({ recordType: "ActiveCaloriesBurned", timeRangeFilter })).then((r) => r.ACTIVE_CALORIES_TOTAL.inKilocalories, () => null),
+      (have.has("Distance") ? m.aggregateRecord({ recordType: "Distance", timeRangeFilter }) : Promise.reject(new Error("not allowed"))).then((r) => r.DISTANCE.inMeters, () => null),
     ]);
     return { kcal: kcal || null, distanceM: dist || null };
   };
@@ -125,5 +149,5 @@ export const read: HealthApi["read"] = async (from, to) => {
 };
 
 export const sync: HealthApi["sync"] = makeSync("health_connect", read);
-export const healthApi = { isAvailable, getPermissionState, requestPermissions, read, sync } satisfies HealthApi;
+export const healthApi = { isAvailable, missingPermissions, getPermissionState, requestPermissions, read, sync } satisfies HealthApi;
 export type { PermissionState, SyncResult } from "./types";

@@ -29,27 +29,26 @@ export function syncWindow(lastSync: string | null, now = new Date()): { from: s
   return { from: from < earliest ? earliest : from, to };
 }
 
-/** Builds `sync` for one platform from its `read`. The cursor moves only after every chunk was accepted. */
+const isEmpty = (r: RawHealth) => Object.values(r).every((list) => list.length === 0);
+
+/**
+ * Builds `sync` for one platform from its `read`. The cursor moves only after every chunk was accepted,
+ * and not at all when the read returned nothing (denied reads look empty, and moving on would skip that history).
+ */
 export function makeSync(source: HealthSource, read: (from: string, to: string) => Promise<RawHealth>) {
-  return async (api: Pick<ApiClient, "syncHealthBatch">, userId: string): Promise<SyncResult> => {
+  return async (api: Pick<ApiClient, "syncHealthBatch">, userId: string, opts: { full?: boolean } = {}): Promise<SyncResult> => {
     const started = new Date();
-    const { from, to } = syncWindow(await getLastSync(userId, source), started);
-    const requests = buildBatchRequests(await read(from, to), source, from, to);
+    const { from, to } = syncWindow(opts.full ? null : await getLastSync(userId, source), started);
+    const raw = await read(from, to);
+    const counts = { from, to, requests: 0, empty: false, days: 0, sleep: 0, workouts: 0, body: 0 };
+    if (isEmpty(raw)) return { ...counts, empty: true };
+    const requests = buildBatchRequests(raw, source, from, to);
     for (const r of requests) await api.syncHealthBatch(r);
     await setLastSync(userId, source, started.toISOString());
     const count = (pick: (r: (typeof requests)[number]) => number) => requests.reduce((n, r) => n + pick(r), 0);
-    return {
-      from,
-      to,
-      requests: requests.length,
-      days: count((r) => r.days.length),
-      sleep: count((r) => r.sleep.length),
-      workouts: count((r) => r.workouts.length),
-      body: count((r) => r.body.length),
-    };
+    return { ...counts, requests: requests.length, days: count((r) => r.days.length), sleep: count((r) => r.sleep.length), workouts: count((r) => r.workouts.length), body: count((r) => r.body.length) };
   };
 }
-
 /** Marks that the iOS permission sheet was shown (HealthKit cannot be asked what was allowed). */
 export const iosAskedKey = "legymdary.health.ios.asked";
 

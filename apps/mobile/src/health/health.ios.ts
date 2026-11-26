@@ -53,6 +53,9 @@ const samples = (list: Value[] | undefined, scale = 1): HealthSample[] => (list 
 const STAGE: Record<string, SleepStageName> = { INBED: "inBed", ASLEEP: "asleep", UNSPECIFIED: "asleep", AWAKE: "awake", CORE: "light", DEEP: "deep", REM: "rem" };
 const MILE_M = 1609.344;
 
+// HealthKit never reveals which reads were denied.
+export const missingPermissions: HealthApi["missingPermissions"] = async () => [];
+
 export const read: HealthApi["read"] = async (from, to) => {
   const k = kit();
   if (!k) throw new Error("Apple Health is not available in this build.");
@@ -95,5 +98,5 @@ export const read: HealthApi["read"] = async (from, to) => {
 };
 
 export const sync: HealthApi["sync"] = makeSync("apple", read);
-export const healthApi = { isAvailable, getPermissionState, requestPermissions, read, sync } satisfies HealthApi;
+export const healthApi = { isAvailable, missingPermissions, getPermissionState, requestPermissions, read, sync } satisfies HealthApi;
 export type { PermissionState, SyncResult } from "./types";

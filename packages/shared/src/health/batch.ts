@@ -88,16 +88,26 @@ function sleepNights(segments: RawSleepSegment[], from: string, to: string): AhS
     .sort((x, y) => x.a - y.a);
   const nights: (typeof segs)[] = [];
   let latest = -Infinity;
+  let cur: typeof segs = [];
   for (const s of segs) {
-    if (!nights.length || s.a - latest > NIGHT_GAP_MS) nights.push([]);
-    nights[nights.length - 1].push(s);
+    if (cur.length && s.a - latest > NIGHT_GAP_MS) {
+      nights.push(cur);
+      cur = [];
+    }
+    cur.push(s);
     latest = Math.max(latest, s.b);
   }
-  const out: AhSleep[] = [];
+  if (cur.length) nights.push(cur);
+  // A night and a nap that end on the same day make ONE row: the server keys sleep by date.
+  const merged = new Map<string, typeof segs>();
   for (const night of nights) {
+    const date = ymd(new Date(Math.max(...night.map((s) => s.b))));
+    merged.set(date, [...(merged.get(date) ?? []), ...night]);
+  }
+  const out: AhSleep[] = [];
+  for (const [date, night] of merged) {
     const start = new Date(Math.min(...night.map((s) => s.a)));
     const end = new Date(Math.max(...night.map((s) => s.b)));
-    const date = ymd(end);
     if (date < from || date > to) continue;
     const of = (...stages: SleepStageName[]) => unionSec(night.filter((s) => stages.includes(s.stage)).map((s) => [s.a, s.b]));
     const hasStages = night.some((s) => s.stage === "light" || s.stage === "deep" || s.stage === "rem");
@@ -109,7 +119,7 @@ function sleepNights(segments: RawSleepSegment[], from: string, to: string): AhS
       endLocal: localTs(end),
       startUtc: start.toISOString(),
       asleepSec: round(asleepSec),
-      inBedSec: round(Math.max(of("inBed"), (end.getTime() - start.getTime()) / 1000)),
+      inBedSec: round(Math.max(of("inBed"), of("inBed", "asleep", "awake", "light", "deep", "rem"))),
       deepSec: hasStages ? round(of("deep")) : null,
       remSec: hasStages ? round(of("rem")) : null,
       lightSec: hasStages ? round(of("light")) : null,
@@ -214,7 +224,8 @@ export function buildBatchRequests(raw: RawHealth, source: HealthSource, from: s
       body: batch.body.slice(i * CHUNK, (i + 1) * CHUNK),
       workouts: oneRange ? (last ? workouts : []) : workouts.slice(i * MAX, (i + 1) * MAX),
     };
-    if (oneRange && last) req.workoutRange = { from, to };
+    // No workouts read (denied or none): never ask the server to delete stored ones.
+    if (oneRange && last && workouts.length > 0) req.workoutRange = { from, to };
     return req;
   });
 }

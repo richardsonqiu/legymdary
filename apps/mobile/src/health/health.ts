@@ -8,10 +8,11 @@ import type { HealthApi } from "./types";
 export const isAvailable: HealthApi["isAvailable"] = async () => false;
 export const getPermissionState: HealthApi["getPermissionState"] = async () => "unavailable";
 export const requestPermissions: HealthApi["requestPermissions"] = async () => false;
+export const missingPermissions: HealthApi["missingPermissions"] = async () => [];
 export const read: HealthApi["read"] = async () => emptyRawHealth();
 export const sync: HealthApi["sync"] = async () => {
   throw new Error("Health sync is not available on this platform.");
 };
 export const healthName = "Health";
-export const healthApi = { isAvailable, getPermissionState, requestPermissions, read, sync } satisfies HealthApi;
+export const healthApi = { isAvailable, missingPermissions, getPermissionState, requestPermissions, read, sync } satisfies HealthApi;
 export type { PermissionState, SyncResult } from "./types";
