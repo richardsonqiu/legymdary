@@ -46,7 +46,7 @@ export function MacroSummary({
               strokeDasharray={c}
               strokeDashoffset={c * (1 - pct)}
               style={{ ["--ring-c" as string]: c }}
-              className={cn("ring-progress", over ? "stroke-amber-400" : "stroke-emerald-400")}
+              className={cn("ring-progress", over ? "stroke-amber-400" : "stroke-teal-300")}
             />
           )}
         </svg>

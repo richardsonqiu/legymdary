@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
+/*
+ * legymdari. editorial theme: Carbon / Citron / Paper.
+ * The neutral scale is still called "zinc" in class names. Every surface,
+ * border and text tone reads it, so dark and light mode only swap these
+ * variables (see [data-theme="light"] below). Accent "teal" is now Citron.
+ */
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* The app's neutral scale is "zinc" in class names; retinted to a deep
-     night-blue so every surface, border and text tone shifts together. */
-  --color-zinc-50: #f5f7fb;
-  --color-zinc-100: #e8ecf4;
-  --color-zinc-200: #d2d9e6;
-  --color-zinc-300: #c2cbdc;
-  --color-zinc-400: #a7b2c7;
-  --color-zinc-500: #8b97ae;
-  --color-zinc-600: #6f7b94;
-  --color-zinc-700: #333d55;
-  --color-zinc-800: #222b40;
-  --color-zinc-900: #131a2b;
-  --color-zinc-950: #0a0f1c;
+  /* Fixed brand colours (never flip). */
+  --color-carbon: #191919;
+  --color-citron: #ded97a;
+  --color-citron-deep: #c9c35c;
+  --color-paper: #f5f5f0;
+
+  /* Dark: warm neutral greys from Carbon up to Paper. */
+  --color-zinc-50: #f5f5f0;
+  --color-zinc-100: #ebebe5;
+  --color-zinc-200: #d9d9d4;
+  --color-zinc-300: #c4c4bf;
+  --color-zinc-400: #a5a5a1;
+  --color-zinc-500: #8b8b87;
+  --color-zinc-600: #6f6f6b;
+  --color-zinc-700: #3e3e3c;
+  --color-zinc-800: #2d2d2b;
+  --color-zinc-900: #222221;
+  --color-zinc-950: #191919;
+
+  /* Accent: Citron. */
+  --color-teal-50: #fbfae8;
+  --color-teal-100: #f3f1cc;
+  --color-teal-200: #e9e5a4;
+  --color-teal-300: #ded97a;
+  --color-teal-400: #cdc75e;
+  --color-teal-500: #b0aa44;
+  --color-teal-600: #8b8633;
+  --color-teal-700: #6b6726;
+
+  --color-page: var(--color-zinc-950);
 }
 
 :root {
   color-scheme: dark;
+}
+
+/* Light: Paper background, white cards, Carbon text. The neutral scale is
+   inverted, white overlays become Carbon overlays, and the pale accent
+   text shades get darker so they stay readable on Paper. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-zinc-50: #191919;
+  --color-zinc-100: #232322;
+  --color-zinc-200: #2f2f2d;
+  --color-zinc-300: #42423f;
+  --color-zinc-400: #585854;
+  --color-zinc-500: #6b6b66;
+  --color-zinc-600: #8a8a85;
+  --color-zinc-700: #d2d2cb;
+  --color-zinc-800: #e4e4de;
+  --color-zinc-900: #ffffff;
+  --color-zinc-950: #f5f5f0;
+  --color-white: #191919;
+
+  --color-teal-50: #3f3c0b;
+  --color-teal-100: #4a470f;
+  --color-teal-200: #575412;
+  --color-teal-300: #6b6716;
+  --color-teal-400: #8a851f;
+  --color-teal-500: #a39d2a;
+
+  --color-sky-50: oklch(39.1% 0.09 240.876);
+  --color-sky-100: oklch(44.3% 0.11 240.79);
+  --color-sky-200: oklch(47% 0.12 241.5);
+  --color-sky-300: oklch(50% 0.134 242.749);
+  --color-sky-400: oklch(58.8% 0.158 241.966);
+  --color-emerald-100: oklch(43.2% 0.095 166.913);
+  --color-emerald-200: oklch(46% 0.105 166);
+  --color-emerald-300: oklch(50.8% 0.118 165.612);
+  --color-emerald-400: oklch(59.6% 0.145 163.225);
+  --color-amber-50: oklch(41.4% 0.112 45.904);
+  --color-amber-100: oklch(47.3% 0.137 46.201);
+  --color-amber-200: oklch(50% 0.15 47.5);
+  --color-amber-300: oklch(55.5% 0.163 48.998);
+  --color-amber-400: oklch(66.6% 0.179 58.318);
+  --color-orange-100: oklch(47% 0.157 37.304);
+  --color-orange-200: oklch(50% 0.17 38);
+  --color-orange-300: oklch(55.3% 0.195 38.402);
+  --color-orange-400: oklch(64.6% 0.222 41.116);
+  --color-violet-100: oklch(43.2% 0.232 292.759);
+  --color-violet-200: oklch(46% 0.25 292.6);
+  --color-violet-300: oklch(49.1% 0.27 292.581);
+  --color-violet-400: oklch(54.1% 0.281 293.009);
+  --color-rose-100: oklch(45.5% 0.188 13.697);
+  --color-rose-200: oklch(48% 0.2 15);
+  --color-rose-300: oklch(51.4% 0.222 16.935);
+  --color-rose-400: oklch(58.6% 0.253 17.585);
 }
 
 html {
@@ -28,16 +104,10 @@ html {
 }
 
 body {
-  background-color: #0a0f1c; /* zinc-950 (night blue) */
-  color: #f5f7fb;
+  background-color: var(--color-page);
+  color: var(--color-zinc-50);
   font-family: var(--font-sans);
-  /* Soft "night sky" atmosphere: teal glow top-left, indigo top-right,
-     fading into deep navy. */
-  background-image:
-    radial-gradient(90% 45% at 10% -5%, rgba(45, 212, 191, 0.13), transparent 70%),
-    radial-gradient(80% 40% at 95% 0%, rgba(99, 102, 241, 0.16), transparent 70%),
-    linear-gradient(180deg, #111a2e 0%, #0a0f1c 45%, #080c17 100%);
-  background-attachment: fixed;
+  transition: background-color 200ms ease;
 }
 
 /* Cleaner number inputs on mobile — no spin buttons. */
@@ -51,22 +121,42 @@ input[type="number"] {
 }
 
 ::selection {
-  background: #f5f7fb;
-  color: #0a0f1c;
+  background: var(--color-citron);
+  color: var(--color-carbon);
 }
 
 /* Slim, monochrome scrollbar. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #333d55 transparent;
+  scrollbar-color: var(--color-zinc-700) transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #333d55;
+  background: var(--color-zinc-700);
   border-radius: 9999px;
+}
+
+/* Editorial wordmark: lowercase with a Citron full stop. */
+.wordmark {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+.wordmark::after {
+  content: ".";
+  color: var(--color-citron);
+}
+:root[data-theme="light"] .wordmark::after {
+  color: var(--color-teal-400);
+}
+
+/* Editorial photo, softened a touch (the source photos are small). */
+.editorial-photo {
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: saturate(0.9) contrast(1.02);
 }
 
 /* Respect the iOS home-indicator safe area for the fixed bottom nav. */
@@ -308,38 +398,50 @@ input[type="number"] {
 /* --- Hero "sky": layered gradients that shift with the score tone --- */
 .hero-sky {
   background:
-    radial-gradient(120% 70% at 50% 110%, rgba(10, 15, 28, 0.95), transparent 60%),
-    radial-gradient(70% 60% at 20% 10%, var(--sky-a, rgba(94, 234, 212, 0.35)), transparent 70%),
-    radial-gradient(70% 60% at 85% 20%, var(--sky-b, rgba(129, 140, 248, 0.35)), transparent 70%),
-    linear-gradient(180deg, #1c2a4a 0%, #121b31 60%, #0d1424 100%);
+    radial-gradient(120% 70% at 50% 110%, color-mix(in srgb, var(--color-page) 95%, transparent), transparent 60%),
+    radial-gradient(70% 60% at 20% 10%, var(--sky-a, rgba(222, 217, 122, 0.3)), transparent 70%),
+    radial-gradient(70% 60% at 85% 20%, var(--sky-b, rgba(165, 165, 161, 0.25)), transparent 70%),
+    var(--color-zinc-900);
 }
 
-/* --- Photo backdrops (dawn landscape) --- */
-/* Top of Home: the photo behind greeting, rings and hero, fading into navy. */
+/* --- Photo backdrops (editorial scenes) --- */
+/* Top of Home: the photo behind greeting and rings, fading into the page.
+   Same photo in both themes; only the overlay colour changes. */
 .home-backdrop {
   background:
     linear-gradient(
       180deg,
-      rgba(10, 15, 28, 0.55) 0%,
-      rgba(10, 15, 28, 0.3) 30%,
-      rgba(10, 15, 28, 0.45) 60%,
-      rgba(10, 15, 28, 0.85) 82%,
-      #0a0f1c 100%
+      color-mix(in srgb, var(--color-page) 35%, transparent) 0%,
+      color-mix(in srgb, var(--color-page) 20%, transparent) 25%,
+      color-mix(in srgb, var(--color-page) 55%, transparent) 50%,
+      color-mix(in srgb, var(--color-page) 90%, transparent) 75%,
+      var(--color-page) 100%
     ),
-    var(--scene, url("/bg-dawn.webp")) var(--scene-pos, center 22%) / cover no-repeat;
+    var(--scene, url("/editorial/sunrise.webp")) var(--scene-pos, center 40%) / cover no-repeat;
 }
 /* A card with the photo inside (used where there's no page backdrop). */
 .hero-photo {
   background:
     radial-gradient(70% 55% at 50% 45%, var(--sky-a, transparent), transparent 75%),
-    linear-gradient(180deg, rgba(10, 15, 28, 0.35) 0%, rgba(10, 15, 28, 0.45) 50%, rgba(10, 15, 28, 0.88) 100%),
-    var(--scene-hero, url("/bg-dawn-hero.webp")) center 35% / cover no-repeat;
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-page) 25%, transparent) 0%,
+      color-mix(in srgb, var(--color-page) 45%, transparent) 50%,
+      color-mix(in srgb, var(--color-page) 88%, transparent) 100%
+    ),
+    var(--scene-hero, url("/editorial/sunrise.webp")) center 40% / cover no-repeat;
 }
-/* Frosted glass over a photo. */
+/* Frosted panel over a photo. */
 .glass {
-  background: rgba(10, 15, 28, 0.38);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  backdrop-filter: blur(14px) saturate(1.2);
+  background: color-mix(in srgb, var(--color-zinc-900) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+}
+/* Banner photo behind page titles: darker at the bottom for the title. */
+.banner-photo {
+  background:
+    linear-gradient(180deg, rgba(25, 25, 25, 0) 20%, rgba(25, 25, 25, 0.78) 100%),
+    var(--banner) var(--banner-pos, center) / cover no-repeat;
 }
 
 /* --- Recap stories --- */

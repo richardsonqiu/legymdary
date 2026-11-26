@@ -235,7 +235,7 @@ function Mini({ label, value }: { label: string; value: string }) {
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3">
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-950">{n}</div>
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-citron text-xs font-bold text-carbon">{n}</div>
       <div className="min-w-0 flex-1 space-y-2">
         <div className="text-sm font-semibold uppercase tracking-wide text-zinc-400">{title}</div>
         {children}

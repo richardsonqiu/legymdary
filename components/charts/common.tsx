@@ -4,23 +4,25 @@ import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export const CHART = {
-  line: "#f5f7fb", // zinc-50
-  lineSoft: "#a7b2c7", // zinc-400
-  grid: "#222b40", // zinc-800
-  axis: "#8b97ae", // zinc-500
-  bar: "#c2cbdc", // zinc-300
+  // Theme variables, so charts follow light / dark mode.
+  line: "var(--color-zinc-50)",
+  lineSoft: "var(--color-zinc-400)",
+  grid: "var(--color-zinc-800)",
+  axis: "var(--color-zinc-500)",
+  bar: "var(--color-zinc-300)",
+  accent: "var(--color-teal-300)",
 };
 
 export const tooltipStyle = {
-  background: "#131a2b",
-  border: "1px solid #333d55",
+  background: "var(--color-zinc-900)",
+  border: "1px solid var(--color-zinc-700)",
   borderRadius: 10,
-  color: "#f5f7fb",
+  color: "var(--color-zinc-50)",
   fontSize: 12,
   padding: "6px 10px",
 };
 
-export const tooltipLabelStyle = { color: "#a7b2c7", marginBottom: 2 };
+export const tooltipLabelStyle = { color: "var(--color-zinc-400)", marginBottom: 2 };
 
 const emptySubscribe = () => () => {};
 
@@ -78,7 +80,7 @@ export function Segmented<T extends string | number>({
           className={cn(
             "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
             value === o.value
-              ? "bg-zinc-100 text-zinc-950"
+              ? "bg-citron text-carbon"
               : "text-zinc-400 hover:text-zinc-200",
           )}
         >

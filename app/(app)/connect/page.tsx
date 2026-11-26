@@ -67,7 +67,7 @@ export default async function ConnectPage() {
 
   return (
     <PageTransition className="space-y-7">
-      <PageHeader title="Connections" subtitle="Bring in data from your watch, ring, scale or a spreadsheet" />
+      <PageHeader image="wall" title="Connections" subtitle="Bring in data from your watch, ring, scale or a spreadsheet" />
 
       <section>
         <SectionTitle>Watch and ring</SectionTitle>

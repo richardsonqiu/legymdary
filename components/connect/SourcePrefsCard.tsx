@@ -64,7 +64,7 @@ export function SourcePrefsCard({ prefs, devices }: { prefs: Prefs; devices: Dev
                   onClick={() => current !== o && pick(cat, o)}
                   className={cn(
                     "press min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-xs font-medium transition-colors",
-                    current === o ? "bg-zinc-100 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",
+                    current === o ? "bg-citron text-carbon" : "text-zinc-400 hover:text-zinc-200",
                   )}
                 >
                   {o === "auto" ? "Auto" : DEVICE_LABEL[o]}

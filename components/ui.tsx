@@ -11,7 +11,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-3xl border border-white/[0.07] bg-white/[0.035] p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]",
+        "rounded-3xl border border-zinc-800/70 bg-zinc-900 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
         className,
       )}
       {...props}
@@ -21,19 +21,51 @@ export function Card({
   );
 }
 
+/** Editorial photos in /public/editorial used behind page titles. */
+export type BannerImage =
+  | "barbell" | "plates" | "kettlebells" | "pullup" | "prep" | "rack"
+  | "salmon" | "bowl" | "oats" | "blueberry" | "coffee"
+  | "runner" | "ridge" | "track" | "city" | "stack" | "shadows"
+  | "sleep" | "tea" | "rain" | "linen" | "wall"
+  | "sunrise" | "mountains" | "ocean" | "evening" | "breath";
+
 export function PageHeader({
   title,
   subtitle,
   action,
+  image,
+  imagePosition,
+  eyebrow,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  /** Optional editorial photo banner behind the title. */
+  image?: BannerImage;
+  imagePosition?: string;
+  /** Small label above the title. */
+  eyebrow?: string;
 }) {
+  if (image) {
+    return (
+      <header
+        className="banner-photo editorial-photo relative mb-5 flex min-h-[148px] items-end justify-between gap-3 overflow-hidden rounded-[28px] px-5 pb-4 pt-10"
+        style={{ ["--banner" as string]: `url("/editorial/${image}.webp")`, ["--banner-pos" as string]: imagePosition ?? "center" }}
+      >
+        <div className="min-w-0">
+          {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-paper/75">{eyebrow}</p>}
+          <h1 className="truncate text-[28px] font-semibold leading-tight tracking-tight text-paper">{title}</h1>
+          {subtitle && <p className="mt-0.5 text-sm text-paper/80">{subtitle}</p>}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </header>
+    );
+  }
   return (
     <header className="mb-5 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">
+        {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{eyebrow}</p>}
+        <h1 className="truncate text-[28px] font-semibold leading-tight tracking-tight">
           {title}
         </h1>
         {subtitle && <p className="mt-0.5 text-sm text-zinc-400">{subtitle}</p>}
@@ -68,7 +100,7 @@ export function SectionTitle({
 
 const buttonVariants = {
   primary:
-    "bg-zinc-50 text-zinc-950 hover:bg-white active:bg-zinc-200 shadow-sm",
+    "bg-citron text-carbon font-semibold hover:bg-citron-deep active:bg-citron-deep",
   secondary:
     "border border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800 active:bg-zinc-800",
   ghost: "text-zinc-300 hover:bg-zinc-800/70 active:bg-zinc-800",
@@ -77,10 +109,10 @@ const buttonVariants = {
 } as const;
 
 const buttonSizes = {
-  sm: "h-9 px-3 text-sm rounded-lg",
-  md: "h-11 px-4 text-sm rounded-xl",
-  lg: "h-12 px-5 text-base rounded-xl",
-  icon: "h-10 w-10 rounded-xl",
+  sm: "h-9 px-3.5 text-sm rounded-full",
+  md: "h-11 px-5 text-sm rounded-full",
+  lg: "h-12 px-6 text-base rounded-full",
+  icon: "h-10 w-10 rounded-full",
 } as const;
 
 export function buttonClass(
@@ -114,7 +146,7 @@ export function Button({
 }
 
 export const inputClass =
-  "h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950/60 px-3.5 text-base text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors focus:border-zinc-500 focus:ring-2 focus:ring-zinc-700/40";
+  "h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950/60 px-3.5 text-base text-zinc-100 placeholder:text-zinc-600 outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-300/25";
 
 export function Field({
   label,
@@ -194,7 +226,7 @@ export function Stat({
   icon?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+    <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900 p-4">
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-zinc-500">
         {icon}
         {label}

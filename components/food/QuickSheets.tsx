@@ -110,7 +110,7 @@ export function ConfirmAddSheet({
                 aria-pressed={type === t}
                 className={cn(
                   "h-10 rounded-xl text-sm font-medium capitalize transition-colors",
-                  type === t ? "bg-zinc-100 text-zinc-950" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800",
+                  type === t ? "bg-citron text-carbon" : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800",
                 )}
               >
                 {t}

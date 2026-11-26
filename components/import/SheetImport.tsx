@@ -128,7 +128,7 @@ export function SheetImport({ library, past }: { library: string[]; past: PastIm
           <a
             href="/api/import/template"
             download
-            className="press flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-zinc-100 text-sm font-semibold text-zinc-950 hover:bg-white"
+            className="press flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-citron text-sm font-semibold text-carbon hover:bg-citron-deep"
           >
             <DownloadIcon className="h-4 w-4" /> Download Excel template (.xlsx)
           </a>

@@ -9,10 +9,10 @@ export function toneFor(score: number | null): Tone {
   return score >= 75 ? "great" : score >= 50 ? "good" : "low";
 }
 const STROKE: Record<Tone, string> = {
-  great: "#5eead4", // teal-300
-  good: "#7dd3fc", // sky-300
-  low: "#fcd34d", // amber-300
-  none: "#333d55",
+  great: "var(--color-teal-300)", // citron
+  good: "var(--color-zinc-300)",
+  low: "var(--color-amber-300)",
+  none: "var(--color-zinc-700)",
 };
 export const toneWord = (score: number | null) =>
   score == null ? "No data" : score >= 85 ? "Optimal" : score >= 70 ? "Good" : score >= 50 ? "Fair" : "Pay attention";
@@ -41,7 +41,7 @@ export function ScoreRing({
     <Link href={href} className="press flex min-w-0 flex-col items-center gap-1.5">
       <span className="relative block h-[60px] w-[60px]">
         <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
-          <circle cx="32" cy="32" r={r} fill="rgba(10,15,28,0.25)" stroke="rgba(255,255,255,0.14)" strokeWidth="4" />
+          <circle cx="32" cy="32" r={r} fill="color-mix(in srgb, var(--color-zinc-950) 35%, transparent)" stroke="color-mix(in srgb, var(--color-white) 14%, transparent)" strokeWidth="4" />
           <circle
             cx="32"
             cy="32"
@@ -87,11 +87,11 @@ export function ArcGauge({ value, size = 220, className }: { value: number; size
     <svg viewBox="0 0 200 170" width={size} height={(size * 170) / 200} className={cn("overflow-visible", className)}>
       <defs>
         <linearGradient id="arc-grad" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#7dd3fc" />
+          <stop offset="0%" stopColor="var(--color-zinc-400)" />
           <stop offset="100%" stopColor={STROKE[tone]} />
         </linearGradient>
       </defs>
-      <path d={d} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="6" strokeLinecap="round" />
+      <path d={d} fill="none" stroke="color-mix(in srgb, var(--color-white) 12%, transparent)" strokeWidth="6" strokeLinecap="round" />
       <path
         d={d}
         fill="none"
@@ -103,7 +103,7 @@ export function ArcGauge({ value, size = 220, className }: { value: number; size
         className="score-ring-arc"
         style={{ ["--ring-c" as string]: `${arcLen}` }}
       />
-      <circle cx={kx} cy={ky} r="7" fill="#f5f7fb" className="animate-fade-in" />
+      <circle cx={kx} cy={ky} r="7" fill="var(--color-zinc-50)" className="animate-fade-in" />
     </svg>
   );
 }

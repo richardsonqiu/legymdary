@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowUpIcon, BoltIcon, CalendarIcon, DumbbellIcon, InfoIcon } from "@/components/icons";
+import { ArrowUpIcon, BoltIcon, CalendarIcon, DumbbellIcon, InfoIcon, PlayIcon } from "@/components/icons";
 import { Button, Card } from "@/components/ui";
 import { setTrainingDays, startRecommendedWorkout } from "@/lib/actions";
 import type { Recommendation } from "@/lib/training/program";
@@ -33,28 +33,39 @@ export function RecommendedWorkout({ rec }: { rec: Recommendation }) {
   }
 
   return (
-    <Card className="space-y-4">
-      <div className="flex items-start gap-3">
-        <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl", rec.lighter ? "bg-amber-400/15 text-amber-200" : "bg-teal-300/15 text-teal-200")}>
-          <DumbbellIcon className="h-6 w-6" />
-        </span>
+    <Card className="space-y-4 overflow-hidden p-0">
+      <div
+        className="banner-photo editorial-photo relative flex min-h-[150px] items-end gap-3 px-4 pb-4 pt-10"
+        style={{ ["--banner" as string]: `url("/editorial/${rec.lighter ? "prep" : rec.planKey === "legs" || rec.planKey === "lower" ? "kettlebells" : "barbell"}.webp")`, ["--banner-pos" as string]: "center 45%" }}
+      >
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] uppercase tracking-wide text-zinc-500">Today&apos;s workout</div>
-          <div className="text-xl font-semibold leading-tight">{rec.title}</div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
-            <span>{rec.exercises.length} exercises</span>
-            <span>about {rec.minutes} min</span>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-paper/75">Today&apos;s workout</div>
+          <div className="text-2xl font-semibold leading-tight tracking-tight text-paper">{rec.title}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-paper/80">
+            <span className="flex items-center gap-1">
+              <DumbbellIcon className="h-3.5 w-3.5" /> {rec.exercises.length} exercises
+            </span>
+            <span>{rec.minutes} min</span>
             {rec.lighter && (
-              <span className="flex items-center gap-1 text-amber-200">
+              <span className="flex items-center gap-1 text-[#fde68a]">
                 <BoltIcon className="h-3.5 w-3.5" /> lighter day
               </span>
             )}
           </div>
         </div>
-        <button onClick={() => setShowWhy((v) => !v)} aria-expanded={showWhy} aria-label="Why this workout" className="rounded-full p-1.5 text-zinc-400 hover:bg-white/10">
+        <button
+          onClick={go}
+          disabled={pending}
+          aria-label={`Start ${rec.title}`}
+          className="press flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-citron text-carbon shadow-lg disabled:opacity-60"
+        >
+          <PlayIcon className="ml-0.5 h-6 w-6" />
+        </button>
+        <button onClick={() => setShowWhy((v) => !v)} aria-expanded={showWhy} aria-label="Why this workout" className="absolute right-3 top-3 rounded-full bg-black/30 p-1.5 text-paper/90 backdrop-blur hover:bg-black/40">
           <InfoIcon className="h-4 w-4" />
         </button>
       </div>
+      <div className="space-y-4 px-4 pb-4">
 
       {showWhy && (
         <ul className="space-y-1 rounded-xl bg-white/[0.04] px-3 py-2 text-xs text-zinc-300">
@@ -110,13 +121,14 @@ export function RecommendedWorkout({ rec }: { rec: Recommendation }) {
               onClick={() => rec.days !== n && days(n)}
               className={cn(
                 "press h-8 flex-1 rounded-lg text-xs font-medium tabular-nums",
-                rec.days === n ? "bg-zinc-100 text-zinc-950" : "bg-white/[0.05] text-zinc-300 hover:bg-white/[0.08]",
+                rec.days === n ? "bg-citron text-carbon" : "bg-white/[0.05] text-zinc-300 hover:bg-white/[0.08]",
               )}
             >
               {n}
             </button>
           ))}
         </div>
+      </div>
       </div>
     </Card>
   );

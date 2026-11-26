@@ -43,7 +43,7 @@ function seen(n: Nudge): boolean {
 const noop = () => () => {};
 
 function Confetti() {
-  const colors = ["#5eead4", "#fbbf24", "#f472b6", "#93c5fd", "#a7f3d0", "#fdba74"];
+  const colors = ["#ded97a", "#fbbf24", "#f472b6", "#93c5fd", "#a7f3d0", "#fdba74"];
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 h-56 overflow-hidden" aria-hidden="true">
       {Array.from({ length: 28 }, (_, i) => (
@@ -129,7 +129,7 @@ export function NudgePopup({ nudge }: { nudge: Nudge | null }) {
             {nudge.kind === "burn" && (
               <>
                 <Badge className="bg-gradient-to-br from-orange-400 to-rose-500">
-                  <FlameIcon className="h-9 w-9 text-white" />
+                  <FlameIcon className="h-9 w-9 text-paper" />
                 </Badge>
                 <div>
                   <div className="text-sm font-medium uppercase tracking-wider text-orange-200">Big burn day</div>
@@ -164,7 +164,7 @@ export function NudgePopup({ nudge }: { nudge: Nudge | null }) {
                     </button>
                   </div>
                 ) : (
-                  <button onClick={close} className="press w-full rounded-2xl bg-zinc-100 py-3 text-sm font-semibold text-zinc-950">
+                  <button onClick={close} className="press w-full rounded-2xl bg-citron py-3 text-sm font-semibold text-carbon">
                     Nice!
                   </button>
                 )}
@@ -174,7 +174,7 @@ export function NudgePopup({ nudge }: { nudge: Nudge | null }) {
             {nudge.kind === "onTrack" && (
               <>
                 <Badge className="bg-gradient-to-br from-emerald-400 to-teal-500">
-                  <TargetIcon className="h-9 w-9 text-white" />
+                  <TargetIcon className="h-9 w-9 text-paper" />
                 </Badge>
                 <div>
                   <div className="text-sm font-medium uppercase tracking-wider text-emerald-200">Right direction</div>
@@ -185,7 +185,7 @@ export function NudgePopup({ nudge }: { nudge: Nudge | null }) {
                   <Stat icon={<BarsIcon className="h-4 w-4 text-sky-300" />} value={nudge.kgChange != null ? `${nudge.kgChange > 0 ? "+" : ""}${nudge.kgChange} kg` : "–"} label="per week" />
                   <Stat icon={<TrophyIcon className="h-4 w-4 text-amber-300" />} value={String(nudge.streak)} label={nudge.streak === 1 ? "day on target" : "days on target"} />
                 </div>
-                <button onClick={close} className="press w-full rounded-2xl bg-zinc-100 py-3 text-sm font-semibold text-zinc-950">
+                <button onClick={close} className="press w-full rounded-2xl bg-citron py-3 text-sm font-semibold text-carbon">
                   Keep going
                 </button>
               </>
@@ -194,7 +194,7 @@ export function NudgePopup({ nudge }: { nudge: Nudge | null }) {
             {nudge.kind === "offTrack" && (
               <>
                 <Badge className="bg-gradient-to-br from-amber-400 to-orange-500">
-                  <TargetIcon className="h-9 w-9 text-white" />
+                  <TargetIcon className="h-9 w-9 text-paper" />
                 </Badge>
                 <div>
                   <div className="text-sm font-medium uppercase tracking-wider text-amber-200">Heads up</div>
@@ -229,7 +229,7 @@ export function NudgePopup({ nudge }: { nudge: Nudge | null }) {
                   <Link href="/stats#balance" onClick={close} className="press rounded-2xl border border-white/10 py-3 text-sm font-semibold text-zinc-100">
                     See my week
                   </Link>
-                  <button onClick={close} className="press rounded-2xl bg-zinc-100 py-3 text-sm font-semibold text-zinc-950">
+                  <button onClick={close} className="press rounded-2xl bg-citron py-3 text-sm font-semibold text-carbon">
                     Got it
                   </button>
                 </div>

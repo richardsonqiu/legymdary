@@ -60,7 +60,9 @@ export default async function InsightsPage({
       {garminSyncing && <AutoRefresh />}
       <PageHeader
         title="Insights"
-        subtitle="Recovery, sleep and training, compared with your usual"
+        eyebrow="Recovery"
+        subtitle="Sleep and training vs your usual"
+        image="sleep"
         action={
           <Link
             href="/connect"

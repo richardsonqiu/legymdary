@@ -23,7 +23,7 @@ export default async function HistoryPage() {
 
   return (
     <PageTransition className="space-y-6">
-      <PageHeader title="History" subtitle="Exercise and food, day by day" />
+      <PageHeader title="History" subtitle="Exercise and food, day by day" image="shadows" />
       <section>
         <SectionTitle>Calendar</SectionTitle>
         <ConsistencyCalendar days={days} />
