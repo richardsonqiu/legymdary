@@ -103,6 +103,10 @@ export const workouts = sqliteTable(
     finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
     /** Set when the workout came from a spreadsheet import (so the import can be undone). */
     importId: integer("import_id"),
+    /** The watch activity this session's exercises belong to (Garmin / Oura / Apple id). */
+    garminActivityId: text("garmin_activity_id"),
+    /** Which planned session it was ("upper", "push", "full_a"…), for the next recommendation. */
+    planKey: text("plan_key"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -122,6 +126,10 @@ export const workoutExercises = sqliteTable(
       .notNull()
       .references(() => exercises.id, { onDelete: "cascade" }),
     position: integer("position").notNull().default(0),
+    /** Plan for this exercise (from a recommendation or template). */
+    targetSets: integer("target_sets"),
+    targetReps: text("target_reps"),
+    targetWeight: real("target_weight"),
   },
   (t) => [index("workout_exercises_workout_idx").on(t.workoutId)],
 );
@@ -267,6 +275,8 @@ export const goals = sqliteTable("goals", {
    * your burn and weight (changes of 50 kcal or more).
    */
   targetMode: text("target_mode").notNull().default("steady"),
+  /** Gym sessions a week you plan (2–6), for the recommended workout. Null = worked out from history. */
+  trainingDays: integer("training_days"),
   /** How often the target is reviewed: "weekly" (Mondays) or "monthly" (the 1st). */
   reviewCadence: text("review_cadence").notNull().default("weekly"),
   /** Set when you tap "Update to the plan's number" in steady mode. */

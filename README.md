@@ -47,6 +47,17 @@ your phone at the gym. Every account gets its own private diary.
   goal date, goal change). For existing users, every past day (up to 3 years, from the first meal or
   weigh-in) is rebuilt the way the app calculated it that day, so Progress › Calorie balance can show how
   far over or under target you were across a week, month or year.
+- **Today's workout** (Train): a recommended gym session from how many days a week you train (2–3 full body
+  A/B, 4 upper / lower, 5–6 push / pull / legs; set on the card or worked out from the last 4 weeks), the
+  next one after the last planned session you did. Each exercise has sets × reps for your goal (6–10 for big
+  lifts, 10–15 for isolation, an extra set when gaining) and a weight from progressive overload: hit the top
+  of the range on every set last time and it goes up 2.5 kg (2 kg dumbbells), otherwise same weight, one more
+  rep. Low readiness makes it a lighter day (one set fewer). *Start* opens it in the logger with targets,
+  set-progress dots, a session clock and a finish summary (`lib/training/program.ts`).
+- **Watch + logger**: on a Garmin (or Oura / Apple) strength activity, *Add exercises* opens a workout linked
+  to it, during or after the session; the activity then shows "Your exercises". A workout logged in the app
+  links itself to that day's strength activity when you finish, and linked pairs count as one session in the
+  calendar, weekly stats and recaps.
 - **How we got your number** (Goal page, linked from Food): the calorie target step by step with your own
   numbers: body (weight, body fat, lean mass), BMR with the equation used (Katch-McArdle with body fat, else
   Mifflin-St Jeor), daily burn (measured from food and weight trend, your watch's average, or BMR × activity
