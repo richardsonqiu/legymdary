@@ -13,7 +13,12 @@
     "android": {
       "package": "com.richardsonqiu.legymdary"
     },
-    "plugins": ["expo-router", "expo-secure-store", "expo-dev-client"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-dev-client",
+      ["expo-image-picker", { "photosPermission": "Choose a photo of your meal to estimate its calories.", "cameraPermission": "Take a photo of your meal to estimate its calories." }]
+    ],
     "experiments": {
       "typedRoutes": true
     }
