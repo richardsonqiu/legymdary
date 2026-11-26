@@ -44,6 +44,7 @@ import {
   logoutResponseSchema,
   meResponseSchema,
   type AuthResponse,
+  type GoogleLoginRequest,
   type LoginRequest,
   type LogoutResponse,
   type MeResponse,
@@ -109,6 +110,7 @@ export function createApiClient(opts: ApiClientOptions) {
   return {
     ...progressMethods(request),
     login: (body: LoginRequest): Promise<AuthResponse> => request("POST", "/api/v1/auth/login", authResponseSchema, body),
+    googleLogin: (body: GoogleLoginRequest): Promise<AuthResponse> => request("POST", "/api/v1/auth/google", authResponseSchema, body),
     logout: (): Promise<LogoutResponse> => request("POST", "/api/v1/auth/logout", logoutResponseSchema, {}),
     me: (): Promise<MeResponse> => request("GET", "/api/v1/me", meResponseSchema),
 

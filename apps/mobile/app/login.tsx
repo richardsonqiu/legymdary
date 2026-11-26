@@ -3,12 +3,13 @@ import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/auth";
+import { GoogleSignInError, googleSignIn } from "../src/googleSignIn";
 import { useTheme } from "../src/theme";
 
 export default function Login() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,6 +23,26 @@ export default function Login() {
       await signIn(email.trim(), password);
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : "Something went wrong. Try again.");
+      setBusy(false);
+    }
+  }
+
+  async function google() {
+    if (busy || !googleSignIn) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const idToken = await googleSignIn.getIdToken();
+      if (idToken) await signInWithGoogle(idToken);
+      else setBusy(false); // cancelled: not an error
+    } catch (e) {
+      setError(
+        e instanceof ApiClientError && e.status === 401
+          ? "No LeGYMdary account is linked to this Google account. Sign in with Google on the website once, then try again."
+          : e instanceof GoogleSignInError || e instanceof ApiClientError
+            ? e.message
+            : "Something went wrong. Try again.",
+      );
       setBusy(false);
     }
   }
@@ -74,12 +95,16 @@ export default function Login() {
         {busy ? <ActivityIndicator color={t.onAccent} /> : <Text style={[s.buttonText, { color: t.onAccent }]}>Sign in</Text>}
       </Pressable>
 
-      <Pressable accessibilityRole="button" accessibilityState={{ disabled: true }} disabled style={[s.button, s.google, { borderColor: t.border }]}>
-        <Text style={{ color: t.muted, fontWeight: "600" }}>Continue with Google</Text>
-      </Pressable>
-      <Text style={[s.note, { color: t.muted }]}>
-        Google sign-in is off until the iOS and Android OAuth client IDs are created in Google Cloud.
-      </Text>
+      {googleSignIn ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={busy}
+          onPress={google}
+          style={[s.button, s.google, { borderColor: t.border, opacity: busy ? 0.6 : 1 }]}
+        >
+          <Text style={{ color: t.text, fontWeight: "600" }}>Continue with Google</Text>
+        </Pressable>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -91,6 +116,5 @@ const s = StyleSheet.create({
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
   button: { borderRadius: 12, paddingVertical: 14, alignItems: "center", justifyContent: "center", minHeight: 48 },
   buttonText: { fontSize: 16, fontWeight: "700" },
-  google: { borderWidth: 1, opacity: 0.6 },
-  note: { fontSize: 12 },
+  google: { borderWidth: 1 },
 });
