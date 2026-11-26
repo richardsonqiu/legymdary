@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ExercisePicker } from "@/components/logger/ExercisePicker";
 import { RestTimer, type RestTimerHandle } from "@/components/logger/RestTimer";
 import { Portal } from "@/components/Portal";
-import { PlusIcon, TrashIcon, TrophyIcon, XIcon } from "@/components/icons";
+import { PlusIcon, TrashIcon, TrophyIcon, XIcon, TargetIcon, CheckIcon, WatchIcon } from "@/components/icons";
 import { Button, Card, EmptyState, Tag } from "@/components/ui";
 import type { Exercise } from "@/db/schema";
 import {
@@ -24,7 +24,7 @@ import type {
   WorkoutDetail,
   WorkoutExerciseDetail,
 } from "@/lib/queries";
-import { cn, estimate1RM, formatShort, kg } from "@/lib/utils";
+import { cn, estimate1RM, formatShort, kg, todayStr } from "@/lib/utils";
 
 type Input = { weight: string; reps: string; warmup: boolean };
 
@@ -61,6 +61,15 @@ export function WorkoutEditor({
       return {
         weight: String(last.weight),
         reps: String(last.reps),
+        warmup: false,
+      };
+    }
+    // A planned session: start from its target weight and the low end of the rep range.
+    if (ex.targetWeight != null || ex.targetReps) {
+      const lo = ex.targetReps ? Number.parseInt(ex.targetReps, 10) : NaN;
+      return {
+        weight: ex.targetWeight != null ? String(ex.targetWeight) : "",
+        reps: Number.isFinite(lo) ? String(lo) : "",
         warmup: false,
       };
     }
@@ -168,10 +177,19 @@ export function WorkoutEditor({
     });
   }
 
+  const [summary, setSummary] = useState<{ minutes: number | null; sets: number; volume: number; planned: number; done: number } | null>(null);
+  /** Finish shows the session summary first; it is saved on "Save & finish". */
   function finish() {
+    const planned = workout.exercises.reduce((a, e) => a + (e.targetSets ?? 0), 0);
+    const done = workout.exercises.reduce((a, e) => a + Math.min(e.targetSets ?? 0, e.sets.filter((x) => !x.isWarmup).length), 0);
+    const minutes = workout.startedAt && !workout.garminActivityId ? Math.round((Date.now() - Date.parse(workout.startedAt)) / 60_000) : null;
+    navigator.vibrate?.([20, 40, 20]);
+    setSummary({ minutes: minutes != null && minutes < 600 ? minutes : null, sets: workout.totalSets, volume: workout.totalVolume, planned, done });
+  }
+  function confirmFinish() {
     start(async () => {
       await finishWorkout(workout.id);
-      router.push("/dashboard");
+      router.push(workout.garminActivityId ? `/activities/${workout.garminActivityId}` : "/dashboard");
     });
   }
   function saveTemplate() {
@@ -234,6 +252,14 @@ export function WorkoutEditor({
           <Mini label="sets" value={`${workout.totalSets}`} />
           <Mini label="volume" value={`${kg(workout.totalVolume)} kg`} />
         </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {workout.startedAt && workout.date === todayStr() && !workout.garminActivityId && <SessionClock since={workout.startedAt} />}
+          {workout.garminActivityId && (
+            <a href={`/activities/${workout.garminActivityId}`} className="flex items-center gap-1 rounded-full bg-white/[0.05] px-2.5 py-1 text-zinc-300">
+              <WatchIcon className="h-3.5 w-3.5" /> linked to your watch activity
+            </a>
+          )}
+        </div>
       </Card>
 
       {/* Exercises */}
@@ -285,6 +311,28 @@ export function WorkoutEditor({
                   </button>
                 </div>
 
+                {(ex.targetSets || ex.targetReps) && (() => {
+                  const done = ex.sets.filter((x) => !x.isWarmup).length;
+                  const target = ex.targetSets ?? 0;
+                  return (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1 rounded-full bg-teal-300/10 px-2.5 py-1 tabular-nums text-teal-100">
+                        <TargetIcon className="h-3.5 w-3.5" />
+                        {ex.targetSets ? `${ex.targetSets} × ` : ""}
+                        {ex.targetReps ?? ""}
+                        {ex.targetWeight ? ` @ ${kg(ex.targetWeight)} kg` : ""}
+                      </span>
+                      {target > 0 && (
+                        <span className="flex items-center gap-1" aria-label={`${Math.min(done, target)} of ${target} sets done`}>
+                          {Array.from({ length: target }, (_, i) => (
+                            <span key={i} className={cn("h-2 w-4 rounded-full", i < done ? "bg-teal-300" : "bg-zinc-700")} />
+                          ))}
+                          {done >= target && <CheckIcon className="h-4 w-4 text-teal-300" />}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
                 {lastByExercise[ex.exerciseId] && (
                   <div className="text-xs text-zinc-500">
                     <span className="text-zinc-600">
@@ -433,6 +481,41 @@ export function WorkoutEditor({
 
       <RestTimer ref={timer} />
 
+      {summary && (
+        <Portal>
+          <div className="animate-backdrop fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center">
+            <div role="dialog" aria-label="Workout done" className="animate-sheet pb-safe w-full max-w-md space-y-4 rounded-t-3xl border border-zinc-800 bg-zinc-950 px-5 pb-5 pt-7 text-center sm:rounded-3xl">
+              <div className="badge-pop mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-teal-300 to-emerald-500">
+                <TrophyIcon className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <div className="text-sm uppercase tracking-wider text-teal-200">{summary.planned > 0 && summary.done >= summary.planned ? "Every set done" : "Great session"}</div>
+                <div className="mt-1 text-2xl font-bold">{workout.name}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Mini label="minutes" value={summary.minutes != null ? String(summary.minutes) : "–"} />
+                <Mini label="sets" value={String(summary.sets)} />
+                <Mini label="volume" value={`${kg(summary.volume)} kg`} />
+              </div>
+              {summary.planned > 0 && (
+                <div className="text-sm text-zinc-300">
+                  {summary.done}/{summary.planned} planned sets
+                  {summary.done >= summary.planned ? " · all done" : ""}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" size="lg" onClick={() => setSummary(null)} disabled={pending}>
+                  Keep going
+                </Button>
+                <Button size="lg" onClick={confirmFinish} disabled={pending}>
+                  {pending ? "Saving…" : "Save & finish"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
       {pickerOpen && (
         <ExercisePicker
           exercises={exercises}
@@ -486,5 +569,25 @@ function NumberInput({
         className="h-14 w-full rounded-xl border border-zinc-700 bg-zinc-950/60 text-center text-lg font-semibold tabular-nums text-zinc-100 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-700/40"
       />
     </label>
+  );
+}
+
+/** Time since the session started, ticking every second. */
+function SessionClock({ since }: { since: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const sec = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
+  if (sec > 6 * 3600) return null;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const ss = sec % 60;
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-emerald-400/10 px-2.5 py-1 font-semibold tabular-nums text-emerald-200" aria-label="Session time">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
+      {h ? `${h}:${String(m).padStart(2, "0")}` : m}:{String(ss).padStart(2, "0")}
+    </span>
   );
 }

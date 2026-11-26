@@ -123,6 +123,7 @@ const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 const avg = (xs: number[]) => (xs.length ? sum(xs) / xs.length : null);
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
+const hasStrengthActivity = (r: DayRow) => r.activities.some((a) => /strength|weight/i.test(a.type ?? ""));
 const isActive = (r: DayRow) => r.strengthSets > 0 || r.activities.some((a) => a.min >= 15);
 const titleCase = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -147,13 +148,15 @@ export async function buildRecap(userId: string, range: RecapRange, today: strin
       typeMin.set(name, (typeMin.get(name) ?? 0) + a.min);
       if (!longest || a.min > longest.minutes) longest = { name: a.name, date: r.date, minutes: Math.round(a.min) };
     }
-    if (r.strengthSets > 0) {
+    // A gym session the watch also recorded counts once (the watch has its real minutes).
+    if (r.strengthSets > 0 && !hasStrengthActivity(r)) {
       sessions++;
       // Gym sessions logged in the app: about 2.5 min per working set.
       typeMin.set("Gym", (typeMin.get("Gym") ?? 0) + r.strengthSets * 2.5);
     }
   }
-  const minutesOf = (rs: DayRow[]) => Math.round(sum(rs.flatMap((r) => r.activities.map((a) => a.min))) + sum(rs.map((r) => r.strengthSets * 2.5)));
+  const minutesOf = (rs: DayRow[]) =>
+    Math.round(sum(rs.flatMap((r) => r.activities.map((a) => a.min))) + sum(rs.map((r) => (hasStrengthActivity(r) ? 0 : r.strengthSets * 2.5))));
   const minutes = minutesOf(rows);
   const typeTotal = sum([...typeMin.values()]) || 1;
   const types = [...typeMin.entries()]

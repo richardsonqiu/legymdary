@@ -22,9 +22,12 @@ import { todayStr } from "@/lib/utils";
 export function StartWorkout({
   canDuplicate,
   templates,
+  recommended,
 }: {
   canDuplicate: boolean;
   templates: TemplateSummary[];
+  /** Today's recommended session (server-rendered). */
+  recommended?: React.ReactNode;
 }) {
   const router = useRouter();
   const [name, setName] = useState("Workout");
@@ -66,7 +69,8 @@ export function StartWorkout({
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Log workout" subtitle="Start a new session" />
+      <PageHeader title="Workout" subtitle="Today's plan, or start your own" />
+      {recommended}
 
       {templates.length > 0 && (
         <section className="space-y-2">

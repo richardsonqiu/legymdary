@@ -41,6 +41,7 @@ import {
 } from "@/lib/apple-health/store";
 import { z } from "zod";
 import { cleanText } from "@/lib/sheet-import/format";
+import { getRecommendation } from "@/lib/training/history";
 import { batchSchema, ImportError, storeBatch, undoImport, type BatchResult } from "@/lib/sheet-import/store";
 import { syncGarminForUser, type SyncResult } from "@/lib/garmin/sync";
 import { cleanPrefs, resolveDays, savePrefs } from "@/lib/sources";
@@ -194,7 +195,86 @@ export async function finishWorkout(workoutId: number): Promise<void> {
     .update(workouts)
     .set({ finishedAt: new Date() })
     .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));
+  await autoLinkActivity(userId, workoutId);
   revalidateAll();
+}
+
+/**
+ * A gym session logged in the app while the watch also recorded it: link it
+ * to that day's strength activity (if exactly one isn't linked yet), so the
+ * two count as one session and the activity shows the exercises.
+ */
+async function autoLinkActivity(userId: string, workoutId: number) {
+  const [w] = await db
+    .select({ date: workouts.date, linked: workouts.garminActivityId })
+    .from(workouts)
+    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)))
+    .limit(1);
+  if (!w || w.linked) return;
+  const candidates = await db
+    .select({ activityId: garminActivities.activityId })
+    .from(garminActivities)
+    .where(
+      and(
+        eq(garminActivities.userId, userId),
+        eq(garminActivities.date, w.date),
+        sql`(${garminActivities.type} like '%strength%' or ${garminActivities.type} like '%weight%' or ${garminActivities.type} = 'hiit')`,
+        sql`not exists (select 1 from ${workouts} x where x.user_id = ${userId} and x.garmin_activity_id = ${garminActivities.activityId})`,
+      ),
+    );
+  if (candidates.length === 1) {
+    await db.update(workouts).set({ garminActivityId: candidates[0].activityId }).where(eq(workouts.id, workoutId));
+  }
+}
+
+/**
+ * "Add exercises" on a watch activity: opens (or reopens) the workout linked
+ * to it in the logger, during the session or afterwards.
+ */
+export async function startWorkoutForActivity(activityId: string): Promise<{ id: number } | { error: string }> {
+  const userId = await requireUserId();
+  if (!/^[\w-]{1,40}$/.test(activityId)) return { error: "Activity not found." };
+  const [act] = await db
+    .select()
+    .from(garminActivities)
+    .where(and(eq(garminActivities.userId, userId), eq(garminActivities.activityId, activityId)))
+    .limit(1);
+  if (!act) return { error: "Activity not found." };
+  const [open] = await db
+    .select({ id: workouts.id, linked: workouts.garminActivityId })
+    .from(workouts)
+    .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt)))
+    .limit(1);
+  const [linked] = await db
+    .select({ id: workouts.id })
+    .from(workouts)
+    .where(and(eq(workouts.userId, userId), eq(workouts.garminActivityId, activityId)))
+    .limit(1);
+  if (open && open.id !== linked?.id) {
+    // A session already running with nothing linked: attach it to this activity.
+    if (!open.linked && !linked) {
+      await db.update(workouts).set({ garminActivityId: activityId }).where(eq(workouts.id, open.id));
+      revalidateAll();
+      return { id: open.id };
+    }
+    return { error: "Finish or discard the workout in progress first." };
+  }
+  if (linked) {
+    await db.update(workouts).set({ finishedAt: null }).where(eq(workouts.id, linked.id));
+    revalidateAll();
+    return { id: linked.id };
+  }
+  const [w] = await db
+    .insert(workouts)
+    .values({
+      userId,
+      name: act.name.slice(0, 80) || "Workout",
+      date: act.date,
+      garminActivityId: activityId,
+    })
+    .returning({ id: workouts.id });
+  revalidateAll();
+  return { id: w.id };
 }
 
 export async function discardWorkout(workoutId: number): Promise<void> {
@@ -930,7 +1010,7 @@ export async function startWorkoutFromTemplate(
     .returning({ id: workouts.id });
   if (items.length) {
     await db.insert(workoutExercises).values(
-      items.map((it, i) => ({ workoutId: row.id, exerciseId: it.exerciseId, position: i })),
+      items.map((it, i) => ({ workoutId: row.id, exerciseId: it.exerciseId, position: i, targetSets: it.targetSets })),
     );
   }
   await db
@@ -1439,4 +1519,49 @@ export async function decideReview(id: number, choice: string): Promise<{ ok: tr
     .where(eq(targetReviews.id, id));
   revalidateAll();
   return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* Recommended workouts                                                */
+/* ------------------------------------------------------------------ */
+
+/** Gym days a week for the recommended plan (2–6), or null to work it out from history. */
+export async function setTrainingDays(days: number | null): Promise<{ ok: true } | { error: string }> {
+  const userId = await requireUserId();
+  const v = days == null ? null : Math.round(days);
+  if (v != null && (v < 2 || v > 6)) return { error: "Pick 2 to 6 days." };
+  const res = await db.update(goals).set({ trainingDays: v, updatedAt: new Date() }).where(eq(goals.userId, userId));
+  if (!res.rowsAffected) await db.insert(goals).values({ userId, trainingDays: v }).onConflictDoNothing();
+  revalidatePath("/log");
+  return { ok: true };
+}
+
+/** Starts today's recommended session with its exercises and targets. */
+export async function startRecommendedWorkout(): Promise<{ id: number } | { error: string }> {
+  const userId = await requireUserId();
+  const today = await userToday();
+  const [open] = await db
+    .select({ id: workouts.id })
+    .from(workouts)
+    .where(and(eq(workouts.userId, userId), isNull(workouts.finishedAt)))
+    .limit(1);
+  if (open) return { error: "Finish or discard the workout in progress first." };
+  const rec = await getRecommendation(userId, today);
+  if (!rec.exercises.length) return { error: "No matching exercises in your library." };
+  const [w] = await db
+    .insert(workouts)
+    .values({ userId, name: rec.title, date: today, planKey: rec.planKey })
+    .returning({ id: workouts.id });
+  await db.insert(workoutExercises).values(
+    rec.exercises.map((e, i) => ({
+      workoutId: w.id,
+      exerciseId: e.exerciseId,
+      position: i,
+      targetSets: e.sets,
+      targetReps: e.reps,
+      targetWeight: e.weight,
+    })),
+  );
+  revalidateAll();
+  return { id: w.id };
 }

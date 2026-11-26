@@ -73,6 +73,10 @@ export type WorkoutExerciseDetail = {
   muscleGroup: string;
   equipment: string;
   sets: LoggedSet[];
+  /** Plan for this exercise (recommended session or template). */
+  targetSets: number | null;
+  targetReps: string | null;
+  targetWeight: number | null;
 };
 
 export type WorkoutDetail = {
@@ -85,6 +89,11 @@ export type WorkoutDetail = {
   totalSets: number;
   totalVolume: number;
   exerciseCount: number;
+  /** When the session was started (for the live timer). */
+  startedAt: string | null;
+  /** Watch activity this session's exercises belong to. */
+  garminActivityId: string | null;
+  planKey: string | null;
 };
 
 export type PRRow = {
@@ -104,9 +113,15 @@ type RawWorkout = {
   date: string;
   notes: string | null;
   finishedAt: Date | null;
+  createdAt?: Date | null;
+  garminActivityId?: string | null;
+  planKey?: string | null;
   workoutExercises: {
     id: number;
     exerciseId: number;
+    targetSets?: number | null;
+    targetReps?: string | null;
+    targetWeight?: number | null;
     exercise: Exercise;
     sets: {
       id: number;
@@ -142,6 +157,9 @@ function toDetail(w: RawWorkout): WorkoutDetail {
       muscleGroup: we.exercise.muscleGroup,
       equipment: we.exercise.equipment,
       sets: setsOut,
+      targetSets: we.targetSets ?? null,
+      targetReps: we.targetReps ?? null,
+      targetWeight: we.targetWeight ?? null,
     };
   });
 
@@ -155,6 +173,9 @@ function toDetail(w: RawWorkout): WorkoutDetail {
     totalSets,
     totalVolume,
     exerciseCount: exercisesOut.length,
+    startedAt: w.createdAt ? w.createdAt.toISOString() : null,
+    garminActivityId: w.garminActivityId ?? null,
+    planKey: w.planKey ?? null,
   };
 }
 
@@ -499,7 +520,7 @@ export async function getTrainingOverview(weeks = 12): Promise<{
         calories: garminActivities.calories,
       })
       .from(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), gte(garminActivities.date, addDaysStr(today, -90)))),
+      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), notLinked(userId), gte(garminActivities.date, addDaysStr(today, -90)))),
   ]);
   const byWeek = new Map<string, TrainingWeek>();
   let cur = from;
@@ -872,7 +893,7 @@ export async function getWeeklyCheckin(): Promise<WeeklyCheckin> {
     db
       .select({ date: garminActivities.date, durationSec: garminActivities.durationSec })
       .from(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), between(garminActivities.date, lastStart, end))),
+      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), notLinked(userId), between(garminActivities.date, lastStart, end))),
   ]);
 
   function stats(from: string, to: string): WeekStats {
@@ -1036,7 +1057,7 @@ export const getConsistencyDays = cache(async function getConsistencyDays(
         sec: sql<number>`coalesce(sum(${garminActivities.durationSec}), 0)`,
       })
       .from(garminActivities)
-      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), between(garminActivities.date, from, to)))
+      .where(and(eq(garminActivities.userId, userId), eq(garminActivities.excluded, false), notLinked(userId), between(garminActivities.date, from, to)))
       .groupBy(garminActivities.date),
     db
       .select({ date: meals.date, n: sql<number>`count(*)`, kcal: sql<number>`coalesce(sum(${meals.calories}), 0)` })
@@ -1184,4 +1205,24 @@ export async function getTargetHistory(from: string, to: string): Promise<Record
     .from(dailyTargets)
     .where(and(eq(dailyTargets.userId, userId), between(dailyTargets.date, from, to)));
   return Object.fromEntries(rows.map((r) => [r.date, r.calories + (r.bonus ?? 0)]));
+}
+
+/** The logged workout (exercises and sets) linked to a watch activity, if any. */
+export async function getWorkoutForActivity(activityId: string): Promise<WorkoutDetail | null> {
+  const userId = await requireUserId();
+  const w = await db.query.workouts.findFirst({
+    where: and(eq(workouts.userId, userId), eq(workouts.garminActivityId, activityId)),
+    with: {
+      workoutExercises: {
+        orderBy: (f, ops) => ops.asc(f.position),
+        with: { exercise: true, sets: { orderBy: (f, ops) => ops.asc(f.position) } },
+      },
+    },
+  });
+  return w ? toDetail(w as RawWorkout) : null;
+}
+
+/** Watch activities whose exercises were logged as a workout count once (as the workout). */
+function notLinked(userId: string) {
+  return sql`not exists (select 1 from ${workouts} lw where lw.user_id = ${userId} and lw.garmin_activity_id = ${garminActivities.activityId})`;
 }

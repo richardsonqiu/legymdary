@@ -6,6 +6,8 @@ import { ArrowLeftIcon } from "@/components/icons";
 import { Card, SectionTitle } from "@/components/ui";
 import { getActivityView, trainingEffectWords, ZONES } from "@/lib/garmin/activity";
 import { requireUserId } from "@/lib/session";
+import { getWorkoutForActivity } from "@/lib/queries";
+import { ActivityBreakdown } from "@/components/garmin/ActivityBreakdown";
 import { cn, formatPretty } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +55,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   const userId = await requireUserId();
   const { id } = await params;
   if (!/^[\w-]{1,40}$/.test(id)) notFound();
-  const a = await getActivityView(userId, id);
+  const [a, linkedWorkout] = await Promise.all([getActivityView(userId, id), getWorkoutForActivity(id)]);
   if (!a) notFound();
   const fromApple = a.id.startsWith("apple-");
   const fromSheet = a.id.startsWith("sheet-");
@@ -199,6 +201,16 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           </Card>
         </section>
       )}
+
+      {(() => {
+        const gym = /strength|weight|hiit|training/i.test(a.typeLabel);
+        return (gym || linkedWorkout) ? (
+          <section>
+            <SectionTitle>{linkedWorkout?.exercises.length ? "Your exercises" : "Log this session"}</SectionTitle>
+            <ActivityBreakdown activityId={a.id} workout={linkedWorkout} gym={gym} />
+          </section>
+        ) : null;
+      })()}
 
       {(a.sets.length > 0 || a.steps.length > 0) && (
         <section>

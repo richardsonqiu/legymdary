@@ -1,6 +1,9 @@
 import { PageTransition } from "@/components/PageTransition";
 import { StartWorkout } from "@/components/logger/StartWorkout";
 import { WorkoutEditor } from "@/components/logger/WorkoutEditor";
+import { RecommendedWorkout } from "@/components/logger/RecommendedWorkout";
+import { getRecommendation } from "@/lib/training/history";
+import { requireUserId, userToday } from "@/lib/session";
 import {
   getActiveWorkout,
   getAllExercises,
@@ -42,10 +45,15 @@ export default async function LogPage() {
   }
 
   void exercisesP.catch(() => {});
-  const [dates, templates] = await Promise.all([datesP, templatesP]);
+  const userId = await requireUserId();
+  const [dates, templates, rec] = await Promise.all([datesP, templatesP, getRecommendation(userId, await userToday())]);
   return (
     <PageTransition className="">
-      <StartWorkout canDuplicate={dates.length > 0} templates={templates} />
+      <StartWorkout
+        canDuplicate={dates.length > 0}
+        templates={templates}
+        recommended={rec.exercises.length ? <RecommendedWorkout rec={rec} /> : null}
+      />
     </PageTransition>
   );
 }
