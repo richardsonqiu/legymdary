@@ -192,6 +192,8 @@ logged data (keeps the exercise library).
 | `INSIGHTS_AI_BACKUP_MODEL` | optional | Brief fallback (default `claude-sonnet-5-5`)       |
 | `CRON_SECRET`          | for Garmin | Auth for the daily Garmin sync cron                  |
 | `GARMIN_ENCRYPTION_KEY`| optional | Encrypts stored Garmin keys (default: `AUTH_SECRET`)   |
+| `GOOGLE_IOS_CLIENT_ID` | optional | Google OAuth iOS client ID, accepted by `/api/v1/auth/google` |
+| `GOOGLE_ANDROID_CLIENT_ID` | optional | Google OAuth Android client ID, accepted by `/api/v1/auth/google` |
 
 ## Project structure
 
@@ -492,6 +494,17 @@ download.
   `no-store`; CSV exports are guarded against formula injection.
 - **Input validation** — dates, numeric ranges, text lengths and image data
   URLs are validated server-side on every write.
+
+## Native app API (`/api/v1`)
+
+Sign-in for the future iOS/Android app. The web app does not use these routes.
+
+- `POST /api/v1/auth/login` `{ email, password, deviceName? }` and `POST /api/v1/auth/google` `{ idToken, deviceName? }` return `{ token, expiresAt, user }`.
+- Send the token as `Authorization: Bearer <token>` on every call. Also send `X-Timezone: <IANA zone>` so "today" is the user's day.
+- `POST /api/v1/auth/logout` revokes the token. `GET /api/v1/me` returns the user.
+- Tokens are random, last 90 days and are stored as a sha-256 hash in `api_tokens`. A request without a valid token gets `401`.
+- Google: the ID token's `aud` must be `GOOGLE_IOS_CLIENT_ID`, `GOOGLE_ANDROID_CLIENT_ID` or `AUTH_GOOGLE_ID`. The user must already have signed in with Google on the web; accounts are matched by Google `sub` only, never by email.
+- Request and response schemas live in `packages/shared/src/api/auth.ts`.
 
 ## Install as an app
 

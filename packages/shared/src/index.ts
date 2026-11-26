@@ -1,3 +1,4 @@
+export * from "./api/auth";
 export * from "./apple-health/parse";
 export * from "./apple-health/types";
 export * from "./balance";
