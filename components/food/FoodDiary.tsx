@@ -60,6 +60,8 @@ export function FoodDiary({
   aiSpend,
   requestedDate,
   targets,
+  targetsByDate,
+  targetChange,
   skipped,
   menu,
   planMissing,
@@ -74,6 +76,10 @@ export function FoodDiary({
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
   targets: DailyTargets;
+  /** The target each past day had (locked once the day is over). */
+  targetsByDate?: Record<string, NonNullable<DailyTargets>>;
+  /** Why today's target differs from the previous day's. */
+  targetChange?: { from: number; to: number; since: string; reasons: string[] } | null;
   /** Meals marked as skipped (a window of days around the one shown). */
   skipped: { date: string; mealType: string }[];
   /** "My menu": pinned and custom meals. */
@@ -114,7 +120,9 @@ export function FoodDiary({
   const totals = sumMacros(dayMeals);
   const isToday = date === today;
   const skippedTypes = skipped.filter((s) => s.date === date).map((s) => s.mealType as MealType);
-  const dayTarget = withBonus(targets, garminByDate?.[date]?.bonus);
+  // Past days are judged against the target they had, not today's.
+  const baseTarget = !isToday && today && date < today ? targetForDay(date, targets, targetsByDate) : targets;
+  const dayTarget = withBonus(baseTarget, garminByDate?.[date]?.bonus);
   const eatenByType = Object.fromEntries(
     MEAL_TYPES.map((t) => [t, sumMacros(dayMeals.filter((m) => m.mealType === t)).calories]),
   ) as Partial<Record<MealType, number>>;
@@ -295,7 +303,13 @@ export function FoodDiary({
       </div>
 
       <Card>
-        <MacroSummary totals={totals} targets={withBonus(targets, garminByDate?.[date]?.bonus)} />
+        <MacroSummary totals={totals} targets={dayTarget} />
+        {isToday && targetChange && <TargetChangeNote change={targetChange} />}
+        {!isToday && today && date < today && baseTarget && (
+          <p className="mt-3 text-[11px] text-zinc-500">
+            Target for this day: {Math.round(baseTarget.calories).toLocaleString("en-US")} kcal (locked, it won&apos;t change).
+          </p>
+        )}
         {garminByDate && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
             <span>
@@ -703,5 +717,45 @@ function MealRow({
         </div>
       )}
     </li>
+  );
+}
+
+/** The target a past day had: its saved one, else the nearest saved one after it, else today's. */
+function targetForDay(
+  date: string,
+  today: DailyTargets,
+  byDate: Record<string, NonNullable<DailyTargets>> | undefined,
+): DailyTargets {
+  if (!byDate) return today;
+  if (byDate[date]) return byDate[date];
+  const later = Object.keys(byDate)
+    .filter((d) => d > date)
+    .sort()[0];
+  return later ? byDate[later] : today;
+}
+
+/** "Target 1,480 kcal, 50 less than yesterday. Why?" with the reasons. */
+function TargetChangeNote({ change }: { change: { from: number; to: number; since: string; reasons: string[] } }) {
+  const diff = change.to - change.from;
+  const yesterday = addDaysStr(todayStr(), -1) === change.since;
+  return (
+    <details className="group mt-3 rounded-xl border border-sky-300/20 bg-sky-300/[0.06] px-3 py-2 text-xs text-sky-100">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        <span>
+          Today&apos;s target is {Math.abs(diff).toLocaleString("en-US")} kcal {diff < 0 ? "lower" : "higher"} than{" "}
+          {yesterday ? "yesterday" : formatPretty(change.since)} ({change.from.toLocaleString("en-US")} → {change.to.toLocaleString("en-US")}).
+        </span>
+        <span className="shrink-0 font-semibold underline-offset-2 group-open:hidden">Why?</span>
+      </summary>
+      <ul className="mt-2 list-disc space-y-1 pl-4 text-sky-100/90">
+        {change.reasons.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] text-sky-100/70">
+        Past days keep the target they had, so they won&apos;t suddenly look over. Changes under 50 kcal are ignored to keep it
+        steady.
+      </p>
+    </details>
   );
 }

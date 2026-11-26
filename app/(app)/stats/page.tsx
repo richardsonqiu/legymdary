@@ -65,7 +65,7 @@ export default async function StatsPage() {
 
       <section>
         <SectionTitle>This week vs last week</SectionTitle>
-        <WeeklyCheckin data={checkin} targets={energy.targets} />
+        <WeeklyCheckin data={checkin} targets={energy.targets} targetsByDate={energy.targetsByDate} />
       </section>
 
       <section>

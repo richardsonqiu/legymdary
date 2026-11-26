@@ -32,7 +32,8 @@ export default async function FoodPage({
     typeof sp.date === "string" && DATE_RE.test(sp.date) ? sp.date : null;
   // Without ?date= the client picks "today" in its own timezone, which is at
   // most a day away from the server's — so load a 3-day window around it.
-  const center = requested ?? (await userToday());
+  const serverToday = await userToday();
+  const center = requested ?? serverToday;
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const [meals, energy, recentMeals, aiSpend, garminDays, userId, skipped, menu] = await Promise.all([
@@ -52,7 +53,13 @@ export default async function FoodPage({
   for (const d of garminDays) {
     garminByDate[d.date] = {
       burned: d.totalKcal,
-      bonus: adjust ? activityBonus(d.activeKcal, energy.garminMaint?.avgActive ?? null) : 0,
+      // Past days keep the bonus they were given (locked with their target).
+      bonus:
+        d.date < serverToday && energy.targetsByDate[d.date]
+          ? (energy.bonusByDate[d.date] ?? 0)
+          : adjust
+            ? activityBonus(d.activeKcal, energy.garminMaint?.avgActive ?? null)
+            : 0,
     };
   }
 
@@ -69,6 +76,8 @@ export default async function FoodPage({
         aiSpend={{ calls: aiSpend.calls, costUsd: aiSpend.costUsd }}
         requestedDate={requested}
         targets={energy.targets}
+        targetsByDate={energy.targetsByDate}
+        targetChange={energy.targetChange}
         skipped={skipped}
         menu={menu}
         garminByDate={energy.wearable ? garminByDate : null}

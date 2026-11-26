@@ -7,19 +7,26 @@ import { cn, kg } from "@/lib/utils";
 export function WeeklyCheckin({
   data,
   targets,
+  targetsByDate,
 }: {
   data: Data;
   targets: DailyTargets;
+  /** Each past day's locked target (else today's is used). */
+  targetsByDate?: Record<string, NonNullable<DailyTargets>>;
 }) {
+  const tFor = (date: string) => targetsByDate?.[date] ?? targets;
   const t = data.thisWeek;
   const l = data.lastWeek;
   const proteinHits =
     targets?.protein != null
-      ? data.days.filter((d) => d.protein >= targets.protein! * 0.9).length
+      ? data.days.filter((d) => d.protein >= (tFor(d.date)?.protein ?? targets.protein!) * 0.9).length
       : null;
   const calorieHits =
     targets != null
-      ? data.days.filter((d) => Math.abs(d.calories - targets.calories) <= targets.calories * 0.1)
+      ? data.days.filter((d) => {
+          const c = tFor(d.date)?.calories ?? targets.calories;
+          return Math.abs(d.calories - c) <= c * 0.1;
+        })
           .length
       : null;
   const weightDelta =

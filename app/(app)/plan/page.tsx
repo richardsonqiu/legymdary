@@ -83,6 +83,16 @@ export default async function PlanPage() {
         <SectionTitle help="maintenance">Daily targets</SectionTitle>
         {plan.calorieTarget != null ? (
           <div className="space-y-3">
+            <p className="text-xs leading-relaxed text-zinc-400">
+              Worked out each day from your latest weight, your average daily burn and your goal. To keep it steady, changes
+              under 50 kcal are skipped, and past days keep the target they had.
+              {energy.targetChange && (
+                <span className="block pt-1 text-sky-200">
+                  Changed from {energy.targetChange.from.toLocaleString("en-US")} to {energy.targetChange.to.toLocaleString("en-US")}{" "}
+                  kcal: {energy.targetChange.reasons.join(" ")}
+                </span>
+              )}
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <Stat
                 label="Calories"
