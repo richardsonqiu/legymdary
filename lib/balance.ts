@@ -28,6 +28,9 @@ export type Balance = {
   estimateKg: number | null;
   /** Weight change on the scale over the period (trend line), kg. */
   scale: { change: number; from: number; to: number; weighIns: number } | null;
+  /** Eaten minus that day's target, summed over counted days that had a target (negative = under). */
+  vsTarget: number | null;
+  vsTargetDays: number;
   /** Days the estimate and the scale are compared over. */
   compareDays: number;
   /** Burn came from the plan's maintenance estimate (no watch data). */
@@ -56,6 +59,8 @@ export function computeBalance(
   weights: { date: string; weight: number }[],
   /** Used as the burn on days without watch data (the plan's maintenance), or null. */
   fallbackBurn: number | null,
+  /** Each day's calorie target (with any activity bonus), from daily_targets. */
+  targetByDate: Record<string, number> = {},
 ): Balance {
   const n = PERIOD_DAYS[period];
   const to = addDaysStr(today, -1); // complete days only
@@ -65,6 +70,8 @@ export function computeBalance(
   let burned = 0;
   let counted = 0;
   let estimatedBurn = false;
+  let vsTarget = 0;
+  let vsTargetDays = 0;
   const perDay: { date: string; value: number | null }[] = [];
   for (let d = from; d <= to; d = addDaysStr(d, 1)) {
     const r = by.get(d);
@@ -76,6 +83,10 @@ export function computeBalance(
       burned += burn;
       counted++;
       perDay.push({ date: d, value: r!.eaten - burn });
+      if (targetByDate[d] != null) {
+        vsTarget += r!.eaten - targetByDate[d];
+        vsTargetDays++;
+      }
     } else perDay.push({ date: d, value: null });
   }
   const balance = Math.round(eaten - burned);
@@ -127,6 +138,8 @@ export function computeBalance(
     compareDays,
     scale,
     estimatedBurn,
+    vsTarget: vsTargetDays ? Math.round(vsTarget) : null,
+    vsTargetDays,
     bars,
   };
 }

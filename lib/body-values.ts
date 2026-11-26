@@ -38,3 +38,26 @@ export async function latestBodyValues(userId: string, asOf: string) {
     bodyFatSource: bf?.source ?? null,
   };
 }
+
+/**
+ * Same rules as latestBodyValues, in memory, for many dates at once (rows
+ * sorted by date ascending). Used to rebuild past daily targets.
+ */
+export function bodyValuesAsOf(
+  rows: { date: string; weight: number | null; bodyFat: number | null; source: string | null }[],
+  asOf: string,
+) {
+  const preferredSince = addDaysStr(asOf, -60);
+  let weight: number | null = null;
+  let bodyFat: number | null = null;
+  let preferred: number | null = null;
+  for (const r of rows) {
+    if (r.date > asOf) break;
+    if (r.weight != null) weight = r.weight;
+    if (r.bodyFat != null) {
+      bodyFat = r.bodyFat;
+      if ((r.source === "manual" || r.source === "inbody") && r.date >= preferredSince) preferred = r.bodyFat;
+    }
+  }
+  return { weight, bodyFat: preferred ?? bodyFat };
+}

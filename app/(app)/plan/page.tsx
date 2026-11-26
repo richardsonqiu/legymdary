@@ -7,6 +7,7 @@ import { Card, PageHeader, SectionTitle, Stat } from "@/components/ui";
 import { getEnergyContext } from "@/lib/energy-data";
 import { EnergyBalanceCard } from "@/components/garmin/EnergyBalanceCard";
 import { TargetModeCard } from "@/components/plan/TargetModeCard";
+import { TargetChangeNote } from "@/components/food/TargetChangeNote";
 import { paceOptions, weightTrendPerWeek, type Plan } from "@/lib/nutrition";
 import { PaceChooser } from "@/components/plan/PaceChooser";
 import { getBodyScans, getBodyStats, getDailyTotals } from "@/lib/queries";
@@ -84,17 +85,7 @@ export default async function PlanPage() {
         <SectionTitle help="maintenance">Daily targets</SectionTitle>
         {plan.calorieTarget != null ? (
           <div className="space-y-3">
-            <p className="text-xs leading-relaxed text-zinc-400">
-              {energy.targetMode === "steady"
-                ? "Steady: this number stays the same until you change your goal or update it below. Past days keep the target they had."
-                : "Worked out each day from your latest weight, your average daily burn and your goal. Changes under 50 kcal are skipped, and past days keep the target they had."}
-              {energy.targetChange && (
-                <span className="block pt-1 text-sky-200">
-                  Changed from {energy.targetChange.from.toLocaleString("en-US")} to {energy.targetChange.to.toLocaleString("en-US")}{" "}
-                  kcal: {energy.targetChange.reasons.join(" ")}
-                </span>
-              )}
-            </p>
+            {energy.targetChange && <TargetChangeNote change={energy.targetChange} today={today} />}
             <div className="grid grid-cols-2 gap-3">
               <Stat
                 label="Calories"

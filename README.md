@@ -44,7 +44,9 @@ your phone at the gym. Every account gets its own private diary.
   had, so they never look "over" after the plan moves. Today's target only changes when the new number
   differs by 50 kcal or more (or 10 g protein), or when you change your goal, pace or profile. When it
   changes, Food shows "Today's target is 160 kcal lower than yesterday" with the reasons (burn, weight,
-  goal date, goal change). The first time, the last 35 days are recalculated from history.
+  goal date, goal change). For existing users, every past day (up to 3 years, from the first meal or
+  weigh-in) is rebuilt the way the app calculated it that day, so Progress › Calorie balance can show how
+  far over or under target you were across a week, month or year.
 - **My menu**: tap Add to pick from meals you have eaten before (or create a new one). Tapping a menu item or an Eat again meal asks to confirm and lets you choose the meal slot.
 - **Recaps**: week, month and year stories (Progress → Recaps, or the Home banner
   early in a week or month): time moving, your top activity, longest session,

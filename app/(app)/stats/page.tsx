@@ -12,6 +12,7 @@ import {
   getDailyTotals,
   getGarminDaily,
   getGoals,
+  getTargetHistory,
   getLatestBodyStat,
   getTrainingOverview,
   getWeeklyCheckin,
@@ -43,16 +44,17 @@ export default async function StatsPage() {
   ]);
   // Calorie balance: a year of food logs and watch burn, with weigh-ins.
   const today = await userToday();
-  const [yearTotals, yearBurn] = await Promise.all([
+  const [yearTotals, yearBurn, targetHistory] = await Promise.all([
     getDailyTotals(addDaysStr(today, -366), today),
     getGarminDaily(addDaysStr(today, -366), today),
+    getTargetHistory(addDaysStr(today, -366), today),
   ]);
   const burnBy = new Map(yearBurn.map((g) => [g.date, g.totalKcal]));
   const balanceDays = yearTotals.map((t) => ({ date: t.date, eaten: t.calories, meals: t.count, skipped: t.skipped, burned: burnBy.get(t.date) ?? null }));
   const weightsAll = bodyStats.filter((s) => s.weight != null).map((s) => ({ date: s.date, weight: s.weight as number }));
   const fallbackBurn = energy.plan.tdee ?? null;
   const balance = Object.fromEntries(
-    (["week", "month", "year"] as const).map((p) => [p, computeBalance(p, today, balanceDays, weightsAll, fallbackBurn)]),
+    (["week", "month", "year"] as const).map((p) => [p, computeBalance(p, today, balanceDays, weightsAll, fallbackBurn, targetHistory)]),
   ) as Record<Period, Balance>;
   const verdicts = Object.fromEntries(
     (["week", "month", "year"] as const).map((p) => [p, balanceVerdict(balance[p], energy.plan.direction)]),

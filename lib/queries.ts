@@ -42,6 +42,7 @@ import {
   sheetImports,
   ouraConnections,
   garminRaw,
+  dailyTargets,
   type SavedMeal,
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
@@ -1173,4 +1174,14 @@ export async function getOuraExtras(from: string, to: string): Promise<OuraExtra
 /** The user's "which device for what" choices. */
 export async function getSourcePrefs() {
   return getPrefs(await requireUserId());
+}
+
+/** Each day's saved calorie target (with its activity bonus), for a date range. */
+export async function getTargetHistory(from: string, to: string): Promise<Record<string, number>> {
+  const userId = await requireUserId();
+  const rows = await db
+    .select({ date: dailyTargets.date, calories: dailyTargets.calories, bonus: dailyTargets.bonus })
+    .from(dailyTargets)
+    .where(and(eq(dailyTargets.userId, userId), between(dailyTargets.date, from, to)));
+  return Object.fromEntries(rows.map((r) => [r.date, r.calories + (r.bonus ?? 0)]));
 }
