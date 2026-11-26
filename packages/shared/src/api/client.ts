@@ -1,5 +1,24 @@
 import type { z } from "zod";
 import {
+  mealAnalysisSchema,
+  mealCreatedResponseSchema,
+  mealResponseSchema,
+  mealsResponseSchema,
+  okResponseSchema,
+  todayResponseSchema,
+  type AnalyzeMealRequest,
+  type MealAnalysisDto,
+  type MealCreatedResponse,
+  type MealInputDto,
+  type MealResponse,
+  type MealsResponse,
+  type OkResponse,
+  type RelogMealRequest,
+  type SkipMealRequest,
+  type TodayResponse,
+} from "./food";
+import { workoutResponseSchema, workoutsResponseSchema, type WorkoutResponse, type WorkoutsResponse } from "./workouts";
+import {
   apiErrorSchema,
   authResponseSchema,
   logoutResponseSchema,
@@ -43,7 +62,7 @@ export function createApiClient(opts: ApiClientOptions) {
   const doFetch: FetchLike = opts.fetch ?? (globalThis as unknown as { fetch: FetchLike }).fetch;
   const base = opts.baseUrl.replace(/\/+$/, "");
 
-  async function request<S extends z.ZodType>(method: "GET" | "POST", path: string, schema: S, body?: unknown): Promise<z.output<S>> {
+  async function request<S extends z.ZodType>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, schema: S, body?: unknown): Promise<z.output<S>> {
     const token = await opts.getToken();
     const headers: Record<string, string> = { Accept: "application/json", "X-Timezone": opts.timeZone() };
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -60,7 +79,7 @@ export function createApiClient(opts: ApiClientOptions) {
     if (!res.ok) {
       if (res.status === 401 && token) opts.onUnauthorized?.(token);
       const err = apiErrorSchema.safeParse(json);
-      throw new ApiClientError(res.status, err.success ? err.data.error : `Request failed (${res.status})`);
+      throw new ApiClientError(res.status, err.success ? err.data.error : res.status === 429 ? "Too many requests. Wait a moment and try again." : `Request failed (${res.status})`);
     }
     const parsed = schema.safeParse(json);
     if (!parsed.success) throw new ApiClientError(res.status, "Unexpected response from the server.");
@@ -71,6 +90,26 @@ export function createApiClient(opts: ApiClientOptions) {
     login: (body: LoginRequest): Promise<AuthResponse> => request("POST", "/api/v1/auth/login", authResponseSchema, body),
     logout: (): Promise<LogoutResponse> => request("POST", "/api/v1/auth/logout", logoutResponseSchema, {}),
     me: (): Promise<MeResponse> => request("GET", "/api/v1/me", meResponseSchema),
+
+    today: (date?: string): Promise<TodayResponse> => request("GET", `/api/v1/today${date ? `?date=${date}` : ""}`, todayResponseSchema),
+    /** Meals from `from` to `to` (YYYY-MM-DD, up to 62 days). */
+    meals: (from: string, to: string = from): Promise<MealsResponse> => request("GET", `/api/v1/meals?from=${from}&to=${to}`, mealsResponseSchema),
+    recentMeals: (limit = 6): Promise<MealsResponse> => request("GET", `/api/v1/meals/recent?limit=${limit}`, mealsResponseSchema),
+    meal: (id: number): Promise<MealResponse> => request("GET", `/api/v1/meals/${id}`, mealResponseSchema),
+    createMeal: (body: MealInputDto): Promise<MealCreatedResponse> => request("POST", "/api/v1/meals", mealCreatedResponseSchema, body),
+    updateMeal: (id: number, body: MealInputDto): Promise<MealResponse> => request("PATCH", `/api/v1/meals/${id}`, mealResponseSchema, body),
+    deleteMeal: (id: number): Promise<OkResponse> => request("DELETE", `/api/v1/meals/${id}`, okResponseSchema, {}),
+    analyzeMeal: (body: AnalyzeMealRequest): Promise<MealAnalysisDto> => request("POST", "/api/v1/meals/analyze", mealAnalysisSchema, body),
+    relogMeal: (id: number, body: RelogMealRequest): Promise<OkResponse> => request("POST", `/api/v1/meals/${id}/relog`, okResponseSchema, body),
+    skipMeal: (body: SkipMealRequest): Promise<OkResponse> => request("POST", "/api/v1/meals/skip", okResponseSchema, body),
+    unskipMeal: (body: SkipMealRequest): Promise<OkResponse> => request("DELETE", "/api/v1/meals/skip", okResponseSchema, body),
+    activeWorkout: (): Promise<WorkoutResponse> => request("GET", "/api/v1/workouts/active", workoutResponseSchema),
+    workouts: (limit = 30): Promise<WorkoutsResponse> => request("GET", `/api/v1/workouts?limit=${limit}`, workoutsResponseSchema),
+    /** Image source for a meal photo: the route needs the bearer token, so pass this to <Image source>. */
+    mealPhoto: async (id: number): Promise<{ uri: string; headers: Record<string, string> }> => {
+      const token = await opts.getToken();
+      return { uri: `${base}/api/v1/meals/${id}/photo`, headers: token ? { Authorization: `Bearer ${token}` } : {} };
+    },
   };
 }
 

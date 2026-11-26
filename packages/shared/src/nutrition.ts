@@ -529,3 +529,15 @@ export function parseItems(json: string | null): MealItem[] {
     return [];
   }
 }
+
+/** Protein is a goal to reach; carbs and fat are a band of plus or minus 10%. */
+export type MacroKind = "protein" | "limit";
+
+/** One macro's verdict for the day, shared by the web and mobile macro bars. */
+export function macroStatus(kind: MacroKind, value: number, target: number): { text: string; tone: "good" | "over" | "muted" } {
+  const diff = Math.round(target - value);
+  if (kind === "protein") return value >= target * 0.95 ? { text: "✓ goal hit", tone: "good" } : { text: `${diff} g to go`, tone: "muted" };
+  if (value > target * 1.1) return { text: `${-diff} g over`, tone: "over" };
+  if (value >= target * 0.9) return { text: "✓ on target", tone: "good" };
+  return { text: `${diff} g left`, tone: "muted" };
+}

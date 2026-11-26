@@ -1,5 +1,5 @@
 import { CountUp } from "@/components/CountUp";
-import type { DailyTargets, Macros } from "@legymdary/shared";
+import { macroStatus, type DailyTargets, type MacroKind, type Macros } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /** Calorie ring + macro bars for one day. Safe in server or client trees. */
@@ -100,23 +100,11 @@ function MacroBar({
   value: number;
   target?: number | null;
   color: string;
-  kind: "protein" | "limit";
+  kind: MacroKind;
 }) {
   const v = Math.round(value);
   const pct = target ? Math.min(100, (value / target) * 100) : 0;
-  let status: { text: string; tone: "good" | "over" | "muted" } | null = null;
-  if (target) {
-    const diff = Math.round(target - value);
-    if (kind === "protein") {
-      status = value >= target * 0.95 ? { text: "✓ goal hit", tone: "good" } : { text: `${diff} g to go`, tone: "muted" };
-    } else if (value > target * 1.1) {
-      status = { text: `${-diff} g over`, tone: "over" };
-    } else if (value >= target * 0.9) {
-      status = { text: "✓ on target", tone: "good" };
-    } else {
-      status = { text: `${diff} g left`, tone: "muted" };
-    }
-  }
+  const status = target ? macroStatus(kind, value, target) : null;
   const over = status?.tone === "over";
   return (
     <div>
