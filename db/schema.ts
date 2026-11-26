@@ -608,6 +608,29 @@ export const rateLimits = sqliteTable("rate_limits", {
 });
 
 /**
+ * Bearer tokens for the native apps. Only the sha-256 of the token is stored,
+ * so a database leak can't be replayed. Revoke by setting `revokedAt`.
+ */
+export const apiTokens = sqliteTable(
+  "api_tokens",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    name: text("name"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [uniqueIndex("api_tokens_hash_idx").on(t.tokenHash), index("api_tokens_user_idx").on(t.userId)],
+);
+
+/**
  * Lossless store of every Garmin Personal API response: one row per dataset
  * per day (or per activity / per snapshot). `payload` is the raw JSON, so any
  * field Garmin provides can be analysed later without re-fetching.
