@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPretty, todayStr } from "@legymdary/shared";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
@@ -8,7 +9,7 @@ import { Button, Card, SectionTitle } from "@/components/ui";
 import { finishSheetImport, importSheetBatch, removeSheetImport, startSheetImport } from "@/lib/actions";
 import { activityLabel, exerciseKey, parseSheets, type ImportCardio, type ImportSession, type ParsedImport } from "@/lib/sheet-import/format";
 import { readSpreadsheet, SheetFileError } from "@/lib/sheet-import/read";
-import { cn, formatPretty, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export type PastImport = { id: number; fileName: string; workouts: number; sets: number; activities: number; createdAt: string };
 

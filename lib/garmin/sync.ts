@@ -11,7 +11,7 @@ import * as api from "@/lib/garmin/client";
 import { GarminError } from "@/lib/garmin/client";
 import { decryptSecret, encryptSecret } from "@/lib/garmin/crypto";
 import { resolveDays } from "@/lib/sources";
-import { addDaysStr, todayStr } from "@/lib/utils";
+import { addDaysStr, todayStr } from "@legymdary/shared";
 
 /**
  * Server-only. Pulls a user's Garmin data for a date range and upserts it:

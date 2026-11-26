@@ -1,21 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import {
-  FRONT,
-  GROUND,
-  lerpPose,
-  phase,
-  solveFront,
-  solveSide,
-  type FrontPose,
-  type Pattern,
-  type Prop,
-  type Pt,
-  type SceneItem,
-  type Segment,
-  type SidePose,
-} from "@/lib/exercise-motion";
+import { FRONT, GROUND, lerpPose, phase, solveFront, solveSide, type FrontPose, type Pattern, type Prop, type Pt, type SceneItem, type Segment, type SidePose } from "@legymdary/shared";
 
 const BODY = "var(--color-zinc-200)";
 const FOCUS = "var(--color-teal-300)";

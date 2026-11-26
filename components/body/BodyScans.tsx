@@ -12,16 +12,9 @@ import { Button, Card, inputClass } from "@/components/ui";
 import type { BodyScan } from "@/db/schema";
 import { deleteBodyScan, extractBodyScansAction, saveBodyScans } from "@/lib/actions";
 import type { ExtractedScan } from "@/lib/body-scan-ai";
-import {
-  compareScans,
-  leanMass,
-  parseSegments,
-  SEGMENT_LABEL,
-  SEGMENTS,
-  segmentBalance,
-} from "@/lib/body-scan";
+import { compareScans, leanMass, parseSegments, SEGMENT_LABEL, SEGMENTS, segmentBalance, formatMedium, formatShort } from "@legymdary/shared";
 import { prepareScreenshotTiles } from "@/lib/image";
-import { cn, formatMedium, formatShort } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const fmt = (v: number | null | undefined, p = 1) => (v == null ? "–" : String(Math.round(v * 10 ** p) / 10 ** p));
 const signed = (v: number | null | undefined, unit = "", p = 1) =>

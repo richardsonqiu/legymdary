@@ -18,9 +18,7 @@ import { db } from "@/db";
 import { bodyStats, dailyTargets, garminDaily, meals, skippedMeals, type DailyTarget, type TargetReview } from "@/db/schema";
 import { ensureReview, reviewTargets } from "@/lib/review";
 import { bodyValuesAsOf } from "@/lib/body-values";
-import { chooseMaintenance, garminMaintenance, measuredMaintenance } from "@/lib/energy";
-import { computePlan, planInputFrom, targetsFromPlan, type DailyTargets, type Plan } from "@/lib/nutrition";
-import { addDaysStr } from "@/lib/utils";
+import { chooseMaintenance, garminMaintenance, measuredMaintenance, computePlan, planInputFrom, targetsFromPlan, type DailyTargets, type Plan, addDaysStr } from "@legymdary/shared";
 
 export const CAL_STEP = 50;
 const HISTORY_DAYS = 3 * 365;

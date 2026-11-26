@@ -3,7 +3,7 @@
  * deterministically from DayRows; the AI only narrates the results.
  */
 import type { DayRow } from "@/lib/analysis/extract";
-import { isFullyLogged } from "@/lib/energy";
+import { isFullyLogged } from "@legymdary/shared";
 
 /* ------------------------------------------------------------------ */
 /* Basics                                                              */

@@ -17,7 +17,7 @@ import {
   startWorkoutFromTemplate,
 } from "@/lib/actions";
 import type { TemplateSummary } from "@/lib/queries";
-import { todayStr } from "@/lib/utils";
+import { todayStr } from "@legymdary/shared";
 
 export function StartWorkout({
   canDuplicate,

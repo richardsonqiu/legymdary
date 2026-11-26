@@ -1,11 +1,12 @@
 "use client";
 
+import { formatPretty } from "@legymdary/shared";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CalendarIcon, FlameIcon, LockIcon, WaveIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
 import { setReviewCadence, setTargetMode } from "@/lib/actions";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 

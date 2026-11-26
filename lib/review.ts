@@ -15,9 +15,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { targetReviews, type TargetReview } from "@/db/schema";
-import { isFullyLogged } from "@/lib/energy";
-import { computePlan, planInputFrom, targetsFromPlan, type PlanInput } from "@/lib/nutrition";
-import { addDaysStr } from "@/lib/utils";
+import { isFullyLogged, computePlan, planInputFrom, targetsFromPlan, type PlanInput, addDaysStr } from "@legymdary/shared";
 
 export type Cadence = "weekly" | "monthly";
 export const cadenceOf = (g: { reviewCadence?: string | null } | null): Cadence => (g?.reviewCadence === "monthly" ? "monthly" : "weekly");

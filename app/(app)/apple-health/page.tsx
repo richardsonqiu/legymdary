@@ -4,7 +4,7 @@ import { AppleHealthImport } from "@/components/apple-health/AppleHealthImport";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
 import { getAppleHealthStatus, getGarminActivities, getGarminStatus } from "@/lib/queries";
-import { addDaysStr } from "@/lib/utils";
+import { addDaysStr } from "@legymdary/shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Apple Health" };

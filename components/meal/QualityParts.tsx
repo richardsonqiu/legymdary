@@ -1,4 +1,4 @@
-import { BANDS, type Band, type Level, type Tone } from "@/lib/meal-quality";
+import { BANDS, type Band, type Level, type Tone } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 export const BAND_DOT: Record<Band, string> = {

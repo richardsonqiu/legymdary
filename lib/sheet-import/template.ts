@@ -6,7 +6,7 @@
  */
 import { crc32, deflateRawSync } from "node:zlib";
 import { ACTIVITY_TYPES, CARDIO_COLUMNS, SET_COLUMNS } from "@/lib/sheet-import/format";
-import { MUSCLE_GROUPS } from "@/lib/utils";
+import { MUSCLE_GROUPS } from "@legymdary/shared";
 
 type XCell = string | number | { v: string | number; s: number } | null;
 

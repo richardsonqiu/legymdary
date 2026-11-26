@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Explain } from "@/components/Explain";
-import type { GlossaryKey } from "@/lib/glossary";
+import type { GlossaryKey } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 export function Card({

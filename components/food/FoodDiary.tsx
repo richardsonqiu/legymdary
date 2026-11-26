@@ -7,7 +7,7 @@ import { groupByDish, ItemExplanation } from "@/components/food/ItemExplanation"
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { MealComposer, type ComposerInit } from "@/components/food/MealComposer";
 import { BAND_DOT, BandPill } from "@/components/meal/QualityParts";
-import { bandLabel, mealQuality } from "@/lib/meal-quality";
+import { bandLabel, mealQuality, isDrink, parseItems, MEAL_TYPES, mealBudgets, SKIPPABLE_MEALS, mealTypeForHour, sumMacros, type DailyTargets, withBonus, type MealType, addDaysStr, formatPretty, todayStr } from "@legymdary/shared";
 import { amountWords } from "@/components/food/AmountPicker";
 import { ConfirmAddSheet, PinPickerSheet, type QuickMeal } from "@/components/food/QuickSheets";
 import { TargetChangeNote, type TargetChangeInfo } from "@/components/food/TargetChangeNote";
@@ -35,19 +35,7 @@ import { Button, Card, SectionTitle } from "@/components/ui";
 import type { Meal, SavedMeal } from "@/db/schema";
 import { deleteMeal, logMenuItem, pinMeal, relogMeal, removeMenuItem, skipMeal, unskipMeal } from "@/lib/actions";
 import { prepareMealPhoto } from "@/lib/image";
-import {
-  isDrink,
-  parseItems,
-  MEAL_TYPES,
-  mealBudgets,
-  SKIPPABLE_MEALS,
-  mealTypeForHour,
-  sumMacros,
-  type DailyTargets,
-  withBonus,
-  type MealType,
-} from "@/lib/nutrition";
-import { addDaysStr, cn, formatPretty, todayStr } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 function useMounted() {
@@ -87,7 +75,6 @@ function editInit(m: Meal): ComposerInit {
 export function FoodDiary({
   meals,
   recentMeals,
-  aiSpend,
   requestedDate,
   targets,
   targetsByDate,
@@ -105,8 +92,6 @@ export function FoodDiary({
   meals: Meal[];
   /** Distinct recent meals, newest first: the first few are "Eat again", all of them feed the My menu picker. */
   recentMeals: Meal[];
-  /** AI requests this month (photo and text estimates, reports) and their estimated cost. */
-  aiSpend: { calls: number; costUsd: number };
   /** From ?date=; null means "today in the user's timezone". */
   requestedDate: string | null;
   targets: DailyTargets;
@@ -590,13 +575,6 @@ export function FoodDiary({
           })}
         </div>
       </section>
-
-      {aiSpend.calls > 0 && (
-        <p className="text-center text-[11px] text-zinc-600">
-          AI this month: {aiSpend.calls} {aiSpend.calls === 1 ? "request" : "requests"} · about $
-          {aiSpend.costUsd < 0.01 ? aiSpend.costUsd.toFixed(4) : aiSpend.costUsd.toFixed(2)}
-        </p>
-      )}
 
       {adding && (
         <ConfirmAddSheet

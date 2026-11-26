@@ -12,8 +12,7 @@ import { and, between, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { garminActivities, garminDaily, sourceDaily, sourcePrefs } from "@/db/schema";
 
-export * from "@/lib/sources-shared";
-import { DEFAULT_PREFS, isPref, orderFor, sourceOfKey, type Category, type Device, type Prefs } from "@/lib/sources-shared";
+import { DEFAULT_PREFS, isPref, orderFor, sourceOfKey, type Category, type Device, type Prefs } from "@legymdary/shared";
 
 export async function getPrefs(userId: string): Promise<Prefs> {
   const [row] = await db.select().from(sourcePrefs).where(eq(sourcePrefs.userId, userId)).limit(1);

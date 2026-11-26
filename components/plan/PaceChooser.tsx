@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button, Card, inputClass } from "@/components/ui";
 import { setGoalPace } from "@/lib/actions";
-import type { PaceOption } from "@/lib/nutrition";
-import { cn, formatMedium } from "@/lib/utils";
+import { type PaceOption, formatMedium } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 

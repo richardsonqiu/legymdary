@@ -4,11 +4,9 @@ import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { CheckIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
-import type { Readiness } from "@/lib/energy";
-import type { DailyTargets } from "@/lib/nutrition";
-import type { ConsistencyDay, DayTotals } from "@/lib/queries";
-import { activeDaysInWeek, isActiveDay, WEEKLY_TARGET } from "@/lib/streaks";
-import { cn, formatMedium, formatShort, todayStr } from "@/lib/utils";
+import { type Readiness, type DailyTargets, type ConsistencyDay, activeDaysInWeek, isActiveDay, WEEKLY_TARGET, formatMedium, formatShort, todayStr } from "@legymdary/shared";
+import type { DayTotals } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 const noop = () => () => {};
 

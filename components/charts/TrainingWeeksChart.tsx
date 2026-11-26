@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART, ChartFrame, Segmented, tooltipLabelStyle, tooltipStyle } from "@/components/charts/common";
 import type { ActivityTypeSummary, TrainingWeek } from "@/lib/queries";
-import { formatShort } from "@/lib/utils";
+import { formatShort } from "@legymdary/shared";
 
 const GYM = "#34d399"; // emerald-400
 const GARMIN = "#a78bfa"; // violet-400

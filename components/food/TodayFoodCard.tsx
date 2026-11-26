@@ -5,9 +5,8 @@ import { useSyncExternalStore } from "react";
 import { MacroSummary } from "@/components/food/MacroSummary";
 import { CameraIcon } from "@/components/icons";
 import { Card, buttonClass } from "@/components/ui";
-import { withBonus, type DailyTargets } from "@/lib/nutrition";
+import { withBonus, type DailyTargets, todayStr } from "@legymdary/shared";
 import type { DayTotals } from "@/lib/queries";
-import { todayStr } from "@/lib/utils";
 
 const noop = () => () => {};
 

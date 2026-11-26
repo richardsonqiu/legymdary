@@ -1,12 +1,13 @@
 "use client";
 
+import { formatPretty, formatShort } from "@legymdary/shared";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ArrowDownIcon, ArrowUpIcon, CalendarIcon, CheckIcon, FlameIcon, ForkIcon, InfoIcon, LockIcon, ScaleIcon } from "@/components/icons";
 import { Button, Card } from "@/components/ui";
 import type { TargetReview } from "@/db/schema";
 import { decideReview } from "@/lib/actions";
-import { cn, formatPretty, formatShort } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const fmt = (n: number) => Math.round(Math.abs(n)).toLocaleString("en-US");
 

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { CheckIcon, ForkIcon, PencilIcon, PinIcon, SearchIcon, XIcon } from "@/components/icons";
 import { Button, inputClass } from "@/components/ui";
-import { MEAL_TYPES, type MealType } from "@/lib/nutrition";
-import { cn, formatPretty } from "@/lib/utils";
+import { MEAL_TYPES, type MealType, formatPretty } from "@legymdary/shared";
+import { cn } from "@/lib/utils";
 
 export type QuickMeal = {
   id: number;

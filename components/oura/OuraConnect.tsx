@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPretty } from "@legymdary/shared";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -7,7 +8,7 @@ import { RefreshIcon, RingIcon } from "@/components/icons";
 import { Button, Card } from "@/components/ui";
 import { disconnectOura, syncOuraNow } from "@/lib/actions";
 import type { OuraStatus } from "@/lib/queries";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const FLASH: Record<string, { ok: boolean; text: string }> = {
   connected: { ok: true, text: "Oura connected. Importing the last 90 days now; this takes a minute." },

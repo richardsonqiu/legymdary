@@ -3,8 +3,7 @@ import { and, desc, eq, gte, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { exercises, sets, workoutExercises, workouts } from "@/db/schema";
 import { getEnergyContext } from "@/lib/energy-data";
-import { recommendSession, type History, type Recommendation } from "@/lib/training/program";
-import { addDaysStr } from "@/lib/utils";
+import { recommendSession, type History, type Recommendation, addDaysStr } from "@legymdary/shared";
 
 export async function getTrainingHistory(userId: string, today: string): Promise<History> {
   const since = addDaysStr(today, -120);

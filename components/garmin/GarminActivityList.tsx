@@ -3,8 +3,7 @@ import { GarminAttribution } from "@/components/garmin/GarminAttribution";
 import { ChevronRightIcon } from "@/components/icons";
 import { Card } from "@/components/ui";
 import type { GarminActivity } from "@/db/schema";
-import { sourceOfKey } from "@/lib/sources-shared";
-import { formatShort, kg } from "@/lib/utils";
+import { sourceOfKey, formatShort, kg } from "@legymdary/shared";
 
 function dur(sec: number | null) {
   if (!sec) return null;

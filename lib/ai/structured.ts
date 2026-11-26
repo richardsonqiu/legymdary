@@ -4,7 +4,7 @@ import type { z } from "zod";
 import { db } from "@/db";
 import { aiUsage } from "@/db/schema";
 import { estimateCostUsd } from "@/lib/food-ai";
-import { plainText } from "@/lib/utils";
+import { plainText } from "@legymdary/shared";
 
 /**
  * Server-only. One structured Claude call with a primary → backup model

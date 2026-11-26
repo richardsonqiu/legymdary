@@ -1,3 +1,4 @@
+import { formatPretty } from "@legymdary/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageTransition } from "@/components/PageTransition";
@@ -8,7 +9,7 @@ import { getActivityView, trainingEffectWords, ZONES } from "@/lib/garmin/activi
 import { requireUserId } from "@/lib/session";
 import { getWorkoutForActivity } from "@/lib/queries";
 import { ActivityBreakdown } from "@/components/garmin/ActivityBreakdown";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Activity" };

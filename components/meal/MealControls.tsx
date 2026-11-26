@@ -6,8 +6,7 @@ import { useState, useTransition } from "react";
 import { PencilIcon, TrashIcon } from "@/components/icons";
 import { buttonClass } from "@/components/ui";
 import { deleteMeal, setMealTime } from "@/lib/actions";
-import { fmtClock } from "@/lib/meal-quality";
-import { MEAL_TYPES } from "@/lib/nutrition";
+import { fmtClock, MEAL_TYPES } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 /** Meal type chips and the time it was eaten. */

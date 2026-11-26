@@ -1,7 +1,7 @@
 import { PageTransition } from "@/components/PageTransition";
 import { FoodDiary } from "@/components/food/FoodDiary";
 import { PageHeader } from "@/components/ui";
-import { activityBonus } from "@/lib/energy";
+import { activityBonus, addDaysStr, mealRegularity } from "@legymdary/shared";
 import { getEnergyContext } from "@/lib/energy-data";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
@@ -10,7 +10,6 @@ import { NudgePopup } from "@/components/nudge/NudgePopup";
 import { nudgeFrom } from "@/lib/nudge-data";
 import { requireUserId, userToday } from "@/lib/session";
 import {
-  getAiUsageSince,
   getTimedMeals,
   getGarminDaily,
   getMeals,
@@ -18,9 +17,7 @@ import {
   getSkippedMeals,
   getMenu,
 } from "@/lib/queries";
-import { addDaysStr } from "@/lib/utils";
 import { MealRhythm } from "@/components/meal/MealRhythm";
-import { mealRegularity } from "@/lib/meal-quality";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Food" };
@@ -39,13 +36,10 @@ export default async function FoodPage({
   // most a day away from the server's — so load a 3-day window around it.
   const serverToday = await userToday();
   const center = requested ?? serverToday;
-  const now = new Date();
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const [meals, energy, recentMeals, aiSpend, garminDays, userId, skipped, menu] = await Promise.all([
+  const [meals, energy, recentMeals, garminDays, userId, skipped, menu] = await Promise.all([
     getMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getEnergyContext(),
     getRecentMeals(40),
-    getAiUsageSince(monthStart),
     getGarminDaily(addDaysStr(center, -1), addDaysStr(center, 1)),
     requireUserId(),
     getSkippedMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
@@ -83,7 +77,6 @@ export default async function FoodPage({
       <FoodDiary
         meals={meals}
         recentMeals={recentMeals}
-        aiSpend={{ calls: aiSpend.calls, costUsd: aiSpend.costUsd }}
         requestedDate={requested}
         targets={energy.targets}
         targetsByDate={energy.targetsByDate}

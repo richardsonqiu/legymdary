@@ -7,11 +7,10 @@ import { useRef, useState, useTransition } from "react";
 import { WatchIcon } from "@/components/icons";
 import { Button, Card } from "@/components/ui";
 import { finishAppleHealthImport, importAppleHealthBatch, removeAppleHealthData } from "@/lib/actions";
-import { createAppleHealthParser } from "@/lib/apple-health/parse";
+import { createAppleHealthParser, batchesOf, type AhSummary, formatPretty } from "@legymdary/shared";
 import { ExportFileError, openExport } from "@/lib/apple-health/read-file";
-import { batchesOf, type AhSummary } from "@/lib/apple-health/types";
 import type { AppleHealthStatus } from "@/lib/queries";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Phase =
   | { kind: "idle" }

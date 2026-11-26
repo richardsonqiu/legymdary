@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Workspaces are linted/type-checked by their own tooling.
+    "packages/**",
+    "apps/**",
     // macOS AppleDouble metadata files (created on the external/exFAT volume).
     "**/._*",
   ]),

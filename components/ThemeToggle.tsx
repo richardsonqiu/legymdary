@@ -21,25 +21,18 @@ function subscribe(fn: () => void) {
   return () => listeners.delete(fn);
 }
 
-/** Auto: dark when the phone is dark, or from 7 pm to 7 am on the phone's clock. */
-function autoTheme(): "light" | "dark" {
-  const h = new Date().getHours();
-  const night = h >= 19 || h < 7;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches || night ? "dark" : "light";
-}
-
 function apply(choice: Choice) {
   try {
     if (choice === "system") localStorage.removeItem(KEY);
     else localStorage.setItem(KEY, choice);
   } catch {}
-  const w = window as Window & { __applyTheme?: () => void };
-  if (w.__applyTheme) w.__applyTheme();
-  else document.documentElement.dataset.theme = choice === "system" ? autoTheme() : choice;
+  const h = new Date().getHours();
+  const light = choice === "light" || (choice === "system" && h >= 6 && h < 19);
+  document.documentElement.dataset.theme = light ? "light" : "dark";
   listeners.forEach((l) => l());
 }
 
-/** Light / Dark / Auto (dark at night or when the phone is dark). */
+/** Light / dark / follow the phone. */
 export function ThemeToggle({ className }: { className?: string }) {
   const choice = useSyncExternalStore(subscribe, read, () => "system" as Choice);
   const opts: { v: Choice; label: string; icon: React.ReactNode }[] = [

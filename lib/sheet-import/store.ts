@@ -12,7 +12,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { exercises, garminActivities, garminRaw, sets, sheetImports, workoutExercises, workouts } from "@/db/schema";
 import { cleanText, exerciseKey, isRealDate, LIMITS, muscleGroupFor } from "@/lib/sheet-import/format";
-import { addDaysStr } from "@/lib/utils";
+import { addDaysStr } from "@legymdary/shared";
 
 const date = z.string().refine(isRealDate, "Invalid date.");
 const text = (max: number) => z.string().max(max * 2).transform((v) => cleanText(v, max));

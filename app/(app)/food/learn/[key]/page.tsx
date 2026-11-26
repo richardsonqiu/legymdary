@@ -4,8 +4,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { ChevronDownIcon, ChevronLeftIcon } from "@/components/icons";
 import { LevelBar } from "@/components/meal/QualityParts";
 import { Card, PageHeader, SectionTitle, type BannerImage } from "@/components/ui";
-import { mealQuality, NUTRIENTS, type NutrientKey } from "@/lib/meal-quality";
-import { NUTRIENT_INFO } from "@/lib/nutrient-info";
+import { mealQuality, NUTRIENTS, type NutrientKey, NUTRIENT_INFO } from "@legymdary/shared";
 import { getMeal } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 

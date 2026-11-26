@@ -15,7 +15,6 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  aiUsage,
   appleHealthImports,
   bodyScans,
   bodyStats,
@@ -47,13 +46,8 @@ import {
 } from "@/db/schema";
 import { latestBodyValues } from "@/lib/body-values";
 import { getPrefs } from "@/lib/sources";
-import { localDateMinutes, requireUserId, userTimeZone, userToday } from "@/lib/session";
-import { mealQuality, SLOT_MINUTES, type TimedMeal } from "@/lib/meal-quality";
-import {
-  addDaysStr,
-  estimate1RM,
-  startOfWeekStr,
-} from "@/lib/utils";
+import { requireUserId, userTimeZone, userToday } from "@/lib/session";
+import { localDateMinutes, type ConsistencyDay, mealQuality, SLOT_MINUTES, type TimedMeal, addDaysStr, estimate1RM, startOfWeekStr } from "@legymdary/shared";
 
 /* ------------------------------------------------------------------ */
 /* Shared shapes                                                       */
@@ -202,11 +196,31 @@ export async function getActiveWorkout(): Promise<WorkoutDetail | null> {
   return w ? toDetail(w as RawWorkout) : null;
 }
 
-export async function getWorkoutDetails(): Promise<WorkoutDetail[]> {
+/** One of the user's workouts with its exercises and sets, or null. */
+export async function getWorkout(id: number): Promise<WorkoutDetail | null> {
+  const userId = await requireUserId();
+  const w = await db.query.workouts.findFirst({
+    where: and(eq(workouts.id, id), eq(workouts.userId, userId)),
+    with: {
+      workoutExercises: {
+        orderBy: (f, ops) => ops.asc(f.position),
+        with: {
+          exercise: true,
+          sets: { orderBy: (f, ops) => ops.asc(f.position) },
+        },
+      },
+    },
+  });
+  return w ? toDetail(w as RawWorkout) : null;
+}
+
+/** Newest first; `limit` caps the list (the web history page passes none). */
+export async function getWorkoutDetails(limit?: number): Promise<WorkoutDetail[]> {
   const userId = await requireUserId();
   const ws = await db.query.workouts.findMany({
     where: eq(workouts.userId, userId),
-    orderBy: desc(workouts.date),
+    orderBy: [desc(workouts.date), desc(workouts.id)],
+    limit,
     with: {
       workoutExercises: {
         orderBy: (f, ops) => ops.asc(f.position),
@@ -821,43 +835,6 @@ export async function getRecentMeals(limit = 6): Promise<Meal[]> {
   return out;
 }
 
-export type AiUsageSummary = {
-  calls: number;
-  costUsd: number;
-  inputTokens: number;
-  outputTokens: number;
-  byModel: { model: string; calls: number; costUsd: number }[];
-};
-
-/** AI calls + estimated spend since a given instant. */
-export async function getAiUsageSince(since: Date): Promise<AiUsageSummary> {
-  const userId = await requireUserId();
-  const rows = await db
-    .select()
-    .from(aiUsage)
-    .where(and(eq(aiUsage.userId, userId), gte(aiUsage.createdAt, since)));
-  const byModel = new Map<string, { model: string; calls: number; costUsd: number }>();
-  let costUsd = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
-  for (const r of rows) {
-    costUsd += r.costUsd;
-    inputTokens += r.inputTokens;
-    outputTokens += r.outputTokens;
-    const m = byModel.get(r.model) ?? { model: r.model, calls: 0, costUsd: 0 };
-    m.calls += 1;
-    m.costUsd += r.costUsd;
-    byModel.set(r.model, m);
-  }
-  return {
-    calls: rows.length,
-    costUsd,
-    inputTokens,
-    outputTokens,
-    byModel: [...byModel.values()].sort((a, b) => b.calls - a.calls),
-  };
-}
-
 export type TemplateSummary = {
   id: number;
   name: string;
@@ -1085,17 +1062,6 @@ export const getBodyScans = cache(async function getBodyScans(): Promise<BodySca
   const userId = await requireUserId();
   return db.select().from(bodyScans).where(eq(bodyScans.userId, userId)).orderBy(asc(bodyScans.date));
 });
-
-export type ConsistencyDay = {
-  date: string;
-  sets: number; // working sets logged in the app
-  garmin: number; // Garmin activities
-  garminMin: number; // their total minutes
-  meals: number;
-  /** Meals marked as skipped. */
-  skipped: number;
-  kcal: number;
-};
 
 /** Per-day exercise + food logging counts (grouped in SQL, tiny payload). */
 export const getConsistencyDays = cache(async function getConsistencyDays(

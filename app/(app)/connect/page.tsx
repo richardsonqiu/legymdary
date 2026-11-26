@@ -2,11 +2,13 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { PageTransition } from "@/components/PageTransition";
 import { SourcePrefsCard } from "@/components/connect/SourcePrefsCard";
-import type { Device } from "@/lib/sources-shared";
+import { type Device, formatPretty } from "@legymdary/shared";
 import { AppleIcon, ChevronRightIcon, DownloadIcon, ScaleIcon, SheetIcon, WatchIcon, RingIcon } from "@/components/icons";
 import { Card, PageHeader, SectionTitle } from "@/components/ui";
+import { hasHealthConnectData } from "@/lib/apple-health/store";
+import { requireUserId } from "@/lib/session";
 import { getAppleHealthStatus, getGarminStatus, getSheetImports, getOuraStatus, getSourcePrefs } from "@/lib/queries";
-import { cn, formatPretty } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Connections" };
@@ -54,14 +56,15 @@ const EXPORTS = [
 ] as const;
 
 export default async function ConnectPage() {
-  const [garmin, apple, oura, imports, prefs] = await Promise.all([
+  const [garmin, apple, oura, imports, prefs, healthConnect] = await Promise.all([
     getGarminStatus(),
     getAppleHealthStatus(),
     getOuraStatus(),
     getSheetImports(),
     getSourcePrefs(),
+    requireUserId().then(hasHealthConnectData),
   ]);
-  const devices: Device[] = [garmin ? "garmin" : null, oura ? "oura" : null, apple ? "apple" : null].filter((d): d is Device => !!d);
+  const devices: Device[] = [garmin ? "garmin" : null, oura ? "oura" : null, apple ? "apple" : null, healthConnect ? "health_connect" : null].filter((d): d is Device => !!d);
   const garminOn = !!garmin && garmin.status !== "error";
   const lastImport = imports[0];
 
