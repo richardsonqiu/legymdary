@@ -18,7 +18,25 @@ import {
   type TodayResponse,
 } from "./food";
 import { progressMethods } from "./progress-client";
-import { workoutResponseSchema, workoutsResponseSchema, type WorkoutResponse, type WorkoutsResponse } from "./workouts";
+import {
+  exercisesResponseSchema,
+  logSetResponseSchema,
+  templatesResponseSchema,
+  workoutExerciseIdResponseSchema,
+  workoutIdResponseSchema,
+  workoutResponseSchema,
+  workoutsResponseSchema,
+  type CreateExerciseRequest,
+  type CreateWorkoutRequest,
+  type ExercisesResponse,
+  type FromTemplateRequest,
+  type LogSetRequest,
+  type LogSetResponse,
+  type TemplatesResponse,
+  type WorkoutIdResponse,
+  type WorkoutResponse,
+  type WorkoutsResponse,
+} from "./workouts";
 import {
   apiErrorSchema,
   authResponseSchema,
@@ -107,6 +125,23 @@ export function createApiClient(opts: ApiClientOptions) {
     unskipMeal: (body: SkipMealRequest): Promise<OkResponse> => request("DELETE", "/api/v1/meals/skip", okResponseSchema, body),
     activeWorkout: (): Promise<WorkoutResponse> => request("GET", "/api/v1/workouts/active", workoutResponseSchema),
     workouts: (limit = 30): Promise<WorkoutsResponse> => request("GET", `/api/v1/workouts?limit=${limit}`, workoutsResponseSchema),
+    workout: (id: number): Promise<WorkoutResponse> => request("GET", `/api/v1/workouts/${id}`, workoutResponseSchema),
+    createWorkout: (body: CreateWorkoutRequest): Promise<WorkoutIdResponse> => request("POST", "/api/v1/workouts", workoutIdResponseSchema, body),
+    /** Starts today's recommended session. Fails (400) while another workout is unfinished. */
+    startRecommendedWorkout: (): Promise<WorkoutIdResponse> => request("POST", "/api/v1/workouts/recommended", workoutIdResponseSchema, {}),
+    startFromTemplate: (body: FromTemplateRequest): Promise<WorkoutIdResponse> => request("POST", "/api/v1/workouts/from-template", workoutIdResponseSchema, body),
+    finishWorkout: (id: number): Promise<WorkoutResponse> => request("POST", `/api/v1/workouts/${id}/finish`, workoutResponseSchema, {}),
+    /** Deletes the workout with its exercises and sets. */
+    discardWorkout: (id: number): Promise<OkResponse> => request("DELETE", `/api/v1/workouts/${id}`, okResponseSchema, {}),
+    addWorkoutExercise: (workoutId: number, exerciseId: number): Promise<{ workoutExerciseId: number }> =>
+      request("POST", `/api/v1/workouts/${workoutId}/exercises`, workoutExerciseIdResponseSchema, { exerciseId }),
+    removeWorkoutExercise: (workoutExerciseId: number): Promise<OkResponse> => request("DELETE", `/api/v1/workout-exercises/${workoutExerciseId}`, okResponseSchema, {}),
+    logSet: (workoutExerciseId: number, body: LogSetRequest): Promise<LogSetResponse> =>
+      request("POST", `/api/v1/workout-exercises/${workoutExerciseId}/sets`, logSetResponseSchema, body),
+    deleteSet: (id: number): Promise<OkResponse> => request("DELETE", `/api/v1/sets/${id}`, okResponseSchema, {}),
+    exercises: (): Promise<ExercisesResponse> => request("GET", "/api/v1/exercises", exercisesResponseSchema),
+    createExercise: (body: CreateExerciseRequest): Promise<WorkoutIdResponse> => request("POST", "/api/v1/exercises", workoutIdResponseSchema, body),
+    templates: (): Promise<TemplatesResponse> => request("GET", "/api/v1/templates", templatesResponseSchema),
     /** Image source for a meal photo: the route needs the bearer token, so pass this to <Image source>. */
     mealPhoto: async (id: number): Promise<{ uri: string; headers: Record<string, string> }> => {
       const token = await opts.getToken();
