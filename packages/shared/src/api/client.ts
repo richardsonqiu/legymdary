@@ -79,7 +79,7 @@ export function createApiClient(opts: ApiClientOptions) {
     if (!res.ok) {
       if (res.status === 401 && token) opts.onUnauthorized?.(token);
       const err = apiErrorSchema.safeParse(json);
-      throw new ApiClientError(res.status, err.success ? err.data.error : `Request failed (${res.status})`);
+      throw new ApiClientError(res.status, err.success ? err.data.error : res.status === 429 ? "Too many requests. Wait a moment and try again." : `Request failed (${res.status})`);
     }
     const parsed = schema.safeParse(json);
     if (!parsed.success) throw new ApiClientError(res.status, "Unexpected response from the server.");
