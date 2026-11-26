@@ -22,5 +22,5 @@ export function Text({ variant = "body", tone = "default", style, ...rest }: Tex
   const t = useTheme();
   const tones = useTones();
   const color = { default: t.text, muted: t.muted, danger: t.danger, good: tones.good, warn: tones.warn, info: tones.info }[tone];
-  return <RNText {...rest} style={[VARIANTS[variant], { color }, style]} />;
+  return <RNText maxFontSizeMultiplier={1.4} {...rest} style={[VARIANTS[variant], { color }, style]} />;
 }

@@ -17,7 +17,7 @@ export function MacroSummary({ totals, targets, compact = false }: { totals: Mac
         <Text variant={compact ? "heading" : "title"} style={{ fontVariant: ["tabular-nums"] }}>
           {(remaining != null ? Math.abs(remaining) : eaten).toLocaleString("en-US")}
         </Text>
-        <Text variant="caption" tone="muted" style={{ fontSize: 10, textTransform: "uppercase" }}>
+        <Text variant="caption" tone="muted" style={{ textTransform: "uppercase" }}>
           {remaining == null ? "kcal eaten" : over ? "kcal over" : "kcal left"}
         </Text>
       </ProgressRing>

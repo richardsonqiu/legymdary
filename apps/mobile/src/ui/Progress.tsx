@@ -1,3 +1,4 @@
+import { macroStatus, type MacroKind } from "@legymdary/shared";
 import type { ReactNode } from "react";
 import { View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -43,17 +44,6 @@ export function Bar({ value, color }: { value: number; color: string }) {
   );
 }
 
-export type MacroKind = "protein" | "limit";
-
-/** Same verdicts as the web MacroBar: protein is a goal to reach, carbs and fat are a band of plus or minus 10%. */
-export function macroStatus(kind: MacroKind, value: number, target: number): { text: string; tone: "good" | "over" | "muted" } {
-  const diff = Math.round(target - value);
-  if (kind === "protein") return value >= target * 0.95 ? { text: "✓ goal hit", tone: "good" } : { text: `${diff} g to go`, tone: "muted" };
-  if (value > target * 1.1) return { text: `${-diff} g over`, tone: "over" };
-  if (value >= target * 0.9) return { text: "✓ on target", tone: "good" };
-  return { text: `${diff} g left`, tone: "muted" };
-}
-
 export function MacroBar({ label, value, target, color, kind }: { label: string; value: number; target?: number | null; color: string; kind: MacroKind }) {
   const tones = useTones();
   const status = target ? macroStatus(kind, value, target) : null;
@@ -73,7 +63,7 @@ export function MacroBar({ label, value, target, color, kind }: { label: string;
       </View>
       <Bar value={target ? value / target : 0} color={over ? tones.warn : color} />
       {status ? (
-        <Text variant="caption" tone={status.tone === "good" ? "good" : status.tone === "over" ? "warn" : "muted"} style={{ textAlign: "right", fontSize: 10 }}>
+        <Text variant="caption" tone={status.tone === "good" ? "good" : status.tone === "over" ? "warn" : "muted"} style={{ textAlign: "right" }}>
           {status.text}
         </Text>
       ) : null}

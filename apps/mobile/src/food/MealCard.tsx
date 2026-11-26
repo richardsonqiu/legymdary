@@ -37,7 +37,7 @@ export function MealCard({ meal, onPress }: { meal: MealDto; onPress: () => void
     <Card onPress={onPress} accessibilityLabel={`${meal.name}, ${Math.round(meal.calories)} kilocalories`} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12 }}>
       <MealThumb id={meal.id} has={meal.hasPhoto} />
       <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="body" numberOfLines={1} style={{ fontWeight: "600" }}>
+        <Text variant="body" numberOfLines={2} style={{ fontWeight: "600" }}>
           {meal.name}
         </Text>
         <Text variant="caption" tone="muted">

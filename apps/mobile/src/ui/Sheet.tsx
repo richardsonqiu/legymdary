@@ -3,15 +3,17 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } fr
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { Text } from "./Text";
+import { useTones } from "./tones";
 
 /** Bottom sheet. Tap outside or the system back gesture closes it. */
 export function Sheet({ visible, title, onClose, children }: { visible: boolean; title?: string; onClose: () => void; children: ReactNode }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const tones = useTones();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Pressable accessibilityLabel="Close" onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+        <Pressable accessible={false} onPress={onClose} style={{ flex: 1, backgroundColor: tones.scrim }} />
         <View
           style={{
             backgroundColor: t.card,
@@ -27,7 +29,7 @@ export function Sheet({ visible, title, onClose, children }: { visible: boolean;
             <Text variant="heading" accessibilityRole="header">
               {title ?? ""}
             </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={12}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
               <Text variant="label" tone="muted">
                 Close
               </Text>

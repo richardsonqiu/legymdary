@@ -1,18 +1,19 @@
 import { localDateMinutes, type MealInputDto } from "@legymdary/shared";
 import { useEffect, useState } from "react";
 import { deviceTimeZone, useAuth } from "../auth";
-import { invalidate, useApi } from "./useApi";
+import { KEYS, invalidate, useApi } from "./useApi";
 
-export { invalidate, useApi, errorMessage } from "./useApi";
+export { useMutation } from "./useMutation";
+export { invalidate, useApi, useRefreshAll, errorMessage, KEYS } from "./useApi";
 
 /** Today's date (YYYY-MM-DD) in the device zone, the same date the server derives from X-Timezone. */
 export const deviceToday = () => localDateMinutes(new Date(), deviceTimeZone()).date;
 
-export const useToday = (date?: string) => useApi(`today:${date ?? "now"}`, (api) => api.today(date));
-export const useMeals = (date: string) => useApi(`meals:${date}`, (api) => api.meals(date));
-export const useRecentMeals = (limit = 6) => useApi(`recent:${limit}`, (api) => api.recentMeals(limit));
-export const useActiveWorkout = () => useApi("workout:active", (api) => api.activeWorkout());
-export const useLastWorkouts = (limit = 1) => useApi(`workout:last:${limit}`, (api) => api.workouts(limit));
+export const useToday = (date?: string) => useApi(`${KEYS.today}:${date ?? "now"}`, (api) => api.today(date));
+export const useMeals = (date: string) => useApi(`${KEYS.meals}:${date}`, (api) => api.meals(date));
+export const useRecentMeals = (limit = 6) => useApi(`${KEYS.recent}:${limit}`, (api) => api.recentMeals(limit));
+export const useActiveWorkout = () => useApi(`${KEYS.workout}:active`, (api) => api.activeWorkout());
+export const useLastWorkouts = (limit = 1) => useApi(`${KEYS.workout}:last:${limit}`, (api) => api.workouts(limit));
 
 /** Meal photo source with the bearer header, or null while loading. */
 export function useMealPhoto(id: number, enabled: boolean) {
@@ -21,7 +22,7 @@ export function useMealPhoto(id: number, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     let live = true;
-    void api.mealPhoto(id).then((s) => live && setSrc(s));
+    api.mealPhoto(id).then((s) => live && setSrc(s), () => {});
     return () => {
       live = false;
     };
@@ -34,9 +35,9 @@ export function useFoodActions() {
   const { api } = useAuth();
   const done = <T,>(p: Promise<T>) =>
     p.then((r) => {
-      invalidate("meals");
-      invalidate("today");
-      invalidate("recent");
+      invalidate(KEYS.meals);
+      invalidate(KEYS.today);
+      invalidate(KEYS.recent);
       return r;
     });
   return {

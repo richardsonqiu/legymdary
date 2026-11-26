@@ -1,10 +1,10 @@
 import { MEAL_TYPES, SKIPPABLE_MEALS, formatPretty, formatShort, kg, withBonus } from "@legymdary/shared";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
-import { deviceToday, useActiveWorkout, useLastWorkouts, useToday } from "../../src/api/hooks";
+import { deviceToday, useActiveWorkout, useLastWorkouts, useRefreshAll, useToday } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth";
 import { MEAL_LABEL } from "../../src/food/MealCard";
-import { Button, Card, EmptyState, ErrorState, ListRow, Loading, MacroSummary, Screen, Section, Text, useTones } from "../../src/ui";
+import { Button, Card, EmptyState, ListRow, MacroSummary, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, useTones } from "../../src/ui";
 
 const greeting = (h: number) => (h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
 const ZERO = { calories: 0, protein: 0, carbs: 0, fat: 0 };
@@ -20,24 +20,17 @@ export default function Home() {
   const d = today.data;
   const lastWorkout = last.data?.workouts[0];
 
-  const refresh = () => {
-    today.refresh();
-    active.refresh();
-    last.refresh();
-  };
+  const all = useRefreshAll([today, active, last]);
 
   return (
     <Screen
       title={`${greeting(new Date().getHours())}${first ? `, ${first}` : ""}`}
       eyebrow={formatPretty(d?.date ?? deviceToday())}
-      onRefresh={refresh}
-      refreshing={today.refreshing || active.refreshing || last.refreshing}
+      onRefresh={all.refresh}
+      refreshing={all.refreshing}
     >
-      {today.loading ? (
-        <Loading />
-      ) : today.error ? (
-        <ErrorState message={today.error} onRetry={today.refresh} />
-      ) : d ? (
+      <QueryBoundary loading={today.loading} error={today.error} hasData={today.hasData} onRetry={() => void today.refresh()}>
+        {d ? (
         <>
           <Card onPress={() => router.navigate("/food")} accessibilityLabel="Today's food. Open the food diary">
             <MacroSummary compact totals={d.eaten ?? ZERO} targets={withBonus(d.targets, d.bonus)} />
@@ -95,7 +88,10 @@ export default function Home() {
             </Card>
           ) : null}
         </>
-      ) : null}
+        ) : null}
+      </QueryBoundary>
+
+      <StaleBanner error={active.hasData ? active.error : last.hasData ? last.error : null} onRetry={all.refresh} />
 
       {active.data?.workout ? (
         <ListRow
@@ -114,7 +110,7 @@ export default function Home() {
             onPress={() => router.navigate("/train")}
           />
         ) : last.loading ? (
-          <Loading />
+          <SkeletonRows count={1} />
         ) : (
           <EmptyState title="No workouts yet" description="Log a gym session in Train." />
         )}

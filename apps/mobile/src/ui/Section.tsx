@@ -10,7 +10,7 @@ export function SectionTitle({ children, action, onAction }: { children: string;
         {children}
       </Text>
       {action && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={12}>
+        <Pressable accessibilityRole="button" onPress={onAction} style={{ minHeight: 44, justifyContent: "center" }}>
           <Text variant="label" tone="muted">
             {action}
           </Text>

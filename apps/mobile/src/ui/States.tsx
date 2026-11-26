@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useTheme } from "../theme";
+import { StaleBanner } from "./Banners";
 import { Button } from "./Button";
+import { SkeletonRows } from "./Skeleton";
 import { Text } from "./Text";
 
 export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
@@ -41,9 +43,14 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
-/** Spinner on first load, error with retry, else children. For data that has no cached copy yet. */
-export function QueryBoundary({ loading, error, onRetry, children }: { loading: boolean; error: string | null; onRetry: () => void; children: ReactNode }) {
-  if (loading) return <Loading />;
-  if (error) return <ErrorState message={error} onRetry={onRetry} />;
-  return <>{children}</>;
+/** First load shows placeholder rows, a failure with nothing to show shows an error with retry, otherwise the children (with a StaleBanner when a refresh failed). */
+export function QueryBoundary({ loading, error, hasData, onRetry, children }: { loading: boolean; error: string | null; hasData: boolean; onRetry: () => void; children: ReactNode }) {
+  if (loading) return <SkeletonRows />;
+  if (!hasData && error) return <ErrorState message={error} onRetry={onRetry} />;
+  return (
+    <>
+      <StaleBanner error={hasData ? error : null} onRetry={onRetry} />
+      {children}
+    </>
+  );
 }

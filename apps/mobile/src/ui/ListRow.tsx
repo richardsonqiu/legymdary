@@ -22,7 +22,7 @@ export function ListRow({
     <>
       {leading}
       <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="body" numberOfLines={1} style={{ fontWeight: "600" }}>
+        <Text variant="body" numberOfLines={2} style={{ fontWeight: "600" }}>
           {title}
         </Text>
         {subtitle ? (

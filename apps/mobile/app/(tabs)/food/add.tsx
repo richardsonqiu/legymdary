@@ -13,11 +13,12 @@ import {
 } from "@legymdary/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, View } from "react-native";
-import { deviceToday, errorMessage, useFoodActions } from "../../../src/api/hooks";
+import { Image, View } from "react-native";
+import { deviceToday, errorMessage, useFoodActions, useMutation } from "../../../src/api/hooks";
 import { useAuth, deviceTimeZone } from "../../../src/auth";
 import { BandBadge, MEAL_LABEL } from "../../../src/food/MealCard";
 import { pickMealPhoto, type MealPhoto } from "../../../src/food/photo";
+import { Alert } from "react-native";
 import { Button, Card, Screen, Segmented, Text, TextField } from "../../../src/ui";
 
 const AMOUNTS = [0.5, 1, 1.5, 2];
@@ -42,55 +43,40 @@ export default function AddMeal() {
   const [name, setName] = useState("");
   const [manual, setManual] = useState(false);
   const [q, setQ] = useState({ calories: "", protein: "", carbs: "", fat: "" });
-  const [busy, setBusy] = useState<"analyze" | "save" | null>(null);
-
-  const fail = (e: unknown) => Alert.alert("Couldn't do that", errorMessage(e));
+  const { run, busy } = useMutation();
 
   const pick = async (source: "camera" | "library") => {
     try {
       const p = await pickMealPhoto(source);
       if (p) setPhoto(p);
     } catch (e) {
-      fail(e);
+      Alert.alert("Couldn't do that", errorMessage(e));
     }
   };
 
   const analyze = async () => {
-    setBusy("analyze");
-    try {
-      const a = await api.analyzeMeal({ image: photo?.analysis ?? null, hint: hint.trim() || null });
-      if (!a.isFood || a.items.length === 0) {
-        Alert.alert("No food found", a.notes || "Try another photo or describe the meal.");
-        return;
-      }
-      setAnalysis(a);
-      setItems(a.items.map(toItem));
-      setName(a.name);
-    } catch (e) {
-      fail(e);
-    } finally {
-      setBusy(null);
+    const a = await run("analyze", () => api.analyzeMeal({ image: photo?.analysis ?? null, hint: hint.trim() || null }));
+    if (!a) return;
+    if (!a.isFood || a.items.length === 0) {
+      Alert.alert("No food found", a.notes || "Try another photo or describe the meal.");
+      return;
     }
+    setAnalysis(a);
+    setItems(a.items.map(toItem));
+    setName(a.name);
   };
 
   const save = async () => {
-    setBusy("save");
-    try {
-      const today = deviceToday();
-      const eatenAt = date === today ? localDateMinutes(new Date(), deviceTimeZone()).minutes : null;
-      const base = { date, mealType: type, name: name.trim() || MEAL_LABEL[type], eatenAt, photo: photo?.thumb ?? null };
-      if (manual) {
-        await actions.createMeal({ ...base, items: [], calories: num(q.calories), protein: num(q.protein), carbs: num(q.carbs), fat: num(q.fat) });
-      } else {
-        await actions.createMeal({ ...base, items, aiEstimated: true, advisor: analysis?.advisor ?? null });
-      }
-      router.back();
-    } catch (e) {
-      fail(e);
-      setBusy(null);
-    }
+    const today = deviceToday();
+    const eatenAt = date === today ? localDateMinutes(new Date(), deviceTimeZone()).minutes : null;
+    const base = { date, mealType: type, name: name.trim() || MEAL_LABEL[type], eatenAt, photo: photo?.thumb ?? null };
+    const done = await run("save", () =>
+      manual
+        ? actions.createMeal({ ...base, items: [], calories: num(q.calories), protein: num(q.protein), carbs: num(q.carbs), fat: num(q.fat) })
+        : actions.createMeal({ ...base, items, aiEstimated: true, advisor: analysis?.advisor ?? null }),
+    );
+    if (done) router.back();
   };
-
   const reviewing = analysis != null;
   const totals = sumMacros(items);
   const quality = mealQuality({ ...totals, ...qualityFromItems(items) });
@@ -107,7 +93,7 @@ export default function AddMeal() {
             <Button title="Take photo" variant="secondary" style={{ flex: 1 }} onPress={() => void pick("camera")} />
             <Button title="Choose photo" variant="secondary" style={{ flex: 1 }} onPress={() => void pick("library")} />
           </View>
-          <TextField label="Describe it (optional with a photo)" value={hint} onChangeText={setHint} placeholder="1 plate chicken rice with soup" multiline />
+          <TextField label="Describe it (optional with a photo)" value={hint} onChangeText={setHint} placeholder="1 plate chicken rice with soup" maxLength={400} multiline />
           <Button title="Estimate with AI" loading={busy === "analyze"} disabled={!photo && hint.trim().length < 3} onPress={() => void analyze()} />
           <Button title="Enter calories myself" variant="ghost" onPress={() => setManual(true)} />
         </>

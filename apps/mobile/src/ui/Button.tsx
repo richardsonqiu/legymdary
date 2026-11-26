@@ -13,6 +13,7 @@ export function Button({
   disabled,
   icon,
   small,
+  accessibilityLabel,
   style,
 }: {
   title: string;
@@ -22,6 +23,8 @@ export function Button({
   disabled?: boolean;
   icon?: ReactNode;
   small?: boolean;
+  /** Read by screen readers instead of the title (for symbol-only buttons). */
+  accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const t = useTheme();
@@ -35,7 +38,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: !!off, busy: !!loading }}
       disabled={off}
       onPress={onPress}
@@ -45,7 +48,7 @@ export function Button({
           borderColor: look.border,
           borderWidth: 1,
           borderRadius: 12,
-          minHeight: small ? 40 : 48,
+          minHeight: small ? 44 : 48,
           paddingHorizontal: small ? 14 : 20,
           alignItems: "center",
           justifyContent: "center",
