@@ -1,4 +1,4 @@
-import { emptyRawHealth, type HealthSample, type RawHealth, type RawSleepSegment, type RawWorkout, type SleepStageName } from "@legymdary/shared";
+import { emptyRawHealth, hasRealData, healthTypeLabel, type HealthSample, type RawHealth, type RawSleepSegment, type RawWorkout, type SleepStageName } from "@legymdary/shared";
 import type { ReadRecordsResult, RecordType } from "react-native-health-connect";
 import { dayBounds, makeSync } from "./sync";
 import type { HealthApi } from "./types";
@@ -51,12 +51,12 @@ export const getPermissionState: HealthApi["getPermissionState"] = async () => {
   return (await grantedTypes(m)).size > 0 ? "granted" : "needed";
 };
 
-/** Requested types that are switched off in Health Connect (empty when all 9 are allowed). */
+/** Plain names of requested types that are switched off in Health Connect (empty when all 9 are allowed). */
 export const missingPermissions: HealthApi["missingPermissions"] = async () => {
   const m = hc();
   if (!m || !(await isAvailable())) return [];
   const have = await grantedTypes(m);
-  return RECORDS.filter((r) => !have.has(r));
+  return RECORDS.filter((r) => !have.has(r)).map(healthTypeLabel);
 };
 export const requestPermissions: HealthApi["requestPermissions"] = async () => {
   if (!(await isAvailable())) return false;
@@ -98,7 +98,8 @@ export const read: HealthApi["read"] = async (from, to) => {
   const perDay = async <T extends "Steps" | "ActiveCaloriesBurned" | "BasalMetabolicRate">(recordType: T, pick: (r: never) => number): Promise<HealthSample[]> => {
     // Aggregates remove the overlap between phone and watch that summing raw records would double count.
     const groups = await m.aggregateGroupByPeriod({ recordType, timeRangeFilter: range, timeRangeSlicer: { period: "DAYS", length: 1 } });
-    return groups.map((g) => ({ start: g.startTime, value: pick(g.result as never) })).filter((s) => Number.isFinite(s.value) && s.value > 0);
+    // A day with no records still returns a computed default (basal rate), so days without a data origin are dropped.
+    return groups.filter((g) => hasRealData(g.result)).map((g) => ({ start: g.startTime, value: pick(g.result as never) })).filter((s) => Number.isFinite(s.value) && s.value > 0);
   };
   const out: RawHealth = emptyRawHealth();
   // A type switched off in Health Connect is skipped (empty) instead of failing the whole sync.

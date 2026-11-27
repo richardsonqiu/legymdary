@@ -29,6 +29,8 @@ export function HealthSection() {
   const [error, setError] = useState<string | null>(null);
   const userId = user?.id != null ? String(user.id) : null;
   const syncing = isBusy("sync") || isBusy("resync");
+  // Set as soon as the confirm sheet closes: the system permission screen can take seconds to open.
+  const [connecting, setConnecting] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -77,17 +79,22 @@ export function HealthSection() {
     });
     if (!ok) return;
     let allowed = false;
-    await run("connect", async () => {
-      setError(null);
-      try {
-        allowed = await requestPermissions();
-        setDenied(!allowed);
-        if (!allowed) setError("Permission was not given. You can allow it in the health app's settings.");
-      } catch (e) {
-        setError(errorMessage(e));
-      }
-      await refresh();
-    });
+    setConnecting(true);
+    try {
+      await run("connect", async () => {
+        setError(null);
+        try {
+          allowed = await requestPermissions();
+          setDenied(!allowed);
+          if (!allowed) setError("Permission was not given. You can allow it in the health app's settings.");
+        } catch (e) {
+          setError(errorMessage(e));
+        }
+        await refresh();
+      });
+    } finally {
+      setConnecting(false);
+    }
     if (allowed) await runSync("sync");
   };
 
@@ -113,7 +120,14 @@ export function HealthSection() {
           </Text>
         ) : null}
         <StaleBanner error={error} onRetry={state === "granted" ? () => void runSync("sync") : state === "needed" ? () => void connect() : undefined} />
-        {state === "needed" ? <Button title={denied ? "Try again" : `Connect ${healthName}`} onPress={() => void connect()} loading={isBusy("connect")} /> : null}
+        {state === "needed" ? (
+          <Button
+            title={connecting ? `Opening ${healthName}...` : denied ? "Try again" : `Connect ${healthName}`}
+            onPress={() => void connect()}
+            loading={connecting}
+            accessibilityLabel={connecting ? `Opening ${healthName}` : undefined}
+          />
+        ) : null}
         {state === "needs_install" ? <Button title="Install or update Health Connect" onPress={() => void install()} /> : null}
         {denied || missing.length > 0 ? <Button title="Open settings" variant="ghost" onPress={() => void Linking.openSettings()} /> : null}
         {state === "granted" ? (

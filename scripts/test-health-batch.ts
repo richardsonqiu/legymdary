@@ -1,7 +1,7 @@
 /** Run: npx.cmd tsx scripts/test-health-batch.ts. Checks the phone-to-server health batch mapping. */
 process.env.TZ = "Asia/Singapore";
 import assert from "node:assert/strict";
-import { buildBatchRequests, emptyRawHealth, healthBatchRequestSchema } from "../packages/shared/src/index";
+import { buildBatchRequests, emptyRawHealth, hasRealData, healthBatchRequestSchema, healthTypeLabel } from "../packages/shared/src/index";
 
 const FROM = "2026-11-18";
 const TO = "2026-11-21";
@@ -32,4 +32,20 @@ const TO = "2026-11-21";
   assert.ok(last.workouts[0].id.startsWith("hc-"));
   assert.ok(healthBatchRequestSchema.safeParse(last).success);
 }
+
+// 3. Health Connect fills days without records with a default basal rate; only days with a data origin count.
+{
+  const days = [
+    { startTime: "2026-11-19T00:00:00", result: { dataOrigins: [], BASAL: 1600 } },
+    { startTime: "2026-11-20T00:00:00", result: { dataOrigins: ["com.fitbit"], BASAL: 1700 } },
+    { startTime: "2026-11-21T00:00:00", result: {} },
+  ];
+  assert.deepEqual(days.filter((d) => hasRealData(d.result)).map((d) => d.startTime), ["2026-11-20T00:00:00"]);
+  assert.equal(hasRealData(undefined), false);
+}
+
+// 4. Missing-permission names are plain words; unknown types pass through.
+assert.equal(healthTypeLabel("SleepSession"), "Sleep");
+assert.equal(healthTypeLabel("Weight"), "Weight");
+assert.equal(healthTypeLabel("Mystery"), "Mystery");
 console.log("health batch tests passed");
