@@ -32,3 +32,4 @@ export * from "./utils";
 export type { Segment } from "./exercise-motion";
 export type { Segment as BodyScanSegment } from "./body-scan";
 export * from "./health/batch";
+export * from "./health/types";
