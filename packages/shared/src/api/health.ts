@@ -9,7 +9,10 @@ import { ahBatchSchema, ahWorkoutSchema } from "../apple-health/types";
 export const HEALTH_SOURCES = ["apple", "health_connect"] as const;
 export type HealthSource = (typeof HEALTH_SOURCES)[number];
 
-const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((s) => !Number.isNaN(Date.parse(s)), "Invalid date");
+
+/** Longest workoutRange, in days (the same as the 400 days a batch may hold). */
+const MAX_RANGE_DAYS = 400;
 
 export const healthBatchRequestSchema = ahBatchSchema
   .extend({
@@ -19,7 +22,13 @@ export const healthBatchRequestSchema = ahBatchSchema
      * Set when this batch holds EVERY workout of these dates: stored workouts of the same
      * source in this range that are not in the batch are removed (same workout, new id).
      */
-    workoutRange: z.object({ from: ymd, to: ymd }).optional(),
+    workoutRange: z
+      .object({ from: ymd, to: ymd })
+      .refine((r) => r.from <= r.to, { message: "workoutRange.from must not be after to" })
+      .refine((r) => (Date.parse(r.to) - Date.parse(r.from)) / 86_400_000 < MAX_RANGE_DAYS, {
+        message: "workoutRange is too long",
+      })
+      .optional(),
   })
   .refine((b) => b.workouts.every((w) => w.id.startsWith(b.source === "apple" ? "apple-" : "hc-")), {
     message: "Workout ids must start with apple- (apple) or hc- (health_connect)",

@@ -66,7 +66,7 @@ async function main() {
     ["workouts/[id]/exercises", "POST"], ["workout-exercises/[id]", "DELETE"], ["workout-exercises/[id]/sets", "POST"],
     ["sets/[id]", "DELETE"], ["exercises", "GET"], ["exercises", "POST"], ["templates", "GET"],
     ["body-stats", "GET"], ["body-stats", "POST"], ["body-stats/[id]", "DELETE"], ["plan", "GET"], ["plan/goals", "PUT"],
-    ["plan/pace", "PUT"], ["plan/mode", "PUT"], ["stats/consistency", "GET"], ["health/batch", "POST"], ["health/data", "DELETE"],
+    ["plan/pace", "PUT"], ["plan/mode", "PUT"], ["stats/consistency", "GET"], ["insights", "GET"], ["health/batch", "POST"], ["health/data", "DELETE"],
   ];
   for (const [mod, method] of routes) {
     for (const t of [null, "not-a-real-token"]) {
@@ -167,6 +167,10 @@ async function main() {
   check("GET today", r.status === 200 && typeof r.json.eaten.calories === "number" && Array.isArray(r.json.logged), r);
   r = await call("stats/consistency", "GET");
   check("GET consistency", r.status === 200 && Array.isArray(r.json.days) && "current" in r.json.foodStreak, r);
+  r = await call("insights", "GET");
+  check("GET insights", r.status === 200 && typeof r.json.date === "string" && Array.isArray(r.json.series) && "yesterday" in r.json, r);
+  r = await call("insights", "GET", { query: "?date=2999-01-01" });
+  check("GET insights future date is 400", r.status === 400, r);
 
   // Health
   const wk = (id: string) => ({ id, date: day, startLocal: `${day} 07:00:00`, type: "running", name: "Run", durationSec: 1800, kcal: 300, distanceM: 5000, avgHr: 150, maxHr: 170, minHr: 100, zonesSec: null });
@@ -195,6 +199,18 @@ async function main() {
   const leftBody = (await db.select({ s: schema.bodyStats.source }).from(schema.bodyStats)).map((d) => d.s);
   check("disconnect removed only health_connect", left.join() === "apple-CCC" && leftDays.join() === "apple" && leftBody.join() === "apple", { left, leftDays, leftBody });
 
+  // Rate limits answer 429 with Retry-After (limits pre-filled in the throwaway DB)
+  r = await call("health/batch", "POST", { body: batch("apple", "apple-DDD", { workoutRange: { from: day, to: "2000-01-01" } }) });
+  check("POST health workoutRange from after to is 400", r.status === 400, r);
+  r = await call("health/batch", "POST", { body: batch("apple", "apple-DDD", { workoutRange: { from: "2020-01-01", to: day } }) });
+  check("POST health workoutRange over 400 days is 400", r.status === 400, r);
+  const full = { windowStart: Date.now(), count: 1000 };
+  await db.insert(schema.rateLimits).values({ key: `apple:import:${userId}`, ...full }).onConflictDoUpdate({ target: schema.rateLimits.key, set: full });
+  r = await call("health/batch", "POST", { body: batch("apple", "apple-EEE") });
+  check("POST health over the hourly limit is 429 with Retry-After", r.status === 429 && Number(r.res.headers.get("retry-after")) > 0 && typeof r.json?.error === "string", { s: r.status, j: r.json });
+  await db.insert(schema.rateLimits).values({ key: `ai:min:${userId}`, ...full }).onConflictDoUpdate({ target: schema.rateLimits.key, set: full });
+  r = await call("meals/analyze", "POST", { body: { hint: "chicken rice with soup" } });
+  check("POST analyze over the burst limit is 429 with Retry-After", r.status === 429 && Number(r.res.headers.get("retry-after")) > 0, { s: r.status, j: r.json });
   console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
   process.exit(failures ? 1 : 0);
 }

@@ -49,7 +49,7 @@ import * as bodySvc from "@/lib/services/body";
 import * as foodSvc from "@/lib/services/food";
 import * as planSvc from "@/lib/services/plan";
 import * as workoutsSvc from "@/lib/services/workouts";
-import { DATE_RE, DAY, HOUR, IMAGE_DATA_URL_RE, clip, clockMinutes, numOrNull, safeDate } from "@/lib/services/util";
+import { DATE_RE, DAY, HOUR, IMAGE_DATA_URL_RE, clip, clockMinutes, numOrNull, safeDate, RateLimitError } from "@/lib/services/util";
 import { clearSkip, defaultEatenAt, mealValues, type MealInput } from "@/lib/services/food";
 import { assertOwnsWorkout } from "@/lib/services/workouts";
 
@@ -267,7 +267,12 @@ export async function analyzeMeal(input: {
   hint?: string | null;
 }): Promise<MealAnalysis | { error: string }> {
   const userId = await requireUserId();
-  return foodSvc.analyzeMeal(userId, input);
+  try {
+    return await foodSvc.analyzeMeal(userId, input);
+  } catch (e) {
+    if (e instanceof RateLimitError) return { error: e.message };
+    throw e;
+  }
 }
 
 

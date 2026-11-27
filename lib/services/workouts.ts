@@ -63,15 +63,15 @@ export async function autoLinkActivity(userId: string, workoutId: number) {
 export async function createWorkout(userId: string, input: {
   name: string;
   date: string;
-}): Promise<number> {  const name = clip(input.name, 80) || "Workout";
+}): Promise<number> {  const name = clip(input.name, 80) || "Workout";
   const date = safeDate(input.date);
   const [row] = await db
     .insert(workouts)
     .values({ userId, name, date })
-    .returning({ id: workouts.id });  return row.id;
+    .returning({ id: workouts.id });  return row.id;
 }
 
-export async function duplicateLastWorkout(userId: string): Promise<number | null> {  const candidates = await db.query.workouts.findMany({
+export async function duplicateLastWorkout(userId: string): Promise<number | null> {  const candidates = await db.query.workouts.findMany({
     where: eq(workouts.userId, userId),
     orderBy: desc(workouts.date),
     limit: 10,
@@ -94,13 +94,13 @@ export async function duplicateLastWorkout(userId: string): Promise<number | nul
         position: i,
       })),
     );
-  }  return row.id;
+  }  return row.id;
 }
 
 export async function updateWorkout(userId: string, 
   workoutId: number,
   input: { name?: string; date?: string; notes?: string | null },
-): Promise<void> {  const patch: Record<string, unknown> = {};
+): Promise<void> {  const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = clip(input.name, 80) || "Workout";
   if (input.date !== undefined && input.date) patch.date = safeDate(input.date);
   if (input.notes !== undefined) patch.notes = clip(input.notes, 2000) || null;
@@ -109,15 +109,15 @@ export async function updateWorkout(userId: string,
       .update(workouts)
       .set(patch)
       .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));
-  }}
+  }}
 
-export async function finishWorkout(userId: string, workoutId: number): Promise<void> {  await db
+export async function finishWorkout(userId: string, workoutId: number): Promise<void> {  await db
     .update(workouts)
     .set({ finishedAt: new Date() })
     .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));
-  await autoLinkActivity(userId, workoutId);}
+  await autoLinkActivity(userId, workoutId);}
 
-export async function discardWorkout(userId: string, workoutId: number): Promise<void> {  await assertOwnsWorkout(userId, workoutId);
+export async function discardWorkout(userId: string, workoutId: number): Promise<void> {  await assertOwnsWorkout(userId, workoutId);
   const wes = await db
     .select({ id: workoutExercises.id })
     .from(workoutExercises)
@@ -131,12 +131,12 @@ export async function discardWorkout(userId: string, workoutId: number): Promise
     .where(eq(workoutExercises.workoutId, workoutId));
   await db
     .delete(workouts)
-    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));}
+    .where(and(eq(workouts.id, workoutId), eq(workouts.userId, userId)));}
 
 export async function addExerciseToWorkout(userId: string, 
   workoutId: number,
   exerciseId: number,
-): Promise<number> {  await assertOwnsWorkout(userId, workoutId);
+): Promise<number> {  await assertOwnsWorkout(userId, workoutId);
 
   // The exercise must be a built-in or one of this user's customs.
   const ex = await db
@@ -158,17 +158,17 @@ export async function addExerciseToWorkout(userId: string,
   const [row] = await db
     .insert(workoutExercises)
     .values({ workoutId, exerciseId, position })
-    .returning({ id: workoutExercises.id });  return row.id;
+    .returning({ id: workoutExercises.id });  return row.id;
 }
 
 export async function removeWorkoutExercise(userId: string, 
   workoutExerciseId: number,
-): Promise<void> {  const owned = await ownedWorkoutExercise(userId, workoutExerciseId);
+): Promise<void> {  const owned = await ownedWorkoutExercise(userId, workoutExerciseId);
   if (owned === null) throw new UserError("Not found.");
   await db.delete(sets).where(eq(sets.workoutExerciseId, workoutExerciseId));
   await db
     .delete(workoutExercises)
-    .where(eq(workoutExercises.id, workoutExerciseId));}
+    .where(eq(workoutExercises.id, workoutExerciseId));}
 
 export async function logSet(userId: string, input: {
   workoutExerciseId: number;
@@ -176,7 +176,7 @@ export async function logSet(userId: string, input: {
   weight: number | string;
   isWarmup?: boolean;
   notes?: string | null;
-}): Promise<{ isPR: boolean; e1rm: number }> {  const reps = Math.round(Number(input.reps));
+}): Promise<{ isPR: boolean; e1rm: number }> {  const reps = Math.round(Number(input.reps));
   const weight = Number(input.weight);
   if (!Number.isFinite(reps) || reps <= 0 || reps > 1000) {
     throw new UserError("Reps must be between 1 and 1000.");
@@ -226,10 +226,10 @@ export async function logSet(userId: string, input: {
   });
 
   const e1rm = estimate1RM(weight, reps);
-  const isPR = !isWarmup && e1rm > 0 && e1rm > prevBest;  return { isPR, e1rm };
+  const isPR = !isWarmup && e1rm > 0 && e1rm > prevBest;  return { isPR, e1rm };
 }
 
-export async function deleteSet(userId: string, setId: number): Promise<void> {  const rows = await db
+export async function deleteSet(userId: string, setId: number): Promise<void> {  const rows = await db
     .select({ userId: workouts.userId })
     .from(sets)
     .innerJoin(
@@ -240,13 +240,13 @@ export async function deleteSet(userId: string, setId: number): Promise<void> {
     .where(eq(sets.id, setId))
     .limit(1);
   if (!rows[0] || rows[0].userId !== userId) throw new UserError("Not found.");
-  await db.delete(sets).where(eq(sets.id, setId));}
+  await db.delete(sets).where(eq(sets.id, setId));}
 
 export async function createExercise(userId: string, input: {
   name: string;
   muscleGroup: string;
   equipment: string;
-}): Promise<{ id: number } | { error: string }> {  const name = clip(input.name, 80);
+}): Promise<{ id: number } | { error: string }> {  const name = clip(input.name, 80);
   if (!name) return { error: "Please enter a name." };
   const muscleGroup = clip(input.muscleGroup, 40) || "Other";
   const equipment = clip(input.equipment, 40) || "Other";
@@ -263,13 +263,13 @@ export async function createExercise(userId: string, input: {
   const [row] = await db
     .insert(exercises)
     .values({ name, muscleGroup, equipment, isCustom: true, userId })
-    .returning({ id: exercises.id });  return { id: row.id };
+    .returning({ id: exercises.id });  return { id: row.id };
 }
 
 export async function startWorkoutFromTemplate(userId: string, 
   templateId: number,
   date: string,
-): Promise<number> {  const [tpl] = await db
+): Promise<number> {  const [tpl] = await db
     .select()
     .from(templates)
     .where(and(eq(templates.id, templateId), eq(templates.userId, userId)))
@@ -293,11 +293,11 @@ export async function startWorkoutFromTemplate(userId: string,
   await db
     .update(templates)
     .set({ lastUsedAt: new Date() })
-    .where(eq(templates.id, templateId));  return row.id;
+    .where(eq(templates.id, templateId));  return row.id;
 }
 
 /** Starts today's recommended session with its exercises and targets. */
-export async function startRecommendedWorkout(userId: string): Promise<{ id: number } | { error: string }> {  const today = await userToday();
+export async function startRecommendedWorkout(userId: string): Promise<{ id: number } | { error: string }> {  const today = await userToday();
   const [open] = await db
     .select({ id: workouts.id })
     .from(workouts)
@@ -319,5 +319,5 @@ export async function startRecommendedWorkout(userId: string): Promise<{ id: num
       targetReps: e.reps,
       targetWeight: e.weight,
     })),
-  );  return { id: w.id };
+  );  return { id: w.id };
 }

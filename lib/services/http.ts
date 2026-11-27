@@ -1,5 +1,5 @@
 import { jsonError, withAuth, type ApiAuth } from "@/lib/api-auth";
-import { UserError } from "./util";
+import { RateLimitError, UserError } from "./util";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -27,6 +27,9 @@ export function route<Ctx = unknown>(
     try {
       return await handler(request, auth, ctx);
     } catch (e) {
+      if (e instanceof RateLimitError) {
+        return jsonError(e.message, 429, { ...NO_STORE, "Retry-After": String(e.retryAfterSec) });
+      }
       if (e instanceof UserError) return fail(e.message);
       console.error("[api/v1] unhandled:", e);
       return fail("Server error", 500);

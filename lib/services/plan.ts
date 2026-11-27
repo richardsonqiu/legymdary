@@ -14,7 +14,7 @@ export async function saveGoals(userId: string, input: {
   targetBodyFat?: number | string | null;
   weeklyRate?: number | string | null;
   calorieOverride?: number | string | null;
-}): Promise<{ ok: true } | { error: string }> {  const inRange = (v: number | null, lo: number, hi: number) =>
+}): Promise<{ ok: true } | { error: string }> {  const inRange = (v: number | null, lo: number, hi: number) =>
     v == null || (v >= lo && v <= hi);
 
   const sex = input.sex === "male" || input.sex === "female" ? input.sex : null;
@@ -54,7 +54,7 @@ export async function saveGoals(userId: string, input: {
   await db
     .insert(goals)
     .values({ userId, ...vals })
-    .onConflictDoUpdate({ target: goals.userId, set: vals });  return { ok: true };
+    .onConflictDoUpdate({ target: goals.userId, set: vals });  return { ok: true };
 }
 
 /**
@@ -63,7 +63,7 @@ export async function saveGoals(userId: string, input: {
  */
 export async function setGoalPace(userId: string, 
   input: { weeklyRate: number } | { targetDate: string },
-): Promise<{ ok: true } | { error: string }> {  // Choosing a pace or date means "use the plan", so it also clears custom calories.
+): Promise<{ ok: true } | { error: string }> {  // Choosing a pace or date means "use the plan", so it also clears custom calories.
   let vals: { weeklyRate: number | null; targetDate: string | null; calorieOverride: null };
   if ("targetDate" in input) {
     const today = await userToday();
@@ -79,11 +79,11 @@ export async function setGoalPace(userId: string,
   await db
     .insert(goals)
     .values({ userId, ...vals, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: goals.userId, set: { ...vals, updatedAt: new Date() } });  return { ok: true };
+    .onConflictDoUpdate({ target: goals.userId, set: { ...vals, updatedAt: new Date() } });  return { ok: true };
 }
 
 /** "steady": the daily target stays put (extra exercise = extra deficit). "adaptive": it follows burn and weight. */
-export async function setTargetMode(userId: string, mode: string): Promise<{ ok: true } | { error: string }> {  if (mode !== "steady" && mode !== "adaptive") return { error: "Unknown option." };
+export async function setTargetMode(userId: string, mode: string): Promise<{ ok: true } | { error: string }> {  if (mode !== "steady" && mode !== "adaptive") return { error: "Unknown option." };
   const res = await db.update(goals).set({ targetMode: mode, updatedAt: new Date() }).where(eq(goals.userId, userId));
-  if (!res.rowsAffected) return { error: "Set your goal first." };  return { ok: true };
+  if (!res.rowsAffected) return { error: "Set your goal first." };  return { ok: true };
 }

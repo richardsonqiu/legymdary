@@ -12,7 +12,7 @@ From the repo root, `npm ci` once. Then in `apps/mobile`:
 
 ## What is here
 
-- `app/login.tsx`: email + password via `POST /api/v1/auth/login`. The Google button is disabled until the owner creates iOS/Android OAuth client IDs.
+- `app/login.tsx`: email + password via `POST /api/v1/auth/login`. Continue with Google uses @react-native-google-signin/google-signin (needs a dev build; hidden in Expo Go and web), sends the ID token to `POST /api/v1/auth/google`, and stores the returned token like email login. The Google account must have signed in on the web once (the server matches by Google `sub` only). Client IDs are in `app.json` under `extra.google`; the iOS URL scheme is in the plugin entry. The Android client is matched by Google from package name + SHA-1.
 - Token in `expo-secure-store`; sign-out calls `/api/v1/auth/logout`; a 401 clears the token.
 - `src/auth.tsx` builds the shared client (`createApiClient` in `packages/shared/src/api/client.ts`), which sends `Authorization: Bearer` and `X-Timezone` on every request and parses responses with the zod schemas from `@legymdary/shared`.
 - Tabs come from the shared `NAV` (moved from `lib/nav.ts` to `packages/shared/src/nav.ts`; web imports it from there). Only Today is built; the rest are placeholders.
@@ -21,6 +21,10 @@ From the repo root, `npm ci` once. Then in `apps/mobile`:
 ## Icon and splash
 
 `assets/icon.png`, `adaptive-icon.png`, `splash-icon.png`, `splash-icon-dark.png` and `favicon.png` are generated with the web icons by `node scripts/gen-icons.mjs` (repo root) from the "one up." wordmark. The splash (`expo-splash-screen` plugin in `app.json`) shows the wordmark on Paper in light mode and Carbon in dark mode; `app/_layout.tsx` keeps it up until auth is ready. Native config changes need a new dev build.
+
+## Google sign-in: signing keys
+
+An Android OAuth client only works for builds signed with its SHA-1. Debug builds use the debug keystore SHA-1. For Play Store builds, add a second Android OAuth client (same package) with the **Play App Signing** SHA-1 from Play Console > App integrity > App signing key certificate. EAS builds need their own keystore SHA-1 (`eas credentials`) added the same way.
 
 ## React version
 

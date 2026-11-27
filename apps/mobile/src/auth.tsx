@@ -1,5 +1,6 @@
 import { ApiClientError, createApiClient, type ApiUser } from "@legymdary/shared";
 import * as SecureStore from "expo-secure-store";
+import { googleSignIn } from "./googleSignIn";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 const TOKEN_KEY = "legymdary.token";
@@ -17,6 +18,7 @@ type AuthState = {
   retry: () => Promise<void>;
   api: ReturnType<typeof createApiClient>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: (idToken: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -86,18 +88,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [api],
   );
 
+  const signInWithGoogle = useCallback(
+    async (idToken: string) => {
+      const res = await api.googleLogin({ idToken, deviceName: "One Up app" });
+      await SecureStore.setItemAsync(TOKEN_KEY, res.token);
+      token.current = res.token;
+      setUser(res.user);
+    },
+    [api],
+  );
+
   const signOut = useCallback(async () => {
     try {
       await api.logout();
     } catch {
       // Offline or already expired: still sign out on this device.
     }
+    await googleSignIn?.signOut();
     await clear();
   }, [api, clear]);
 
   const value = useMemo(
-    () => ({ ready, user, offline, retry: restore, api, signIn, signOut }),
-    [ready, user, offline, restore, api, signIn, signOut],
+    () => ({ ready, user, offline, retry: restore, api, signIn, signInWithGoogle, signOut }),
+    [ready, user, offline, restore, api, signIn, signInWithGoogle, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

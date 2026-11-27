@@ -8,10 +8,25 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.richardsonqiu.legymdary",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "One Up reads your steps, calories, resting heart rate, sleep, weight and workouts from Apple Health to show them next to your food and training.",
+        "NSHealthUpdateUsageDescription": "One Up does not write to Apple Health."
+      }
     },
     "android": {
       "package": "com.richardsonqiu.legymdary",
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_BASAL_METABOLIC_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_DISTANCE"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#191919"
@@ -21,6 +36,35 @@
       "expo-router",
       "expo-secure-store",
       "expo-dev-client",
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "One Up reads your steps, calories, resting heart rate, sleep, weight and workouts from Apple Health to show them next to your food and training.",
+          "healthUpdatePermission": "One Up does not write to Apple Health."
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo of your meal to estimate its calories.",
+          "cameraPermission": "Take a photo of your meal to estimate its calories."
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.139197049496-86092iqv7uq8b07mrij1h1h4sqnbv0uc"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -35,6 +79,12 @@
         }
       ]
     ],
+    "extra": {
+      "google": {
+        "webClientId": "139197049496-qv37sht9oa2271b2qj0lfjslnu8q1voo.apps.googleusercontent.com",
+        "iosClientId": "139197049496-86092iqv7uq8b07mrij1h1h4sqnbv0uc.apps.googleusercontent.com"
+      }
+    },
     "experiments": {
       "typedRoutes": true
     },

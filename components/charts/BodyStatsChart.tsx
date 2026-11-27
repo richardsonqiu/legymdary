@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -19,31 +19,19 @@ import {
   tooltipStyle,
 } from "@/components/charts/common";
 import type { BodyStat } from "@/db/schema";
-import { addDaysStr, formatMedium, formatShort, kg, todayStr } from "@legymdary/shared";
+import { BODY_METRICS, bodyStatPoints, formatMedium, formatShort, kg, pointsDelta, todayStr, type BodyMetric } from "@legymdary/shared";
 
-type Metric = "weight" | "waist" | "bodyFat";
-
-const METRICS: { label: string; value: Metric; unit: string }[] = [
-  { label: "Weight", value: "weight", unit: "kg" },
-  { label: "Waist", value: "waist", unit: "cm" },
-  { label: "Body fat", value: "bodyFat", unit: "%" },
-];
+const METRICS = BODY_METRICS;
 
 export function BodyStatsChart({ data }: { data: BodyStat[] }) {
-  const [metric, setMetric] = useState<Metric>("weight");
+  const [metric, setMetric] = useState<BodyMetric>("weight");
   const [range, setRange] = useState<number>(90);
   const meta = METRICS.find((m) => m.value === metric)!;
 
-  const points = useMemo(() => {
-    const min = range > 0 ? addDaysStr(todayStr(), -range) : "0000-00-00";
-    return data
-      .filter((d) => d.date >= min && d[metric] != null)
-      .map((d) => ({ date: d.date, value: d[metric] as number }));
-  }, [data, metric, range]);
+  const points = bodyStatPoints(data, metric, range, todayStr());
 
-  const first = points[0]?.value;
   const last = points[points.length - 1]?.value;
-  const delta = first != null && last != null ? last - first : null;
+  const delta = pointsDelta(points);
 
   return (
     <div className="space-y-3">

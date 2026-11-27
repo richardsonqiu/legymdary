@@ -13,6 +13,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:ai-schemas": "tsx scripts/check-ai-schemas.ts",
+    "test:health": "tsx scripts/test-health-batch.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed.ts",
@@ -40,7 +41,10 @@
   },
   "overrides": {
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-native-health": {
+      "@expo/config-plugins": "~58.0.13"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

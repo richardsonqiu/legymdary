@@ -3,6 +3,13 @@ import { todayStr } from "@legymdary/shared";
 /** An error whose message is safe to show the user (bad input, not found). Routes answer it with 400. */
 export class UserError extends Error {}
 
+/** A UserError for a rate limit. Routes answer it with 429 and Retry-After. */
+export class RateLimitError extends UserError {
+  constructor(message: string, readonly retryAfterSec: number) {
+    super(message);
+  }
+}
+
 export const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A YYYY-MM-DD string that is a real calendar date, else the fallback. */
