@@ -1,6 +1,6 @@
 import { buildSleepSummary, type SleepSummary } from "@/lib/analysis/sleep";
 import { userToday } from "@/lib/session";
-import { and, desc, eq, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, gt, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { bodyScans, garminDaily, garminRaw, goals } from "@/db/schema";
 import { extractDays, type DayRow } from "@/lib/analysis/extract";
@@ -189,7 +189,7 @@ export async function latestDataDate(userId: string): Promise<string> {
     db
       .select({ date: garminDaily.date })
       .from(garminDaily)
-      .where(and(eq(garminDaily.userId, userId), isNotNull(garminDaily.sleepSeconds), lte(garminDaily.date, cap)))
+      .where(and(eq(garminDaily.userId, userId), gt(garminDaily.sleepSeconds, 0), lte(garminDaily.date, cap)))
       .orderBy(desc(garminDaily.date))
       .limit(1),
     db

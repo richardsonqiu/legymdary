@@ -515,8 +515,9 @@ export async function extractDays(
         tg?.bodyBatteryLow ??
         null,
       // Without the raw daily summary (import paused), the day's high is the closest
-      // stand-in: Body Battery normally peaks when you wake.
-      bbWake: num(us, "bodyBatteryAtWakeTime") ?? (us ? null : (tg?.bodyBatteryHigh ?? null)),
+      // stand-in: Body Battery normally peaks when you wake. Only on a night the
+      // watch recorded sleep; otherwise there is no "at wake" value to stand in for.
+      bbWake: num(us, "bodyBatteryAtWakeTime") ?? (!us && (tg?.sleepSeconds ?? 0) > 0 ? (tg?.bodyBatteryHigh ?? null) : null),
       bbCharged: num(bb, "charged") ?? tg?.bodyBatteryCharged ?? null,
       bbDrained: num(bb, "drained") ?? tg?.bodyBatteryDrained ?? null,
       steps:
