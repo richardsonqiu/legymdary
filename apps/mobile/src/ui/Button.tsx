@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, View, type StyleProp, type ViewStyle } from "react-native";
 import { useTheme } from "../theme";
+import { Icon, type IconName } from "./Icons";
 import { Text } from "./Text";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -31,9 +32,9 @@ export function Button({
   const off = disabled || loading;
   const look = {
     primary: { bg: t.accent, fg: t.onAccent, border: t.accent },
-    secondary: { bg: "transparent", fg: t.text, border: t.border },
+    secondary: { bg: t.card, fg: t.text, border: t.controlBorder },
     ghost: { bg: "transparent", fg: t.text, border: "transparent" },
-    danger: { bg: "transparent", fg: t.danger, border: t.border },
+    danger: { bg: t.card, fg: t.muted, border: t.controlBorder },
   }[variant];
   return (
     <Pressable
@@ -63,6 +64,25 @@ export function Button({
       <Text variant="label" style={{ color: look.fg, fontSize: small ? 14 : 16, fontWeight: "700" }}>
         {title}
       </Text>
+    </Pressable>
+  );
+}
+
+
+/** A 44pt icon-only ghost button (day arrows, close, delete). Same line icons as the web. */
+export function IconButton({ icon, label, onPress, disabled, loading }: { icon: IconName; label: string; onPress: () => void; disabled?: boolean; loading?: boolean }) {
+  const t = useTheme();
+  const off = disabled || loading;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!off, busy: !!loading }}
+      disabled={off}
+      onPress={onPress}
+      style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", opacity: off ? 0.5 : pressed ? 0.6 : 1 })}
+    >
+      {loading ? <ActivityIndicator color={t.muted} /> : <Icon name={icon} size={20} color={t.text} />}
     </Pressable>
   );
 }

@@ -14,10 +14,10 @@ export function MacroSummary({ totals, targets, compact = false }: { totals: Mac
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
       <ProgressRing value={target ? eaten / target : 0} size={compact ? 96 : 124} stroke={compact ? 9 : 11} color={over ? tones.warn : tones.good}>
-        <Text variant={compact ? "heading" : "title"} style={{ fontVariant: ["tabular-nums"] }}>
+        <Text variant={compact ? "heading" : "title"} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15} style={{ fontVariant: ["tabular-nums"] }}>
           {(remaining != null ? Math.abs(remaining) : eaten).toLocaleString("en-US")}
         </Text>
-        <Text variant="caption" tone="muted" style={{ textTransform: "uppercase" }}>
+        <Text variant="caption" tone="muted" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1} style={{ textTransform: "uppercase" }}>
           {remaining == null ? "kcal eaten" : over ? "kcal over" : "kcal left"}
         </Text>
       </ProgressRing>

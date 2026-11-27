@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { deviceToday, useFoodActions, useMeals, useMutation, useRecentMeals, useRefreshAll, useToday } from "../../../src/api/hooks";
 import { MEAL_LABEL, MealCard, MealThumb } from "../../../src/food/MealCard";
-import { Button, Card, EmptyState, MacroSummary, QueryBoundary, Screen, Section, Segmented, Sheet, SkeletonRows, StaleBanner, Text, useToast, useTones } from "../../../src/ui";
+import { Button, Card, IconButton, EmptyState, MacroSummary, QueryBoundary, Screen, Section, Segmented, Sheet, SkeletonRows, StaleBanner, Text, useToast, useTones } from "../../../src/ui";
 
 const ZERO = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
@@ -129,7 +129,7 @@ export default function Food() {
         ) : recent.loading ? (
           <SkeletonRows count={1} height={120} />
         ) : (
-          <EmptyState title="Nothing yet" description="Meals you log show up here for one-tap logging again." />
+          <EmptyState icon="food" title="Nothing yet" description="Meals you log show up here for one-tap logging again." />
         )}
       </Section>
 

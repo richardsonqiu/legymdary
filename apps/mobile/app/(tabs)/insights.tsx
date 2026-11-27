@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRefreshAll } from "../../src/api/hooks";
 import { useInsights } from "../../src/api/progress";
-import { Button, Card, EmptyState, LevelBar, LineChart, Pill, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, TickBar, toneWord, useScoreColor } from "../../src/ui";
+import { Button, Card, IconButton, EmptyState, LevelBar, LineChart, Pill, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, TickBar, toneWord, useScoreColor } from "../../src/ui";
 
 const n0 = (v: number | null | undefined, unit = "") => (v == null ? "-" : `${Math.round(v).toLocaleString("en-US")}${unit}`);
 
@@ -31,7 +31,7 @@ function Trend({ title, series, pick, unit }: { title: string; series: InsightsR
   return (
     <View style={{ gap: 4 }}>
       <Text variant="label">{title}</Text>
-      <LineChart points={pts} unit={unit} accessibilityLabel={`${title}, last 30 days, latest ${pts[pts.length - 1].y}${unit}`} />
+      <LineChart points={pts} height={160} unit={unit} xLabel={(x) => formatPretty(addDaysStr(series[0].date, x))} accessibilityLabel={`${title}, last 30 days, latest ${pts[pts.length - 1].y}${unit}`} />
     </View>
   );
 }
@@ -60,7 +60,7 @@ export default function Insights() {
       <QueryBoundary loading={false} error={q.error} hasData={q.hasData} onRetry={() => void q.refresh()}>
         {d ? (
           <>
-            {!d.hasWearableData ? <EmptyState title="No watch data yet" description="Connect Garmin, Oura or Apple Health in the web app to unlock readiness, sleep and recovery." /> : null}
+            {!d.hasWearableData ? <EmptyState icon="insights" title="No watch data yet" description="Connect Garmin, Oura or Apple Health in the web app to unlock readiness, sleep and recovery." /> : null}
 
             {d.readiness ? (
               <Section title="Readiness">

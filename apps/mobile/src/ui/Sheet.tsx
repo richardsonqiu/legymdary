@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
+import { IconButton } from "./Button";
 import { Text } from "./Text";
 import { useTones } from "./tones";
 
@@ -17,8 +18,8 @@ export function Sheet({ visible, title, onClose, children }: { visible: boolean;
         <View
           style={{
             backgroundColor: t.card,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
             borderColor: t.border,
             borderWidth: 1,
             maxHeight: "88%",
@@ -29,11 +30,7 @@ export function Sheet({ visible, title, onClose, children }: { visible: boolean;
             <Text variant="heading" accessibilityRole="header">
               {title ?? ""}
             </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
-              <Text variant="label" tone="muted">
-                Close
-              </Text>
-            </Pressable>
+            <IconButton icon="x" label="Close" onPress={onClose} />
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingTop: 8, gap: 12 }}>
             {children}

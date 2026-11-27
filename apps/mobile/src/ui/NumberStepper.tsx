@@ -33,14 +33,14 @@ export function NumberStepper({
       accessibilityLabel={`${sign > 0 ? "Increase" : "Decrease"} ${label}`}
       disabled={sign > 0 ? max != null && value >= max : value <= min}
       onPress={() => onChange(clamp(value + sign * step))}
-      style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: t.border, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: t.controlBorder, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
     >
       <Text variant="heading">{sign > 0 ? "+" : "−"}</Text>
     </Pressable>
   );
   return (
     <View style={{ gap: 4 }}>
-      <Text variant="caption" tone="muted">
+      <Text variant="caption" style={{ fontWeight: "500", textTransform: "uppercase", letterSpacing: 0.3, color: t.muted2 }}>
         {label}
       </Text>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -59,7 +59,7 @@ export function NumberStepper({
             }
             else setText(String(value));
           }}
-          style={{ color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 12, minHeight: 44, minWidth: 72, textAlign: "center", fontSize: 16, fontWeight: "700", backgroundColor: t.page }}
+          style={{ color: t.text, borderColor: t.controlBorder, borderWidth: 1, borderRadius: 12, minHeight: 44, minWidth: 72, textAlign: "center", fontSize: 16, fontWeight: "700", backgroundColor: t.page }}
         />
         {btn(1)}
         {unit ? (

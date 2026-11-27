@@ -7,8 +7,13 @@ export type Palette = {
   border: string;
   text: string;
   muted: string;
+  /** Dimmer text (web zinc-500): section titles, field labels, inactive tabs. */
+  muted2: string;
+  /** Border for buttons and inputs (web zinc-700). */
+  controlBorder: string;
   accent: string;
   onAccent: string;
+  /** Errors use the web amber (warn) tone, not red. */
   danger: string;
   dark: boolean;
 };
@@ -19,9 +24,11 @@ export const DARK: Palette = {
   border: "#2d2d2b",
   text: "#f5f5f0",
   muted: "#a5a5a1",
+  muted2: "#8b8b87",
+  controlBorder: "#3e3e3c",
   accent: "#ded97a",
   onAccent: "#191919",
-  danger: "#f87171",
+  danger: "#fbbf24",
   dark: true,
 };
 
@@ -30,10 +37,12 @@ export const LIGHT: Palette = {
   card: "#ffffff",
   border: "#e4e4de",
   text: "#191919",
-  muted: "#6b6b66",
+  muted: "#585854",
+  muted2: "#6b6b66",
+  controlBorder: "#d2d2cb",
   accent: "#ded97a",
   onAccent: "#191919",
-  danger: "#b91c1c",
+  danger: "#b45309",
   dark: false,
 };
 

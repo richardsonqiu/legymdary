@@ -91,7 +91,7 @@ export default function Home() {
         ) : last.loading ? (
           <SkeletonRows count={1} />
         ) : (
-          <EmptyState title="No workouts yet" description="Log a gym session in Train." />
+          <EmptyState icon="train" title="No workouts yet" description="Log a gym session in Train." />
         )}
       </Section>
 

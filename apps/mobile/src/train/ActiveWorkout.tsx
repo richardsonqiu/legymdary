@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Keyboard, View } from "react-native";
 import { deviceToday, useMutation, useWorkoutActions } from "../api/hooks";
 import { useTheme } from "../theme";
-import { Bar, Button, Card, EmptyState, NumberStepper, Segmented, Sheet, Text, confirm, useTones, useToast } from "../ui";
+import { Bar, Button, Card, EmptyState, Icon, IconButton, NumberStepper, Segmented, Sheet, Text, confirm, useTones, useToast } from "../ui";
 import { ExercisePicker } from "./ExercisePicker";
 import { Stat, volumeText } from "./WorkoutSummary";
 
@@ -142,7 +142,7 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
       ) : null}
 
       {workout.exercises.length === 0 ? (
-        <EmptyState title="No exercises yet" description="Add exercises from the library to start logging sets." action={<Button title="Add exercise" onPress={() => setPickerOpen(true)} />} />
+        <EmptyState icon="train" title="No exercises yet" description="Add exercises from the library to start logging sets." action={<Button title="Add exercise" onPress={() => setPickerOpen(true)} />} />
       ) : (
         <>
           {workout.exercises.map((ex) => {
@@ -185,14 +185,14 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
                     </Text>
                     <Text variant="number" style={{ flex: 1 }}>
                       {kg(s.weight)} kg × {s.reps}
-                      {s.id === best ? "  ★" : ""}
                     </Text>
+                    {s.id === best ? <Icon name="trophy" size={18} color={tones.good} /> : null}
                     {!s.isWarmup ? (
                       <Text variant="caption" tone="muted">
                         1RM {kg(estimate1RM(s.weight, s.reps))}
                       </Text>
                     ) : null}
-                    <Button title="✕" accessibilityLabel={`Delete set ${kg(s.weight)} kg times ${s.reps}`} variant="ghost" small loading={isBusy(`ds${s.id}`)} onPress={() => void removeSet(s.id)} />
+                    <IconButton icon="trash" label={`Delete set ${kg(s.weight)} kg times ${s.reps}`} loading={isBusy(`ds${s.id}`)} onPress={() => void removeSet(s.id)} />
                   </View>
                 ))}
 
@@ -229,7 +229,10 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
       <Sheet visible={summary != null} title="Finish workout?" onClose={() => setSummary(null)}>
         {summary ? (
           <>
-            <Text variant="title">{summary.planned > 0 && summary.done >= summary.planned ? "Every set done" : "Great session"}</Text>
+            <View style={{ alignSelf: "center", width: 56, height: 56, borderRadius: 28, backgroundColor: t.accent, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="trophy" size={28} color={t.onAccent} />
+            </View>
+            <Text variant="title" style={{ textAlign: "center" }}>{summary.planned > 0 && summary.done >= summary.planned ? "Every set done" : "Great session"}</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Stat label="minutes" value={summary.minutes != null ? String(summary.minutes) : "–"} />
               <Stat label="sets" value={String(summary.sets)} />
