@@ -1,6 +1,6 @@
 import { buildSleepSummary, type SleepSummary } from "@/lib/analysis/sleep";
 import { userToday } from "@/lib/session";
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { bodyScans, garminDaily, garminRaw, goals } from "@/db/schema";
 import { extractDays, type DayRow } from "@/lib/analysis/extract";
@@ -169,15 +169,28 @@ export type SeriesPoint = {
 
 export type Analysis = { date: string; card: DayCard; series: SeriesPoint[] };
 
-/** Latest day with Garmin sleep/HRV/daily data, else today. */
+/**
+ * The newest night we have, else today. Takes the later of the raw sleep
+ * records (Garmin full import, Oura, Apple Health, Health Connect) and the
+ * daily summaries the regular Garmin sync writes. The raw import can stall
+ * (rate limit, a key to reconnect) while the daily sync carries on; trusting
+ * the raw date alone then hid Readiness, Sleep and Battery on Home.
+ */
 export async function latestDataDate(userId: string): Promise<string> {
   const cap = addDaysStr((await userToday()), 1);
-  const [[raw], [typed]] = await Promise.all([
+  const [[raw], [typed], [anyDaily]] = await Promise.all([
     db
       .select({ date: garminRaw.date })
       .from(garminRaw)
       .where(and(eq(garminRaw.userId, userId), eq(garminRaw.dataset, "sleep_summary"), lte(garminRaw.date, cap)))
       .orderBy(desc(garminRaw.date))
+      .limit(1),
+    // Daily summaries that include a night of sleep.
+    db
+      .select({ date: garminDaily.date })
+      .from(garminDaily)
+      .where(and(eq(garminDaily.userId, userId), isNotNull(garminDaily.sleepSeconds), lte(garminDaily.date, cap)))
+      .orderBy(desc(garminDaily.date))
       .limit(1),
     db
       .select({ date: garminDaily.date })
@@ -186,7 +199,8 @@ export async function latestDataDate(userId: string): Promise<string> {
       .orderBy(desc(garminDaily.date))
       .limit(1),
   ]);
-  return raw?.date ?? typed?.date ?? (await userToday());
+  const nights = [raw?.date, typed?.date].filter((d): d is string => !!d).sort();
+  return nights[nights.length - 1] ?? anyDaily?.date ?? (await userToday());
 }
 
 export async function buildAnalysis(userId: string, date: string): Promise<Analysis> {

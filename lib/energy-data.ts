@@ -17,6 +17,7 @@ import {
   type OuraStatus,
 } from "@/lib/queries";
 import { requireUserId } from "@/lib/session";
+import { hasHealthConnectData } from "@/lib/apple-health/store";
 import { lockTargets, targetModeOf, type TargetChange } from "@/lib/targets";
 import type { TargetReview } from "@/db/schema";
 
@@ -33,6 +34,8 @@ export type EnergyContext = {
   /** Oura Ring connection. */
   oura: OuraStatus | null;
   /** Any watch / ring data source: Garmin, Oura or an Apple Health upload. */
+  /** Android Health Connect data synced from the mobile app. */
+  healthConnect: boolean;
   wearable: boolean;
   goals: Goals | null;
   body: Awaited<ReturnType<typeof getLatestBodyValues>>;
@@ -68,7 +71,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
   const today = (await userToday());
   const from = addDaysStr(today, -35);
   const to = addDaysStr(today, 1);
-  const [garmin, appleHealth, oura, goals, body, stats, intake, garminDays] = await Promise.all([
+  const [garmin, appleHealth, oura, goals, body, stats, intake, garminDays, healthConnect] = await Promise.all([
     getGarminStatus(),
     getAppleHealthStatus(),
     getOuraStatus(),
@@ -77,6 +80,7 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
     getBodyStats(),
     getDailyTotals(from, to),
     getGarminDaily(from, to),
+    requireUserId().then(hasHealthConnectData),
   ]);
 
   const weights = stats
@@ -158,7 +162,9 @@ export const getEnergyContext = cache(async (): Promise<EnergyContext> => {
     garmin,
     appleHealth,
     oura,
-    wearable: !!garmin || !!appleHealth || !!oura,
+    healthConnect,
+    // Phone health sync (Health Connect) counts too: its nights feed Readiness and Sleep.
+    wearable: !!garmin || !!appleHealth || !!oura || healthConnect,
     goals,
     body,
     plan,

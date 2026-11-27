@@ -90,7 +90,7 @@ export default async function DashboardPage() {
     steps: todayGarmin?.steps ?? null,
     stepGoal: 8000,
     battery: card?.bodyBattery?.wake ?? null,
-    garminConnected: !!energy.garmin || !!energy.oura,
+    garminConnected: !!energy.garmin || !!energy.oura || energy.healthConnect,
     appleHealth: !energy.garmin && !energy.oura && !!energy.appleHealth,
   };
 
