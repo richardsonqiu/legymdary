@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      const res = await api.login({ email, password, deviceName: "LeGYMdary app" });
+      const res = await api.login({ email, password, deviceName: "One Up app" });
       await SecureStore.setItemAsync(TOKEN_KEY, res.token);
       token.current = res.token;
       setUser(res.user);
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(
     async (idToken: string) => {
-      const res = await api.googleLogin({ idToken, deviceName: "LeGYMdary app" });
+      const res = await api.googleLogin({ idToken, deviceName: "One Up app" });
       await SecureStore.setItemAsync(TOKEN_KEY, res.token);
       token.current = res.token;
       setUser(res.user);

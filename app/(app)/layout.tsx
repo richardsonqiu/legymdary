@@ -1,4 +1,5 @@
 import { BottomNav } from "@/components/BottomNav";
+import { LaunchSplash } from "@/components/brand/LaunchSplash";
 import { SubTabs } from "@/components/SubTabs";
 import { TimezoneSync } from "@/components/TimezoneSync";
 
@@ -15,6 +16,7 @@ export default function AppLayout({
       </main>
       <BottomNav />
       <TimezoneSync />
+      <LaunchSplash />
     </div>
   );
 }

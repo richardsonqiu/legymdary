@@ -38,7 +38,7 @@ export default function Login() {
     } catch (e) {
       setError(
         e instanceof ApiClientError && e.status === 401
-          ? "No LeGYMdary account is linked to this Google account. Sign in with Google on the website once, then try again."
+          ? "No One Up account is linked to this Google account. Sign in with Google on the website once, then try again."
           : e instanceof GoogleSignInError || e instanceof ApiClientError
             ? e.message
             : "Something went wrong. Try again.",
@@ -54,7 +54,11 @@ export default function Login() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={[s.root, { backgroundColor: t.page, paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }]}
     >
-      <Text style={[s.title, { color: t.text }]}>LeGYMdary</Text>
+      <View accessible accessibilityLabel="one up" style={s.brand}>
+        <Text style={[s.title, { color: t.text }]}>one up</Text>
+        {/* Round full stop in the accent colour, like the web wordmark. */}
+        <View style={[s.dot, { backgroundColor: t.dark ? "#DED97A" : "#8A851F" }]} />
+      </View>
       <Text style={[s.sub, { color: t.muted }]}>Sign in to continue</Text>
 
       <TextInput
@@ -112,6 +116,8 @@ export default function Login() {
 const s = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 24, gap: 12 },
   title: { fontSize: 32, fontWeight: "800" },
+  brand: { flexDirection: "row", alignItems: "flex-end" },
+  dot: { width: 7, height: 7, borderRadius: 4, marginLeft: 2, marginBottom: 9 },
   sub: { fontSize: 16, marginBottom: 12 },
   input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
   button: { borderRadius: 12, paddingVertical: 14, alignItems: "center", justifyContent: "center", minHeight: 48 },

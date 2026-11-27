@@ -72,7 +72,7 @@ export function HealthSection() {
   const connect = async () => {
     const ok = await confirm({
       title: `Connect ${healthName}?`,
-      message: "LeGYMdary reads steps, calories, resting heart rate, sleep, weight, body fat and workouts, and sends them to your account. It never writes to your health data.",
+      message: "One Up reads steps, calories, resting heart rate, sleep, weight, body fat and workouts, and sends them to your account. It never writes to your health data.",
       confirmText: "Continue",
     });
     if (!ok) return;
