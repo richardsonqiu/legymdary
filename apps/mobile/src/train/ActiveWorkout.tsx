@@ -186,7 +186,7 @@ export function ActiveWorkout({ workout }: { workout: WorkoutDto }) {
                     <Text variant="number" style={{ flex: 1 }}>
                       {kg(s.weight)} kg × {s.reps}
                     </Text>
-                    {s.id === best ? <Icon name="trophy" size={18} color={tones.good} /> : null}
+                    {s.id === best ? (<View accessible accessibilityLabel="Best set"><Icon name="trophy" size={18} color={tones.good} /></View>) : null}
                     {!s.isWarmup ? (
                       <Text variant="caption" tone="muted">
                         1RM {kg(estimate1RM(s.weight, s.reps))}

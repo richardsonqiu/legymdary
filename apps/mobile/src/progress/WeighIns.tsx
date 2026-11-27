@@ -35,9 +35,9 @@ export function WeighInForm({ latest, today }: { latest: BodyStatDto | null; tod
     <Card>
       {toast.node}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small onPress={() => setDate(addDaysStr(date, -1))} />
+        <IconButton icon="chevronLeft" label="Previous day" onPress={() => setDate(addDaysStr(date, -1))} />
         <Text variant="heading">{date === today ? "Today" : formatPretty(date)}</Text>
-        <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
+        <IconButton icon="chevronRight" label="Next day" disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
       </View>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <View style={{ flex: 1 }}>

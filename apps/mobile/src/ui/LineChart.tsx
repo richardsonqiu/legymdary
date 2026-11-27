@@ -90,7 +90,7 @@ export function LineChart({
           {Array.from({ length: TICKS }, (_, i) => {
             const v = min + ((max - min) * i) / (TICKS - 1);
             return (
-              <Text key={i} pointerEvents="none" style={{ position: "absolute", left: 0, width: padL - 6, top: sy(v) - 7, textAlign: "right", fontSize: 11, lineHeight: 14, color: t.muted2 }}>
+              <Text key={i} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1} pointerEvents="none" style={{ position: "absolute", left: 0, width: padL - 6, top: sy(v) - 7, textAlign: "right", fontSize: 11, lineHeight: 14, color: t.muted2 }}>
                 {fmt(v)}
               </Text>
             );

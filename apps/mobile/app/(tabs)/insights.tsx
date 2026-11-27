@@ -49,11 +49,11 @@ export default function Insights() {
     <Screen title="Insights" eyebrow="Recovery" photo="sleep" subtitle="Sleep and training vs your usual" onRefresh={all.refresh} refreshing={all.refreshing}>
       {q.hasData ? <StaleBanner error={q.error} onRetry={() => void q.refresh()} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small disabled={!shown} onPress={() => shown && setPicked(addDaysStr(shown, -1))} />
+        <IconButton icon="chevronLeft" label="Previous day" disabled={!shown} onPress={() => shown && setPicked(addDaysStr(shown, -1))} />
         <Pressable accessibilityRole="button" accessibilityLabel="Jump to the latest day" onPress={() => setPicked(null)} style={{ minHeight: 44, justifyContent: "center" }}>
           <Text variant="heading">{shown ? formatPretty(shown) : "Latest"}</Text>
         </Pressable>
-        <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={!shown || (d != null && d.date >= d.latest)} onPress={() => shown && setPicked(addDaysStr(shown, 1) >= (d?.latest ?? "9999") ? null : addDaysStr(shown, 1))} />
+        <IconButton icon="chevronRight" label="Next day" disabled={!shown || (d != null && d.date >= d.latest)} onPress={() => shown && setPicked(addDaysStr(shown, 1) >= (d?.latest ?? "9999") ? null : addDaysStr(shown, 1))} />
       </View>
 
       {q.loading ? <SkeletonRows count={4} height={96} /> : null}

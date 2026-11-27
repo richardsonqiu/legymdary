@@ -47,11 +47,11 @@ export default function Food() {
     <Screen title="Food" eyebrow="Fuel" photo="salmon" subtitle="Snap a meal or describe it" onRefresh={all.refresh} refreshing={all.refreshing}>
       {toast.node}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small onPress={() => setDate(addDaysStr(date, -1))} />
+        <IconButton icon="chevronLeft" label="Previous day" onPress={() => setDate(addDaysStr(date, -1))} />
         <Pressable accessibilityRole="button" accessibilityLabel="Jump to today" onPress={() => setPicked(null)} style={{ minHeight: 44, justifyContent: "center" }}>
           <Text variant="heading">{date === today ? "Today" : formatPretty(date)}</Text>
         </Pressable>
-        <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
+        <IconButton icon="chevronRight" label="Next day" disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
       </View>
 
       <QueryBoundary loading={day.loading} error={day.error} hasData={day.hasData} onRetry={() => void day.refresh()}>
