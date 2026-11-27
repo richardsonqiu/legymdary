@@ -29,7 +29,7 @@ export function ProgressRing({ value, size = 120, stroke = 11, color, children }
           origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
-      {children}
+      <View style={{ maxWidth: size - 2 * stroke - 6, alignItems: "center" }}>{children}</View>
     </View>
   );
 }

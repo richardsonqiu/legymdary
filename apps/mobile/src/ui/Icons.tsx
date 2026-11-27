@@ -8,7 +8,11 @@ const PATHS = {
   progress: ["M5 20V11M12 20V4M19 20v-6"],
   insights: ["M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"],
   play: ["M8 5.5v13a.6.6 0 0 0 .9.5l10.2-6.5a.6.6 0 0 0 0-1L8.9 5a.6.6 0 0 0-.9.5Z"],
-  chevronRight: ["M9 6l6 6-6 6"],
+  chevronRight: ["m10 6 6 6-6 6"],
+  chevronLeft: ["m14 6-6 6 6 6"],
+  x: ["M6 6l12 12M18 6 6 18"],
+  trash: ["M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"],
+  trophy: ["M8 4h8v4.5a4 4 0 0 1-8 0V4Z", "M8 5.5H5.5V7a3 3 0 0 0 3 3M16 5.5h2.5V7a3 3 0 0 1-3 3M9.5 18h5M10.5 14.5l-.5 3.5M13.5 14.5l.5 3.5"],
 } as const;
 
 export type IconName = keyof typeof PATHS;

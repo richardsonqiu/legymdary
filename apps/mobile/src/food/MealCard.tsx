@@ -9,7 +9,7 @@ export const MEAL_LABEL: Record<string, string> = { breakfast: "Breakfast", lunc
 export function useBandColor() {
   const t = useTheme();
   const tones = useTones();
-  return (b: Band | null) => (b === "nutritious" || b === "good" ? tones.good : b === "fair" ? tones.warn : b === "limited" ? t.danger : t.muted);
+  return (b: Band | null) => (b === "nutritious" || b === "good" ? tones.good : b === "fair" ? tones.warn : b === "limited" ? tones.rose : t.muted);
 }
 
 export const qualityOf = (m: MealDto) => mealQuality({ calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat, fiber: m.fiber, sugar: m.sugar, processing: m.processing });

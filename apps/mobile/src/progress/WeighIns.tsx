@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { useAuth } from "../auth";
 import { invalidateBody } from "../api/progress";
 import { useMutation } from "../api/hooks";
-import { Button, Card, LineChart, ListRow, Segmented, Text, TextField, confirm, useToast } from "../ui";
+import { Button, Card, IconButton, LineChart, ListRow, Segmented, Text, TextField, confirm, useToast } from "../ui";
 
 /** Log a weigh-in. Blank fields are skipped; one entry per day replaces the old one, like the web form. */
 export function WeighInForm({ latest, today }: { latest: BodyStatDto | null; today: string }) {
@@ -35,9 +35,9 @@ export function WeighInForm({ latest, today }: { latest: BodyStatDto | null; tod
     <Card>
       {toast.node}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small onPress={() => setDate(addDaysStr(date, -1))} />
+        <IconButton icon="chevronLeft" label="Previous day" onPress={() => setDate(addDaysStr(date, -1))} />
         <Text variant="heading">{date === today ? "Today" : formatPretty(date)}</Text>
-        <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
+        <IconButton icon="chevronRight" label="Next day" disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
       </View>
       <View style={{ flexDirection: "row", gap: 8 }}>
         <View style={{ flex: 1 }}>
@@ -91,7 +91,7 @@ export function BodyTrend({ stats, today }: { stats: BodyStatDto[]; today: strin
         </Text>
       ) : (
         <>
-          <LineChart points={points.map((p) => ({ x: daysBetween(first!, p.date), y: p.value }))} unit={` ${meta.unit}`} accessibilityLabel={`${meta.label} chart, latest ${kg(last)} ${meta.unit}`} />
+          <LineChart points={points.map((p) => ({ x: daysBetween(first!, p.date), y: p.value }))} unit={` ${meta.unit}`} xLabel={(x) => formatMedium(addDaysStr(first!, x))} accessibilityLabel={`${meta.label} chart, latest ${kg(last)} ${meta.unit}`} />
           <Text variant="caption" tone="muted">
             {formatMedium(first!)} to {formatMedium(points[points.length - 1].date)}
           </Text>

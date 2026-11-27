@@ -43,16 +43,16 @@ export function TabBar({ state, descriptors, navigateToTab }: TabBarProps) {
             <View
               style={{
                 width: 48,
-                height: 34,
-                borderRadius: 17,
+                height: 36,
+                borderRadius: 18,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: focused ? t.accent : "transparent",
               }}
             >
-              <Icon name={ICONS[route.name] ?? "home"} color={focused ? t.onAccent : t.muted} />
+              <Icon name={ICONS[route.name] ?? "home"} color={focused ? t.onAccent : t.muted2} />
             </View>
-            <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: focused ? "600" : "500", color: focused ? t.text : t.muted }}>
+            <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: focused ? "600" : "500", color: focused ? t.text : t.muted2 }}>
               {label}
             </Text>
           </Pressable>

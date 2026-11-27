@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { deviceToday, useFoodActions, useMeals, useMutation, useRecentMeals, useRefreshAll, useToday } from "../../../src/api/hooks";
 import { MEAL_LABEL, MealCard, MealThumb } from "../../../src/food/MealCard";
-import { Button, Card, EmptyState, MacroSummary, QueryBoundary, Screen, Section, Segmented, Sheet, SkeletonRows, StaleBanner, Text, useToast, useTones } from "../../../src/ui";
+import { Button, Card, IconButton, EmptyState, MacroSummary, QueryBoundary, Screen, Section, Segmented, Sheet, SkeletonRows, StaleBanner, Text, useToast, useTones } from "../../../src/ui";
 
 const ZERO = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
@@ -47,11 +47,11 @@ export default function Food() {
     <Screen title="Food" eyebrow="Fuel" photo="salmon" subtitle="Snap a meal or describe it" onRefresh={all.refresh} refreshing={all.refreshing}>
       {toast.node}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small onPress={() => setDate(addDaysStr(date, -1))} />
+        <IconButton icon="chevronLeft" label="Previous day" onPress={() => setDate(addDaysStr(date, -1))} />
         <Pressable accessibilityRole="button" accessibilityLabel="Jump to today" onPress={() => setPicked(null)} style={{ minHeight: 44, justifyContent: "center" }}>
           <Text variant="heading">{date === today ? "Today" : formatPretty(date)}</Text>
         </Pressable>
-        <Button title="›" accessibilityLabel="Next day" variant="ghost" small disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
+        <IconButton icon="chevronRight" label="Next day" disabled={date >= today} onPress={() => setDate(addDaysStr(date, 1))} />
       </View>
 
       <QueryBoundary loading={day.loading} error={day.error} hasData={day.hasData} onRetry={() => void day.refresh()}>
@@ -129,7 +129,7 @@ export default function Food() {
         ) : recent.loading ? (
           <SkeletonRows count={1} height={120} />
         ) : (
-          <EmptyState title="Nothing yet" description="Meals you log show up here for one-tap logging again." />
+          <EmptyState icon="food" title="Nothing yet" description="Meals you log show up here for one-tap logging again." />
         )}
       </Section>
 

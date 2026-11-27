@@ -40,7 +40,7 @@ export function Screen({
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: t.page }}
-      contentContainerStyle={{ paddingTop: (topInset ? insets.top : 0) + 24, paddingHorizontal: 20, paddingBottom: 40, gap: 16 }}
+      contentContainerStyle={{ paddingTop: (topInset ? insets.top : 0) + 24, paddingHorizontal: 16, paddingBottom: 40, gap: 16 }}
       keyboardShouldPersistTaps="handled"
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.muted} /> : undefined}
     >

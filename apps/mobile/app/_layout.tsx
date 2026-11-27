@@ -3,8 +3,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { useFonts } from "expo-font";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import { GEIST_FONTS } from "../src/ui/fonts";
+import { Button } from "../src/ui/Button";
 import { Text } from "../src/ui/Text";
 import { AuthProvider, useAuth } from "../src/auth";
 import { ThemeProvider, useTheme } from "../src/theme";
@@ -29,13 +30,7 @@ function Routes() {
         <StatusBar style={theme.dark ? "light" : "dark"} />
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>Can't reach the server</Text>
         <Text style={{ color: theme.muted, textAlign: "center" }}>Check your connection. You are still signed in.</Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => void retry()}
-          style={{ backgroundColor: theme.accent, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32, minHeight: 48, justifyContent: "center" }}
-        >
-          <Text style={{ color: theme.onAccent, fontSize: 16, fontWeight: "700" }}>Retry</Text>
-        </Pressable>
+        <Button title="Retry" onPress={() => void retry()} />
       </View>
     );
   }

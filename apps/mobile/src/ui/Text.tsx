@@ -8,10 +8,10 @@ export type TextTone = "default" | "muted" | "danger" | "good" | "warn" | "info"
 
 // Sizes and weights follow the web: page titles 28 semibold with tight tracking.
 const VARIANTS: Record<TextVariant, TextStyle> = {
-  display: { fontSize: 30, fontWeight: "600", letterSpacing: -0.6, lineHeight: 34 },
+  display: { fontSize: 28, fontWeight: "600", letterSpacing: -0.6, lineHeight: 32 },
   title: { fontSize: 22, fontWeight: "600", letterSpacing: -0.3 },
   heading: { fontSize: 17, fontWeight: "600" },
-  body: { fontSize: 15 },
+  body: { fontSize: 16 },
   label: { fontSize: 13, fontWeight: "600" },
   caption: { fontSize: 12 },
   number: { fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },

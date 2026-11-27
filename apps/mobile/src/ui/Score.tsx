@@ -35,7 +35,7 @@ export function ScoreRing({ value, display, label, onPress }: { value: number | 
             <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color(value)} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} rotation={-90} origin={`${size / 2}, ${size / 2}`} />
           ) : null}
         </Svg>
-        <Text style={{ fontSize: 14, fontWeight: "600", fontVariant: ["tabular-nums"] }}>{display ?? (value == null ? "–" : Math.round(value))}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.15} style={{ fontSize: 14, fontWeight: "600", fontVariant: ["tabular-nums"] }}>{display ?? (value == null ? "–" : Math.round(value))}</Text>
       </View>
       <Text numberOfLines={1} style={{ fontSize: 11, color: t.muted }}>
         {label}

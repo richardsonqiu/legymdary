@@ -51,7 +51,7 @@ export function StartWorkout({ history, templates }: { history: ReturnType<typeo
               />
             ))
           ) : (
-            <EmptyState title="No templates yet" description="Templates you save in the web app show up here." />
+            <EmptyState icon="train" title="No templates yet" description="Templates you save in the web app show up here." />
           )}
         </QueryBoundary>
       </Section>
@@ -71,7 +71,7 @@ export function StartWorkout({ history, templates }: { history: ReturnType<typeo
             {null}
           </QueryBoundary>
         ) : list.length === 0 ? (
-          <EmptyState title="No gym sessions logged" description="Finish a workout and it shows here." />
+          <EmptyState icon="train" title="No gym sessions logged" description="Finish a workout and it shows here." />
         ) : (
           list.map((w) => <ListRow key={w.id} title={w.name} subtitle={`${formatPretty(w.date)} · ${w.totalSets} sets · ${kg(w.totalVolume)} kg`} onPress={() => open(w.id)} />)
         )}

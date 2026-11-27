@@ -4,8 +4,9 @@ import { View } from "react-native";
 import { deviceToday, useActiveWorkout, useLastWorkouts, useRefreshAll, useToday } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth";
 import { MEAL_LABEL } from "../../src/food/MealCard";
+import { useTheme } from "../../src/theme";
 import { HomeHeader, HomeScoresView } from "../../src/home/HomeTop";
-import { Button, Card, EmptyState, ListRow, MacroSummary, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, confirm, useTones, type PhotoName } from "../../src/ui";
+import { Button, Card, EmptyState, Icon, ListRow, MacroSummary, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, confirm, useTones, type PhotoName } from "../../src/ui";
 
 /** One scene a day, like the web (lib/scenes.ts). */
 const SCENES: PhotoName[] = ["sunrise", "mountains", "ocean", "evening"];
@@ -15,6 +16,7 @@ const ZERO = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 export default function Home() {
   const router = useRouter();
   const tones = useTones();
+  const theme = useTheme();
   const { user, signOut } = useAuth();
   const today = useToday();
   const active = useActiveWorkout();
@@ -76,7 +78,7 @@ export default function Home() {
         <ListRow
           title={`Continue: ${active.data.workout.name}`}
           subtitle={`${active.data.workout.exerciseCount} exercises · ${active.data.workout.totalSets} sets`}
-          trailing={<Text variant="label">Open ›</Text>}
+          trailing={<View style={{ flexDirection: "row", alignItems: "center" }}><Text variant="label">Open</Text><Icon name="chevronRight" size={18} color={theme.text} /></View>}
           onPress={() => router.navigate("/train")}
         />
       ) : null}
@@ -91,7 +93,7 @@ export default function Home() {
         ) : last.loading ? (
           <SkeletonRows count={1} />
         ) : (
-          <EmptyState title="No workouts yet" description="Log a gym session in Train." />
+          <EmptyState icon="train" title="No workouts yet" description="Log a gym session in Train." />
         )}
       </Section>
 

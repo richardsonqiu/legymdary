@@ -3,26 +3,30 @@ import { ActivityIndicator, View } from "react-native";
 import { useTheme } from "../theme";
 import { StaleBanner } from "./Banners";
 import { Button } from "./Button";
+import { Icon, type IconName } from "./Icons";
 import { SkeletonRows } from "./Skeleton";
 import { Text } from "./Text";
 
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+/** Same as the web EmptyState: dashed rounded-2xl box, optional 48px icon circle, medium title, muted description. */
+export function EmptyState({ title, description, action, icon }: { title: string; description?: string; action?: ReactNode; icon?: IconName }) {
   const t = useTheme();
   return (
-    <View style={{ borderWidth: 1, borderStyle: "dashed", borderColor: t.border, borderRadius: 16, padding: 20, alignItems: "center", gap: 6 }}>
-      <Text variant="heading" style={{ textAlign: "center" }}>
-        {title}
-      </Text>
+    <View style={{ borderWidth: 1, borderStyle: "dashed", borderColor: t.border, borderRadius: 16, paddingHorizontal: 24, paddingVertical: 48, alignItems: "center" }}>
+      {icon ? (
+        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: t.card, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+          <Icon name={icon} color={t.muted2} />
+        </View>
+      ) : null}
+      <Text style={{ fontWeight: "500", textAlign: "center", color: t.text }}>{title}</Text>
       {description ? (
-        <Text variant="body" tone="muted" style={{ textAlign: "center" }}>
+        <Text variant="body" style={{ fontSize: 14, textAlign: "center", marginTop: 4, maxWidth: 320, color: t.muted2 }}>
           {description}
         </Text>
       ) : null}
-      {action ? <View style={{ marginTop: 8 }}>{action}</View> : null}
+      {action ? <View style={{ marginTop: 16 }}>{action}</View> : null}
     </View>
   );
 }
-
 export function Loading({ label = "Loading" }: { label?: string }) {
   const t = useTheme();
   return (
