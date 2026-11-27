@@ -69,11 +69,16 @@ export default async function DashboardPage() {
 
   // ---- Score rings + readiness hero (recovery needs Garmin) ----
   let card: Awaited<ReturnType<typeof buildAnalysis>>["card"] | null = null;
+  // Today's data has arrived but holds no night: the watch wasn't worn to bed.
+  const todaySynced = energy.garminDays.find((d) => d.date === serverToday) ?? null;
+  let noSleepLastNight = false;
   if (energy.wearable && user?.id) {
     const latest = await latestDataDate(user.id);
-    // Only show recovery for last night (or the night before if today's sync hasn't landed yet).
-    if (latest >= addDaysStr(serverToday, -1))
+    // Show recovery for last night. The night before only stands in while today's
+    // sync hasn't landed yet; once it has without sleep, last night wasn't recorded.
+    if (latest >= serverToday || (latest === addDaysStr(serverToday, -1) && !todaySynced))
       card = (await buildAnalysis(user.id, latest)).card;
+    else if (todaySynced) noSleepLastNight = true;
   }
   const todayGarmin =
     energy.garminDays.find((d) => d.date === serverToday) ?? null;
@@ -90,7 +95,8 @@ export default async function DashboardPage() {
     steps: todayGarmin?.steps ?? null,
     stepGoal: 8000,
     battery: card?.bodyBattery?.wake ?? null,
-    garminConnected: !!energy.garmin || !!energy.oura,
+    garminConnected: !!energy.garmin || !!energy.oura || energy.healthConnect,
+    noSleepLastNight,
     appleHealth: !energy.garmin && !energy.oura && !!energy.appleHealth,
   };
 

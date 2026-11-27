@@ -14,6 +14,8 @@ export type TodayScoresInput = {
   /** Body Battery when you woke (0 to 100). */
   battery: number | null;
   garminConnected: boolean;
+  /** Today's data synced but there was no night (watch not worn to bed). */
+  noSleepLastNight?: boolean;
   /** Watch data comes from an Apple Health upload (not a live sync). */
   appleHealth?: boolean;
 };
@@ -88,7 +90,9 @@ export function TodayScores({ s }: { s: TodayScoresInput }) {
           <p className="mt-0.5 text-sm leading-snug text-zinc-400">
             {r
               ? r.label === ADVICE[r.band].replace(/\.$/, "") ? null : ADVICE[r.band]
-              : s.garminConnected
+              : s.noSleepLastNight
+                ? "No sleep recorded last night. Wear your watch or ring to bed for Readiness."
+                : s.garminConnected
                 ? "Shows after your watch or ring syncs a night of sleep."
                 : s.appleHealth
                   ? "Upload a fresh Apple Health export to see last night."
