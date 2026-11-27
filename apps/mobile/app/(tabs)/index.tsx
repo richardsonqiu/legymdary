@@ -4,9 +4,12 @@ import { View } from "react-native";
 import { deviceToday, useActiveWorkout, useLastWorkouts, useRefreshAll, useToday } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth";
 import { MEAL_LABEL } from "../../src/food/MealCard";
-import { Button, Card, EmptyState, ListRow, MacroSummary, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, useTones } from "../../src/ui";
+import { HomeHeader, HomeScoresView } from "../../src/home/HomeTop";
+import { Button, Card, EmptyState, ListRow, MacroSummary, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, confirm, useTones, type PhotoName } from "../../src/ui";
 
-const greeting = (h: number) => (h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+/** One scene a day, like the web (lib/scenes.ts). */
+const SCENES: PhotoName[] = ["sunrise", "mountains", "ocean", "evening"];
+const sceneFor = (date: string) => SCENES[((Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000) % SCENES.length) + SCENES.length) % SCENES.length];
 const ZERO = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
 export default function Home() {
@@ -24,14 +27,22 @@ export default function Home() {
 
   return (
     <Screen
-      title={`${greeting(new Date().getHours())}${first ? `, ${first}` : ""}`}
-      eyebrow={formatPretty(d?.date ?? deviceToday())}
+      backdrop={sceneFor(d?.date ?? deviceToday())}
+      header={
+        <HomeHeader
+          name={first}
+          initial={(user?.name || user?.email || "?").charAt(0).toUpperCase()}
+          date={formatPretty(d?.date ?? deviceToday())}
+          onAccount={() => void confirm({ title: user?.email ?? "Account", message: "Sign out of One Up on this phone?", confirmText: "Sign out", destructive: true }).then((yes) => { if (yes) void signOut(); })}
+        />
+      }
       onRefresh={all.refresh}
       refreshing={all.refreshing}
     >
       <QueryBoundary loading={today.loading} error={today.error} hasData={today.hasData} onRetry={() => void today.refresh()}>
         {d ? (
         <>
+          <HomeScoresView d={d} />
           <Card onPress={() => router.navigate("/food")} accessibilityLabel="Today's food. Open the food diary">
             <MacroSummary compact totals={d.eaten ?? ZERO} targets={withBonus(d.targets, d.bonus)} />
             {d.bonus > 0 ? (
@@ -55,38 +66,6 @@ export default function Home() {
             <Button title={d.eaten.count > 0 ? "Add another meal" : "Log your first meal today"} variant="secondary" onPress={() => router.push({ pathname: "/food/add", params: { date: d.date } })} />
           </Card>
 
-          {d.readiness ? (
-            <Card>
-              <Text variant="label" tone="muted">
-                Readiness
-              </Text>
-              <Text variant="heading" tone={d.readiness.verdict === "push" ? "good" : d.readiness.verdict === "easy" ? "warn" : "default"}>
-                {d.readiness.headline}
-              </Text>
-              <Text variant="body" tone="muted">
-                {d.readiness.advice}
-              </Text>
-              {d.readiness.signals.map((s) => (
-                <View key={s.label} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text variant="caption" tone="muted">
-                    {s.label}
-                  </Text>
-                  <Text variant="caption" tone={s.tone === "good" ? "good" : s.tone === "poor" ? "warn" : "default"} style={{ fontWeight: "700" }}>
-                    {s.value}
-                  </Text>
-                </View>
-              ))}
-            </Card>
-          ) : null}
-
-          {d.steps != null ? (
-            <Card>
-              <Text variant="label" tone="muted">
-                Steps today
-              </Text>
-              <Text variant="title">{d.steps.toLocaleString("en-US")}</Text>
-            </Card>
-          ) : null}
         </>
         ) : null}
       </QueryBoundary>
@@ -116,7 +95,6 @@ export default function Home() {
         )}
       </Section>
 
-      <Button title="Sign out" variant="ghost" onPress={() => void signOut()} />
     </Screen>
   );
 }

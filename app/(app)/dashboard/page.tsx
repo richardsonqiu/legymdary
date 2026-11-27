@@ -10,7 +10,7 @@ import {
   TodayScores,
   type TodayScoresInput,
 } from "@/components/score/TodayScores";
-import { buildAnalysis, latestDataDate } from "@/lib/analysis/service";
+import { homeRecovery } from "@/lib/services/home-recovery";
 import { sceneFor, sceneStyle, compareScans, parseSegments, segmentBalance, addDaysStr, formatShort, kg } from "@legymdary/shared";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import { DumbbellIcon, TrophyIcon, WatchIcon, CalendarIcon, ChevronRightIcon } from "@/components/icons";
@@ -67,19 +67,10 @@ export default async function DashboardPage() {
   ]);
   const foodTargets = energy.targets;
 
-  // ---- Score rings + readiness hero (recovery needs Garmin) ----
-  let card: Awaited<ReturnType<typeof buildAnalysis>>["card"] | null = null;
-  // Today's data has arrived but holds no night: the watch wasn't worn to bed.
-  const todaySynced = energy.garminDays.find((d) => d.date === serverToday) ?? null;
-  let noSleepLastNight = false;
-  if (energy.wearable && user?.id) {
-    const latest = await latestDataDate(user.id);
-    // Show recovery for last night. The night before only stands in while today's
-    // sync hasn't landed yet; once it has without sleep, last night wasn't recorded.
-    if (latest >= serverToday || (latest === addDaysStr(serverToday, -1) && !todaySynced))
-      card = (await buildAnalysis(user.id, latest)).card;
-    else if (todaySynced) noSleepLastNight = true;
-  }
+  // ---- Score rings + readiness hero (recovery needs a watch, ring or phone sync) ----
+  const { card, noSleepLastNight } = user?.id
+    ? await homeRecovery(user.id, energy, serverToday)
+    : { card: null, noSleepLastNight: false };
   const todayGarmin =
     energy.garminDays.find((d) => d.date === serverToday) ?? null;
   const todayFood = foodTotals.find((d) => d.date === serverToday);

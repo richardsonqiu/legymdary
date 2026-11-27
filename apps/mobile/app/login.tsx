@@ -1,6 +1,7 @@
 import { ApiClientError } from "@legymdary/shared";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Text } from "../src/ui/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/auth";
 import { GoogleSignInError, googleSignIn } from "../src/googleSignIn";
@@ -115,12 +116,13 @@ export default function Login() {
 
 const s = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 24, gap: 12 },
-  title: { fontSize: 32, fontWeight: "800" },
-  brand: { flexDirection: "row", alignItems: "flex-end" },
-  dot: { width: 7, height: 7, borderRadius: 4, marginLeft: 2, marginBottom: 9 },
-  sub: { fontSize: 16, marginBottom: 12 },
-  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
-  button: { borderRadius: 12, paddingVertical: 14, alignItems: "center", justifyContent: "center", minHeight: 48 },
+  // Same wordmark as the web: Geist Bold, tracking -0.035em, round accent dot (0.22em).
+  title: { fontSize: 32, fontWeight: "700", letterSpacing: -1.1 },
+  brand: { flexDirection: "row", alignItems: "flex-end", alignSelf: "center" },
+  dot: { width: 7, height: 7, borderRadius: 4, marginLeft: 2, marginBottom: 10 },
+  sub: { fontSize: 16, marginBottom: 12, textAlign: "center" },
+  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: "Geist-Regular" },
+  button: { borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", minHeight: 48 },
   buttonText: { fontSize: 16, fontWeight: "700" },
   google: { borderWidth: 1 },
 });

@@ -11,7 +11,7 @@ export default function Train() {
   const workout = active.data?.workout ?? null;
 
   return (
-    <Screen title="Train" eyebrow={workout ? "In progress" : "Workout"} onRefresh={all.refresh} refreshing={all.refreshing}>
+    <Screen title="Train" eyebrow={workout ? "In progress" : "Workout"} photo="pullup" subtitle="Today's plan, or start your own" onRefresh={all.refresh} refreshing={all.refreshing}>
       <QueryBoundary loading={active.loading} error={active.error} hasData={active.hasData} onRetry={() => void active.refresh()}>
         {workout ? <ActiveWorkout workout={workout} /> : <StartWorkout history={history} templates={templates} />}
       </QueryBoundary>

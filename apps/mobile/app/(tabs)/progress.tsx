@@ -18,7 +18,7 @@ export default function Progress() {
   const latest = [...stats].reverse().find((s) => s.weight != null) ?? null;
 
   return (
-    <Screen title="Progress" eyebrow="Trends" onRefresh={all.refresh} refreshing={all.refreshing}>
+    <Screen title="Progress" eyebrow="Trends" photo="runner" subtitle="Body and training over time" onRefresh={all.refresh} refreshing={all.refreshing}>
       {body.hasData ? <StaleBanner error={body.error} onRetry={() => void body.refresh()} /> : null}
       <Section title="Log body stats">
         <WeighInForm latest={latest} today={today} />

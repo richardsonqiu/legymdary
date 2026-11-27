@@ -44,7 +44,7 @@ export default function Food() {
   const open = (m: MealDto) => router.push({ pathname: "/food/meal/[id]", params: { id: String(m.id) } });
 
   return (
-    <Screen title="Food" eyebrow="Fuel" onRefresh={all.refresh} refreshing={all.refreshing}>
+    <Screen title="Food" eyebrow="Fuel" photo="salmon" subtitle="Snap a meal or describe it" onRefresh={all.refresh} refreshing={all.refreshing}>
       {toast.node}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small onPress={() => setDate(addDaysStr(date, -1))} />
