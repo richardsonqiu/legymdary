@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useRefreshAll } from "../../src/api/hooks";
 import { useInsights } from "../../src/api/progress";
-import { Button, Card, EmptyState, LineChart, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, useTones } from "../../src/ui";
+import { Button, Card, EmptyState, LevelBar, LineChart, Pill, QueryBoundary, Screen, Section, SkeletonRows, StaleBanner, Text, TickBar, toneWord, useScoreColor } from "../../src/ui";
 
 const n0 = (v: number | null | undefined, unit = "") => (v == null ? "-" : `${Math.round(v).toLocaleString("en-US")}${unit}`);
 
@@ -37,17 +37,16 @@ function Trend({ title, series, pick, unit }: { title: string; series: InsightsR
 }
 
 export default function Insights() {
-  const tones = useTones();
+  const scoreColor = useScoreColor();
   const [picked, setPicked] = useState<string | null>(null);
   const q = useInsights(picked);
   const all = useRefreshAll([q]);
   const d = q.data;
   // The picked day, or the data's day while following the latest. Keeps the navigator on screen while a day loads or fails.
   const shown = picked ?? d?.date ?? null;
-  const bandColor = d?.readiness ? (d.readiness.band === "push" ? tones.good : d.readiness.band === "easy" ? tones.warn : tones.info) : tones.info;
 
   return (
-    <Screen title="Insights" eyebrow="Recovery" onRefresh={all.refresh} refreshing={all.refreshing}>
+    <Screen title="Insights" eyebrow="Recovery" photo="sleep" subtitle="Sleep and training vs your usual" onRefresh={all.refresh} refreshing={all.refreshing}>
       {q.hasData ? <StaleBanner error={q.error} onRetry={() => void q.refresh()} /> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Button title="‹" accessibilityLabel="Previous day" variant="ghost" small disabled={!shown} onPress={() => shown && setPicked(addDaysStr(shown, -1))} />
@@ -65,18 +64,34 @@ export default function Insights() {
 
             {d.readiness ? (
               <Section title="Readiness">
-                <Card>
-                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 10 }}>
-                    <Text variant="display" style={{ color: bandColor }}>
-                      {d.readiness.score}
-                    </Text>
-                    <Text variant="heading">{d.readiness.label}</Text>
+                <Card style={{ borderRadius: 28, padding: 20 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+                      <Text style={{ fontSize: 56, fontWeight: "600", letterSpacing: -1.5, lineHeight: 60, fontVariant: ["tabular-nums"] }}>{d.readiness.score}</Text>
+                      <Text style={{ fontSize: 18 }} tone="muted">
+                        /100
+                      </Text>
+                    </View>
+                    <Pill>{toneWord(d.readiness.score)}</Pill>
                   </View>
-                  <Text variant="caption" tone="muted">
-                    Confidence: {d.readiness.confidence}
+                  <TickBar value={d.readiness.score} />
+                  <Text variant="heading">{d.readiness.label}</Text>
+                  <Text variant="caption" tone="muted" style={{ textTransform: "uppercase", letterSpacing: 1 }}>
+                    {d.readiness.confidence} confidence
                   </Text>
+                </Card>
+                <Card>
                   {d.readiness.contributors.map((c, i) => (
-                    <Row key={`${c.label}-${i}`} label={c.label} value={String(Math.round(c.score))} sub={c.detail} />
+                    <View key={`${c.label}-${i}`} style={{ gap: 6 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                        <Text style={{ flexShrink: 1 }}>{c.label}</Text>
+                        <Text style={{ fontWeight: "600", color: scoreColor(c.score) }}>{toneWord(c.score)}</Text>
+                      </View>
+                      <Text variant="caption" tone="muted">
+                        {c.detail}
+                      </Text>
+                      <LevelBar value={c.score} />
+                    </View>
                   ))}
                 </Card>
               </Section>

@@ -15,7 +15,7 @@ export function TextField({ label, style, ...rest }: TextInputProps & { label?: 
         accessibilityLabel={label}
         placeholderTextColor={t.muted}
         {...rest}
-        style={[{ color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 48, fontSize: 16, backgroundColor: t.page }, style]}
+        style={[{ color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, minHeight: 48, fontSize: 16, fontFamily: "Geist-Regular", backgroundColor: t.page }, style]}
       />
     </View>
   );

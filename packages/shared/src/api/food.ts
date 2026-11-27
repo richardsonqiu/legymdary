@@ -119,6 +119,33 @@ export const targetsSchema = z.object({
 });
 export type TargetsDto = z.infer<typeof targetsSchema>;
 
+const nnum = z.number().nullable();
+
+/** The rings and readiness card on Home, the same numbers as the web dashboard. */
+export const homeScoresSchema = z.object({
+  /** Last night's readiness (0 to 100), or null without a recorded night. */
+  readiness: z
+    .object({
+      score: z.number(),
+      band: z.enum(["push", "normal", "easy"]),
+      label: z.string(),
+      /** The three factors that weigh most, each 0 to 100. */
+      factors: z.array(z.object({ label: z.string(), score: z.number() })),
+    })
+    .nullable(),
+  sleepScore: nnum,
+  sleepHours: nnum,
+  /** Body Battery when you woke. */
+  battery: nnum,
+  steps: nnum,
+  stepGoal: z.number(),
+  /** Today's data synced without a night: the watch wasn't worn to bed. */
+  noSleepLastNight: z.boolean(),
+  /** What feeds recovery: a watch/ring/phone sync, an Apple Health upload, or nothing yet. */
+  source: z.enum(["sync", "apple_upload", "none"]),
+});
+export type HomeScores = z.infer<typeof homeScoresSchema>;
+
 /** GET /api/v1/today?date=YYYY-MM-DD (date defaults to today in the X-Timezone zone). */
 export const todayResponseSchema = z.object({
   date: ymdSchema,
@@ -135,5 +162,7 @@ export const todayResponseSchema = z.object({
   wearable: z.boolean(),
   steps: z.number().nullable(),
   activeWorkoutId: z.number().nullable(),
+  /** Home rings and readiness card. Only for today; optional so older servers still parse. */
+  scores: homeScoresSchema.nullable().optional(),
 });
 export type TodayResponse = z.infer<typeof todayResponseSchema>;

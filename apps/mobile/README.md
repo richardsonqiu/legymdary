@@ -18,6 +18,13 @@ From the repo root, `npm ci` once. Then in `apps/mobile`:
 - Tabs come from the shared `NAV` (moved from `lib/nav.ts` to `packages/shared/src/nav.ts`; web imports it from there). Only Today is built; the rest are placeholders.
 - Theme: Carbon / Citron / Paper from `app/globals.css`, dark 7 PM to 6 AM like the web Auto rule.
 
+## Look and feel (same as the web)
+
+- Font: Geist from `assets/fonts` (loaded with `expo-font` before the splash hides). `src/ui/Text.tsx` picks the file for each weight, so use `fontWeight` as usual.
+- Palette in `src/theme.tsx` mirrors `app/globals.css`; "good" tones are the accent (Citron, olive on Paper). Auto: dark from 7 PM to 6 AM.
+- Shapes: cards 24 radius, pill buttons, the web's line icons (`src/ui/Icons.tsx`) and a bottom tab bar with the active tab on a Citron pill (`src/ui/TabBar.tsx`).
+- Page headers sit on the web's editorial photos (`assets/editorial`, `src/ui/Photo.tsx`); Home has the daily backdrop, the "one up." wordmark, score rings and the readiness card (`src/home/HomeTop.tsx`), fed by `scores` on `GET /api/v1/today` (the same numbers as the web dashboard, from `lib/services/home-recovery.ts`).
+
 ## Icon and splash
 
 `assets/icon.png`, `adaptive-icon.png`, `splash-icon.png`, `splash-icon-dark.png` and `favicon.png` are generated with the web icons by `node scripts/gen-icons.mjs` (repo root) from the "one up." wordmark. The splash (`expo-splash-screen` plugin in `app.json`) shows the wordmark on Paper in light mode and Carbon in dark mode; `app/_layout.tsx` keeps it up until auth is ready. Native config changes need a new dev build.

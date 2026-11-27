@@ -1,14 +1,16 @@
-import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from "react-native";
+import { StyleSheet, Text as RNText, type TextProps as RNTextProps, type TextStyle } from "react-native";
+import { geistFor } from "./fonts";
 import { useTheme } from "../theme";
 import { useTones } from "./tones";
 
 export type TextVariant = "display" | "title" | "heading" | "body" | "label" | "caption" | "number";
 export type TextTone = "default" | "muted" | "danger" | "good" | "warn" | "info";
 
+// Sizes and weights follow the web: page titles 28 semibold with tight tracking.
 const VARIANTS: Record<TextVariant, TextStyle> = {
-  display: { fontSize: 32, fontWeight: "800" },
-  title: { fontSize: 22, fontWeight: "700" },
-  heading: { fontSize: 17, fontWeight: "700" },
+  display: { fontSize: 30, fontWeight: "600", letterSpacing: -0.6, lineHeight: 34 },
+  title: { fontSize: 22, fontWeight: "600", letterSpacing: -0.3 },
+  heading: { fontSize: 17, fontWeight: "600" },
   body: { fontSize: 15 },
   label: { fontSize: 13, fontWeight: "600" },
   caption: { fontSize: 12 },
@@ -22,5 +24,8 @@ export function Text({ variant = "body", tone = "default", style, ...rest }: Tex
   const t = useTheme();
   const tones = useTones();
   const color = { default: t.text, muted: t.muted, danger: t.danger, good: tones.good, warn: tones.warn, info: tones.info }[tone];
-  return <RNText maxFontSizeMultiplier={1.4} {...rest} style={[VARIANTS[variant], { color }, style]} />;
+  const flat: TextStyle = StyleSheet.flatten([VARIANTS[variant], { color }, style]) ?? {};
+  // Geist per weight. fontWeight is dropped so Android doesn't fake-bold the face.
+  const font = { ...flat, fontFamily: flat.fontFamily ?? geistFor(flat.fontWeight), fontWeight: undefined };
+  return <RNText maxFontSizeMultiplier={1.4} {...rest} style={font} />;
 }

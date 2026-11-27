@@ -192,6 +192,19 @@ async function main() {
   check("source_daily has both sources", daysBySource.join() === "apple,health_connect", daysBySource);
   r = await call("today", "GET", { query: `?date=${day}` });
   check("today sees wearable data", r.json.wearable === true && r.json.steps === 9000, r.json);
+  {
+    // Home rings: only for today (no date param), and the response matches the shared schema.
+    const { todayResponseSchema } = await import("@legymdary/shared");
+    const t = await call("today", "GET");
+    const parsed = todayResponseSchema.safeParse(t.json);
+    const sc = t.json.scores;
+    check(
+      "today (no date) parses with the shared schema and has Home scores",
+      parsed.success && sc != null && sc.source === "sync" && typeof sc.noSleepLastNight === "boolean" && sc.stepGoal === 8000,
+      parsed.success ? sc : parsed.error.issues.slice(0, 3),
+    );
+    check("today for another date has no Home scores", r.json.scores == null || r.json.date === t.json.date, r.json.scores);
+  }
   r = await call("health/data", "DELETE", { body: { source: "health_connect" } });
   check("DELETE health_connect data", r.status === 200, r);
   const left = (await db.select({ id: schema.garminActivities.activityId }).from(schema.garminActivities)).map((a) => a.id);

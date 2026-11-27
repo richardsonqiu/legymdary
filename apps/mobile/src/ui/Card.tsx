@@ -14,7 +14,7 @@ export function Card({
   accessibilityLabel?: string;
 }) {
   const t = useTheme();
-  const base: ViewStyle = { backgroundColor: t.card, borderColor: t.border, borderWidth: 1, borderRadius: 16, padding: 16, gap: 12 };
+  const base: ViewStyle = { backgroundColor: t.card, borderColor: t.border, borderWidth: 1, borderRadius: 24, padding: 16, gap: 12 };
   if (!onPress) return <View style={[base, style]}>{children}</View>;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [base, pressed && { opacity: 0.7 }, style]}>

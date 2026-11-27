@@ -15,3 +15,6 @@ export * from "./Skeleton";
 export * from "./States";
 export * from "./Text";
 export * from "./tones";
+export * from "./Photo";
+export * from "./Icons";
+export * from "./Score";

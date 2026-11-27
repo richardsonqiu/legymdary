@@ -2,15 +2,21 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useFonts } from "expo-font";
+import { Pressable, View } from "react-native";
+import { GEIST_FONTS } from "../src/ui/fonts";
+import { Text } from "../src/ui/Text";
 import { AuthProvider, useAuth } from "../src/auth";
 import { ThemeProvider, useTheme } from "../src/theme";
 
 void SplashScreen.preventAutoHideAsync();
 
 function Routes() {
-  const { ready, user, offline, retry } = useAuth();
+  const { ready: authReady, user, offline, retry } = useAuth();
   const theme = useTheme();
+  // Keep the splash up until Geist is loaded too, so text never flashes in another font.
+  const [fontsLoaded, fontError] = useFonts(GEIST_FONTS);
+  const ready = authReady && (fontsLoaded || !!fontError);
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();

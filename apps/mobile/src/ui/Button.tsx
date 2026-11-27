@@ -47,7 +47,7 @@ export function Button({
           backgroundColor: look.bg,
           borderColor: look.border,
           borderWidth: 1,
-          borderRadius: 12,
+          borderRadius: 999,
           minHeight: small ? 44 : 48,
           paddingHorizontal: small ? 14 : 20,
           alignItems: "center",
