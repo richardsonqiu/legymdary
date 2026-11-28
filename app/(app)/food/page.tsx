@@ -45,8 +45,12 @@ export default async function FoodPage({
     getSkippedMeals(addDaysStr(center, -1), addDaysStr(center, 1)),
     getMenu(),
   ]);
-  const timed = await getTimedMeals(addDaysStr(center, -13), center);
-  const regularity = mealRegularity(timed);
+  // 14 finished days before the day shown (that day isn't over yet).
+  const timed = await getTimedMeals(addDaysStr(center, -14), center);
+  const regularity = mealRegularity(timed, {
+    today: center,
+    sleepScoreByDate: Object.fromEntries(energy.garminDays.map((d) => [d.date, d.sleepScore])),
+  });
   const garminSyncing = [scheduleGarminSync(userId, energy.garmin), scheduleOuraSync(userId, energy.oura)].some(Boolean);
   const plan = energy.plan;
   const adjust = !!energy.garmin?.adjustForActivity && !!energy.targets && !plan.usingOverride;
@@ -91,6 +95,7 @@ export default async function FoodPage({
       />
       <MealRhythm
         date={center}
+        today={serverToday}
         meals={timed.filter((m) => m.date === center)}
         week={timed.filter((m) => m.date >= addDaysStr(center, -6))}
         regularity={regularity}

@@ -11,7 +11,7 @@ import {
   type TodayScoresInput,
 } from "@/components/score/TodayScores";
 import { homeRecovery } from "@/lib/services/home-recovery";
-import { sceneFor, sceneStyle, compareScans, parseSegments, segmentBalance, addDaysStr, formatShort, kg } from "@legymdary/shared";
+import { sceneFor, sceneStyle, compareScans, parseSegments, segmentBalance, addDaysStr, formatShort, kg, mealRegularity } from "@legymdary/shared";
 import { WorkoutSummary } from "@/components/WorkoutSummary";
 import { DumbbellIcon, TrophyIcon, WatchIcon, CalendarIcon, ChevronRightIcon } from "@/components/icons";
 import { Card, EmptyState, SectionTitle } from "@/components/ui";
@@ -23,6 +23,7 @@ import {
   getBodyScans,
   getConsistencyDays,
   getLatestGarminActivity,
+  getTimedMeals,
   getMealSlots,
 } from "@/lib/queries";
 import { GarminActivityList } from "@/components/garmin/GarminActivityList";
@@ -31,6 +32,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { scheduleGarminSync } from "@/lib/garmin/background";
 import { scheduleOuraSync } from "@/lib/oura/background";
 import { NudgePopup } from "@/components/nudge/NudgePopup";
+import { RhythmReadyCard } from "@/components/meal/RhythmReadyCard";
 import { nudgeFrom } from "@/lib/nudge-data";
 import { getSessionUser, userToday } from "@/lib/session";
 
@@ -50,6 +52,7 @@ export default async function DashboardPage() {
     scans,
     latestActivity,
     slots,
+    timedMeals,
   ] = await Promise.all([
     getConsistencyDays(
       addDaysStr(serverToday, -380),
@@ -64,7 +67,13 @@ export default async function DashboardPage() {
     getBodyScans(),
     getLatestGarminActivity(),
     getMealSlots(serverToday),
+    getTimedMeals(addDaysStr(serverToday, -14), serverToday),
   ]);
+  // Meal rhythm: Home announces it once, the first time it has enough days.
+  const rhythm = mealRegularity(timedMeals, {
+    today: serverToday,
+    sleepScoreByDate: Object.fromEntries(energy.garminDays.map((d) => [d.date, d.sleepScore])),
+  });
   const foodTargets = energy.targets;
 
   // ---- Score rings + readiness hero (recovery needs a watch, ring or phone sync) ----
@@ -177,6 +186,8 @@ export default async function DashboardPage() {
       </header>
 
       <TodayScores s={scores} />
+
+      {!rhythm.calibrating && rhythm.score != null && <RhythmReadyCard label={rhythm.label} score={rhythm.score} action={rhythm.actions[0] ?? null} />}
 
       <RecapBanner
         today={serverToday}
