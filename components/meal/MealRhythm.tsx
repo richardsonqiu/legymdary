@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { ChevronDownIcon, ForkIcon, InfoIcon } from "@/components/icons";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { ChevronDownIcon, ForkIcon, InfoIcon, SparkIcon } from "@/components/icons";
 import { BAND_DOT } from "@/components/meal/QualityParts";
 import { MealIntro } from "@/components/meal/MealIntro";
+import { RHYTHM_SEEN_KEY } from "@/components/meal/rhythm-seen";
 import { Card, SectionTitle } from "@/components/ui";
-import { BANDS, fmtClock, type Band, type Regularity, formatShort } from "@legymdary/shared";
+import { BANDS, fmtClock, type Band, type Regularity, type RhythmTone, type Verdict, formatShort } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 export type RhythmMeal = { id: number; date: string; name: string; minutes: number; band: Band | null; calories: number; estimated: boolean };
@@ -17,15 +18,40 @@ const hm = (min: number) => {
   return m ? `${h} h ${m} min` : `${h} h`;
 };
 
+// Read once per page load, so the panel doesn't snap shut once we mark it seen.
+let seenAtLoad: boolean | null = null;
+const readSeen = () => {
+  if (seenAtLoad == null) {
+    try {
+      seenAtLoad = localStorage.getItem(RHYTHM_SEEN_KEY) === "1";
+    } catch {
+      seenAtLoad = true;
+    }
+  }
+  return seenAtLoad;
+};
+const noSub = () => () => {};
+
 /** Meal timing (24 h clock + regularity) and meal quality through the day or week. */
-export function MealRhythm({ date, meals, week, regularity }: { date: string; meals: RhythmMeal[]; week: RhythmMeal[]; regularity: Regularity }) {
+export function MealRhythm({ date, today, meals, week, regularity }: { date: string; today: string; meals: RhythmMeal[]; week: RhythmMeal[]; regularity: Regularity }) {
   const [view, setView] = useState<"day" | "week">("day");
-  const [showReg, setShowReg] = useState(false);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const seen = useSyncExternalStore(noSub, readSeen, () => true);
+  // The first time the rhythm is ready, open it so the new insight is seen.
+  const showReg = toggled ?? (!regularity.calibrating && !seen);
+  const setShowReg = (f: (v: boolean) => boolean) => setToggled(f(showReg));
+  useEffect(() => {
+    if (regularity.calibrating) return;
+    try {
+      localStorage.setItem(RHYTHM_SEEN_KEY, "1");
+    } catch {}
+  }, [regularity.calibrating]);
   const [intro, setIntro] = useState(false);
   const day = meals.filter((m) => m.calories >= 15).sort((a, b) => a.minutes - b.minutes);
+  const isToday = date === today;
 
   return (
-    <section className="mt-6 space-y-3">
+    <section id="meal-timing" className="mt-6 scroll-mt-6 space-y-3">
       <MealIntro open={intro} onClose={() => setIntro(false)} />
       <SectionTitle
         action={
@@ -38,7 +64,7 @@ export function MealRhythm({ date, meals, week, regularity }: { date: string; me
       </SectionTitle>
 
       <Card className="space-y-4">
-        <MealClock meals={day} usual={regularity.calibrating ? null : [regularity.firstAvg!, regularity.lastAvg!]} />
+        <MealClock meals={day} isToday={isToday} usual={regularity.calibrating ? null : [regularity.firstAvg!, regularity.lastAvg!]} />
 
         <button onClick={() => setShowReg((v) => !v)} aria-expanded={showReg} className="press flex w-full items-center gap-3 text-left">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-citron text-carbon">
@@ -47,25 +73,77 @@ export function MealRhythm({ date, meals, week, regularity }: { date: string; me
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">Meal regularity</span>
             <span className="block text-sm text-zinc-400">
-              {regularity.calibrating ? `Calibrating · ${regularity.days} of ${regularity.needed} days` : `${regularity.label} · ${regularity.score}/100`}
+              {regularity.calibrating ? `Learning your rhythm · ${regularity.days} of ${regularity.needed} days` : `${regularity.label} · ${regularity.score}/100`}
             </span>
           </span>
           <ChevronDownIcon className={cn("h-4 w-4 text-zinc-500 transition-transform", showReg && "rotate-180")} />
         </button>
+        {!regularity.calibrating && !showReg && regularity.actions[0] && (
+          <p className="-mt-1 flex gap-2 text-sm text-zinc-300">
+            <SparkIcon className="mt-0.5 h-4 w-4 shrink-0 text-teal-300" />
+            {regularity.actions[0]}
+          </p>
+        )}
         {showReg && (
-          <div className="space-y-2 rounded-2xl bg-white/[0.04] p-3 text-sm">
+          <div className="space-y-3 rounded-2xl bg-white/[0.04] p-3 text-sm">
             {regularity.calibrating ? (
-              <p className="text-zinc-300">
-                Log 2 or more meals a day for {regularity.needed} days to see how steady your meal times are.
-                {regularity.days > 0 && ` ${regularity.days} so far.`}
-              </p>
+              <>
+                <div className="flex gap-1.5" aria-label={`${regularity.days} of ${regularity.needed} days`}>
+                  {Array.from({ length: regularity.needed }, (_, i) => (
+                    <span key={i} className={cn("h-1.5 flex-1 rounded-full", i < regularity.days ? "bg-teal-300" : "bg-zinc-700/70")} />
+                  ))}
+                </div>
+                <p className="text-zinc-200">
+                  Log at least 2 meals a day, at the time you eat them.{" "}
+                  {regularity.needed - regularity.days === 1 ? "1 more day" : `${regularity.needed - regularity.days} more days`} and you&apos;ll see how steady your meal times are, with tips.
+                </p>
+                {regularity.excluded > 0 && (
+                  <p className="text-xs text-zinc-500">
+                    {regularity.excluded} older {regularity.excluded === 1 ? "meal has" : "meals have"} no eating time, so {regularity.excluded === 1 ? "it doesn't" : "they don't"} count. Set the time on a meal&apos;s page.
+                  </p>
+                )}
+              </>
             ) : (
               <>
-                <Row label="First meal" value={`${fmtClock(regularity.firstAvg!)} ± ${regularity.firstSd} min`} />
-                <Row label="Last meal" value={`${fmtClock(regularity.lastAvg!)} ± ${regularity.lastSd} min`} />
-                <Row label="Eating window" value={hm(regularity.windowAvg!)} />
-                <Row label="Meals after 21:00" value={`${regularity.lateDays} of 14 days`} />
-                <p className="pt-1 text-xs text-zinc-500">Regular meal times keep your body clock steady: more even energy and easier sleep.</p>
+                <VerdictRow
+                  label="First meal"
+                  value={`around ${fmtClock(regularity.firstAvg!)}`}
+                  sub={`Most days ${fmtClock(regularity.firstRange![0])} to ${fmtClock(regularity.firstRange![1])}`}
+                  verdict={regularity.verdicts!.first}
+                />
+                <VerdictRow
+                  label="Last meal"
+                  value={`around ${fmtClock(regularity.lastAvg!)}`}
+                  sub={`Most days ${fmtClock(regularity.lastRange![0])} to ${fmtClock(regularity.lastRange![1])}`}
+                  verdict={regularity.verdicts!.last}
+                />
+                <VerdictRow label="Eating window" value={hm(regularity.windowAvg!)} sub="First to last meal, a typical day" verdict={regularity.verdicts!.window} />
+                <VerdictRow label="Late meals" value={`${regularity.lateDays} of ${regularity.days} days`} sub="Last meal at 21:00 or later" verdict={regularity.verdicts!.late} />
+                {regularity.sleep && (
+                  <VerdictRow
+                    label="Sleep after late meals"
+                    value={`${regularity.sleep.lateAvg} vs ${regularity.sleep.otherAvg}`}
+                    sub={`Sleep score, ${regularity.sleep.lateNights} late vs ${regularity.sleep.otherNights} other nights`}
+                    verdict={
+                      regularity.sleep.otherAvg - regularity.sleep.lateAvg >= 4
+                        ? { tone: "watch", word: "Worse" }
+                        : { tone: "good", word: "No clear effect" }
+                    }
+                  />
+                )}
+                <div className="space-y-1.5 border-t border-zinc-800/70 pt-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Try this</div>
+                  {regularity.actions.map((a) => (
+                    <p key={a} className="flex gap-2 text-zinc-200">
+                      <SparkIcon className="mt-0.5 h-4 w-4 shrink-0 text-teal-300" />
+                      {a}
+                    </p>
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Last {regularity.days} finished days with 2+ meals. Regular meal times keep your body clock steady: more even energy and easier sleep.
+                  {regularity.excluded > 0 ? ` ${regularity.excluded} meals without an eating time aren't counted.` : ""}
+                </p>
               </>
             )}
           </div>
@@ -98,17 +176,29 @@ export function MealRhythm({ date, meals, week, regularity }: { date: string; me
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+const TONE: Record<RhythmTone, string> = {
+  good: "bg-teal-300/15 text-teal-200",
+  ok: "bg-white/[0.06] text-zinc-300",
+  watch: "bg-amber-400/15 text-amber-200",
+};
+
+function VerdictRow({ label, value, sub, verdict }: { label: string; value: string; sub: string; verdict: Verdict }) {
   return (
-    <div className="flex justify-between gap-3">
-      <span className="text-zinc-400">{label}</span>
-      <span className="font-medium tabular-nums">{value}</span>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="text-zinc-300">{label}</div>
+        <div className="text-[11px] text-zinc-500">{sub}</div>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className="font-medium tabular-nums">{value}</div>
+        <span className={cn("mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold", TONE[verdict.tone])}>{verdict.word}</span>
+      </div>
     </div>
   );
 }
 
 /** 24 h dial: midnight at the top, meals as dots, today's eating window as an arc. */
-function MealClock({ meals, usual }: { meals: RhythmMeal[]; usual: [number, number] | null }) {
+function MealClock({ meals, usual, isToday }: { meals: RhythmMeal[]; usual: [number, number] | null; isToday: boolean }) {
   const S = 260;
   const c = S / 2;
   const R = 96;
@@ -169,7 +259,15 @@ function MealClock({ meals, usual }: { meals: RhythmMeal[]; usual: [number, numb
           <>
             <span className="text-3xl font-semibold tabular-nums">{meals.length}</span>
             <span className="text-xs text-zinc-400">{meals.length === 1 ? "meal" : "meals"}</span>
-            {window != null && <span className="mt-1 text-[11px] tabular-nums text-zinc-500">{hm(window)} window</span>}
+            {meals.length === 1 ? (
+              <span className="mt-1 text-[11px] tabular-nums text-zinc-500">at {fmtClock(meals[0].minutes)}</span>
+            ) : window != null && window >= 60 ? (
+              <span className="mt-1 text-[11px] tabular-nums text-zinc-500">
+                {hm(window)} {isToday ? "so far" : "window"}
+              </span>
+            ) : window != null ? (
+              <span className="mt-1 text-[11px] tabular-nums text-zinc-500">around {fmtClock(meals[0].minutes)}</span>
+            ) : null}
           </>
         ) : (
           <span className="max-w-[9rem] text-xs text-zinc-500">Log a meal to see your timing</span>

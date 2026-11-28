@@ -7,7 +7,7 @@ import { ItemExplanation } from "@/components/food/ItemExplanation";
 import { Portal } from "@/components/Portal";
 import { Button, Field, inputClass } from "@/components/ui";
 import { analyzeMeal, saveMeal, saveMenuItem, updateMeal } from "@/lib/actions";
-import { baseOf, isDrink, MEAL_TYPES, sumMacros, withEaten, type MealItem, type MealType } from "@legymdary/shared";
+import { baseOf, fmtClock, isDrink, MEAL_TYPES, SLOT_MINUTES, sumMacros, withEaten, type MealItem, type MealType } from "@legymdary/shared";
 import { cn } from "@/lib/utils";
 
 export type ComposerInit = {
@@ -54,6 +54,14 @@ export function MealComposer({
   onSaved: () => void;
 }) {
   const [mealType, setMealType] = useState<MealType>(init.mealType);
+  // When it was eaten (new meals). Defaults to now for today, else the meal's usual time.
+  const [clock] = useState(() => {
+    const d = new Date();
+    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return { isToday: init.date === local, now: d.getHours() * 60 + d.getMinutes() };
+  });
+  const [time, setTime] = useState<string | null>(null);
+  const shownTime = time ?? fmtClock(clock.isToday ? clock.now : (SLOT_MINUTES[mealType] ?? SLOT_MINUTES.snack));
   const [name, setName] = useState(init.name);
   const [items, setItems] = useState<MealItem[]>(init.items);
   const [notes, setNotes] = useState(init.notes);
@@ -136,6 +144,8 @@ export function MealComposer({
         notes,
         aiEstimated,
         advisor,
+        // Only new meals; an existing meal's time is changed on its page.
+        ...(init.id ? {} : { eatenAt: (() => { const [h, m] = shownTime.split(":").map(Number); return h * 60 + m; })() }),
       };
       try {
         if (init.toMenu) {
@@ -298,6 +308,22 @@ export function MealComposer({
                 </button>
               ))}
             </div>
+            )}
+
+            {!init.toMenu && !init.id && (
+              <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-sm">
+                <span className="text-zinc-400">
+                  Time eaten
+                  <span className="block text-[11px] text-zinc-500">Used for your meal timing</span>
+                </span>
+                <input
+                  type="time"
+                  value={shownTime}
+                  onChange={(e) => e.target.value && setTime(e.target.value)}
+                  aria-label="Time eaten"
+                  className="rounded-lg bg-transparent px-2 py-1 text-base font-medium tabular-nums text-zinc-100 outline-none focus:ring-2 focus:ring-teal-300/25"
+                />
+              </label>
             )}
 
             <Field label="Meal name">

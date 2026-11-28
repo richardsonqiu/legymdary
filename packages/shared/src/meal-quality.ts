@@ -189,57 +189,175 @@ export const SLOT_MINUTES: Record<string, number> = { breakfast: 8 * 60, lunch: 
 
 export const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(Math.round(min) % 60).padStart(2, "0")}`;
 
-export type TimedMeal = { date: string; minutes: number; band: Band | null; calories: number };
+export type TimedMeal = {
+  date: string;
+  minutes: number;
+  band: Band | null;
+  calories: number;
+  /** The time was guessed (older meals: when it was logged, or the slot's usual time). */
+  estimated?: boolean;
+};
+
+export type RhythmTone = "good" | "ok" | "watch";
+export type Verdict = { tone: RhythmTone; word: string };
 
 export type Regularity = {
-  /** Days with 2+ timed meals in the window. */
+  /** Finished days with 2+ meals that have a real eating time. */
   days: number;
   needed: number;
   calibrating: boolean;
+  /** 0 to 100: 100 when first and last meals land within about 20 min each day. */
   score: number | null;
   label: string;
+  /** Typical (median) first and last meal time, minutes after midnight. */
   firstAvg: number | null;
+  /** How much it moves: a robust spread in minutes (one odd day doesn't swing it). */
   firstSd: number | null;
   lastAvg: number | null;
   lastSd: number | null;
+  /** Most days fall in this range (20th to 80th percentile). */
+  firstRange: [number, number] | null;
+  lastRange: [number, number] | null;
   windowAvg: number | null;
+  /** Days whose last meal was at 21:00 or later, out of `days`. */
   lateDays: number;
+  verdicts: { first: Verdict; last: Verdict; window: Verdict; late: Verdict } | null;
+  /** Sleep score the night after late meals vs other nights, when there is enough of both. */
+  sleep: { lateAvg: number; otherAvg: number; lateNights: number; otherNights: number } | null;
+  /** One or two concrete things to try, most useful first. */
+  actions: string[];
+  /** Meals left out because their time was guessed. */
+  excluded: number;
 };
 
-const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
-const sd = (a: number[]) => {
-  const m = mean(a);
-  return Math.sqrt(mean(a.map((x) => (x - m) ** 2)));
+const median = (a: number[]) => {
+  const s = [...a].sort((x, y) => x - y);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
+const quantile = (a: number[], q: number) => {
+  const s = [...a].sort((x, y) => x - y);
+  const i = (s.length - 1) * q;
+  const lo = Math.floor(i);
+  return s[lo] + (s[Math.min(s.length - 1, lo + 1)] - s[lo]) * (i - lo);
+};
+/** Median absolute deviation scaled to match a standard deviation for normal data. */
+const spreadOf = (a: number[]) => {
+  const m = median(a);
+  return median(a.map((x) => Math.abs(x - m))) * 1.4826;
+};
+const round30 = (min: number) => Math.round(min / 30) * 30;
+const hm = (min: number) => {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return m ? `${h} h ${m} min` : `${h} h`;
+};
+
+function spreadVerdict(sd: number): Verdict {
+  return sd <= 30 ? { tone: "good", word: "Steady" } : sd <= 60 ? { tone: "ok", word: "Shifts a little" } : { tone: "watch", word: "Varies a lot" };
+}
 
 /**
- * How steady your meal times are: the spread of your first and last meal
- * times over the last 14 days. Needs 5 days with 2+ meals to calibrate.
+ * How steady your meal times are, over the last 14 finished days.
+ *
+ * - Only meals with a real eating time count; today is left out (it isn't over).
+ * - Needs 5 days with 2+ meals before it shows anything.
+ * - Spread is the median absolute deviation (×1.48), so one odd day doesn't swing it.
+ * - Score: 100 when first and last meals move about 20 min or less, 0 at 3 h.
+ * - Late: last meal at 21:00 or later. With sleep scores, compares the night
+ *   after late meals with other nights.
  */
-export function mealRegularity(meals: TimedMeal[], needed = 5): Regularity {
+export function mealRegularity(
+  meals: TimedMeal[],
+  opts: { needed?: number; today?: string; sleepScoreByDate?: Record<string, number | null | undefined> } = {},
+): Regularity {
+  const needed = opts.needed ?? 5;
+  const real = meals.filter((m) => m.calories >= 30 && (!opts.today || m.date < opts.today));
+  const excluded = real.filter((m) => m.estimated).length;
   const byDay = new Map<string, number[]>();
-  for (const m of meals) if (m.calories >= 30) byDay.set(m.date, [...(byDay.get(m.date) ?? []), m.minutes]);
-  const days = [...byDay.values()].filter((t) => t.length >= 2).map((t) => t.sort((a, b) => a - b));
-  const lateDays = [...byDay.values()].filter((t) => Math.max(...t) >= 21 * 60).length;
-  if (days.length < needed) {
-    return { days: days.length, needed, calibrating: true, score: null, label: "Calibrating", firstAvg: null, firstSd: null, lastAvg: null, lastSd: null, windowAvg: null, lateDays };
+  for (const m of real) if (!m.estimated) byDay.set(m.date, [...(byDay.get(m.date) ?? []), m.minutes]);
+  const dayList = [...byDay.entries()].filter(([, t]) => t.length >= 2).map(([d, t]) => [d, t.sort((a, b) => a - b)] as const);
+  const lateDays = dayList.filter(([, t]) => t[t.length - 1] >= 21 * 60).length;
+  const empty = { firstRange: null, lastRange: null, verdicts: null, sleep: null, actions: [], excluded };
+  if (dayList.length < needed) {
+    return { days: dayList.length, needed, calibrating: true, score: null, label: "Calibrating", firstAvg: null, firstSd: null, lastAvg: null, lastSd: null, windowAvg: null, lateDays, ...empty };
   }
-  const first = days.map((d) => d[0]);
-  const last = days.map((d) => d[d.length - 1]);
-  const spread = (sd(first) + sd(last)) / 2;
-  // 0 min spread → 100, 2 h spread → 0.
-  const score = Math.max(0, Math.min(100, Math.round(100 - (spread / 120) * 100)));
+  const first = dayList.map(([, t]) => t[0]);
+  const last = dayList.map(([, t]) => t[t.length - 1]);
+  const firstSd = Math.round(spreadOf(first));
+  const lastSd = Math.round(spreadOf(last));
+  const spread = (firstSd + lastSd) / 2;
+  const score = Math.max(0, Math.min(100, Math.round((100 * (180 - spread)) / 160)));
+  const firstAvg = Math.round(median(first));
+  const lastAvg = Math.round(median(last));
+  const windowAvg = Math.round(median(dayList.map(([, t]) => t[t.length - 1] - t[0])));
+  const firstRange: [number, number] = [Math.round(quantile(first, 0.2)), Math.round(quantile(first, 0.8))];
+  const lastRange: [number, number] = [Math.round(quantile(last, 0.2)), Math.round(quantile(last, 0.8))];
+  const lateShare = lateDays / dayList.length;
+
+  const verdicts = {
+    first: spreadVerdict(firstSd),
+    last: spreadVerdict(lastSd),
+    window: (windowAvg <= 12 * 60 ? { tone: "good", word: "Within 12 h" } : windowAvg <= 14 * 60 ? { tone: "ok", word: "A long day" } : { tone: "watch", word: "Very long" }) as Verdict,
+    late: (lateDays === 0 ? { tone: "good", word: "None" } : lateShare <= 0.15 ? { tone: "ok", word: "Now and then" } : { tone: "watch", word: "Often" }) as Verdict,
+  };
+
+  // Sleep the night after: sleep is dated by the morning you woke up.
+  let sleep: Regularity["sleep"] = null;
+  if (opts.sleepScoreByDate) {
+    const next = (d: string) => new Date(Date.parse(`${d}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+    const lateS: number[] = [];
+    const otherS: number[] = [];
+    for (const [d, t] of dayList) {
+      const sc = opts.sleepScoreByDate[next(d)];
+      if (sc == null) continue;
+      (t[t.length - 1] >= 21 * 60 ? lateS : otherS).push(sc);
+    }
+    if (lateS.length >= 2 && otherS.length >= 3) {
+      const avg = (a: number[]) => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
+      sleep = { lateAvg: avg(lateS), otherAvg: avg(otherS), lateNights: lateS.length, otherNights: otherS.length };
+    }
+  }
+
+  const finishBy = Math.min(round30(lastAvg), 20 * 60 + 30);
+  const actions: string[] = [];
+  if (sleep && sleep.otherAvg - sleep.lateAvg >= 4) {
+    actions.push(`You sleep worse after late meals: score ${sleep.lateAvg} vs ${sleep.otherAvg} on other nights. Try finishing by ${fmtClock(finishBy)}.`);
+  }
+  if (verdicts.last.tone === "watch" && lastSd >= firstSd) {
+    actions.push(`Your last meal moves the most, from ${fmtClock(lastRange[0])} to ${fmtClock(lastRange[1])}. Aim to finish around ${fmtClock(finishBy)} most days.`);
+  }
+  if (verdicts.first.tone === "watch") {
+    actions.push(`Your first meal moves from ${fmtClock(firstRange[0])} to ${fmtClock(firstRange[1])}. Try having it around ${fmtClock(round30(firstAvg))} every day, weekends too.`);
+  }
+  if (verdicts.last.tone === "watch" && lastSd < firstSd) {
+    actions.push(`Your last meal moves from ${fmtClock(lastRange[0])} to ${fmtClock(lastRange[1])}. Aim to finish around ${fmtClock(finishBy)}.`);
+  }
+  if (verdicts.late.tone === "watch" && !actions.some((a) => a.startsWith("You sleep worse"))) {
+    actions.push(`Late meals on ${lateDays} of ${dayList.length} days. Finishing 2 to 3 hours before bed tends to help sleep.`);
+  }
+  if (verdicts.window.tone === "watch") {
+    actions.push(`Your eating day spans ${hm(windowAvg)}. A 12 hour window, like ${fmtClock(round30(firstAvg))} to ${fmtClock(round30(firstAvg) + 12 * 60)}, is easier on your body clock.`);
+  }
+  if (!actions.length) actions.push("Steady meal times. Keep it up.");
+
   return {
-    days: days.length,
+    days: dayList.length,
     needed,
     calibrating: false,
     score,
-    label: score >= 75 ? "Regular" : score >= 50 ? "Fairly regular" : "Irregular",
-    firstAvg: Math.round(mean(first)),
-    firstSd: Math.round(sd(first)),
-    lastAvg: Math.round(mean(last)),
-    lastSd: Math.round(sd(last)),
-    windowAvg: Math.round(mean(days.map((d) => d[d.length - 1] - d[0]))),
+    label: score >= 80 ? "Very regular" : score >= 60 ? "Regular" : score >= 40 ? "Somewhat irregular" : "Irregular",
+    firstAvg,
+    firstSd,
+    lastAvg,
+    lastSd,
+    firstRange,
+    lastRange,
+    windowAvg,
     lateDays,
+    verdicts,
+    sleep,
+    actions: actions.slice(0, 2),
+    excluded,
   };
 }
